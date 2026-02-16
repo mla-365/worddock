@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WordDock Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #f8f9fa;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --muted: #a0a0a0;
+  --corner: #b0b0b0;
+  --corner-size: 13px;
+  --border: #dde3e8;
+  --shadow: 0 4px 30px rgba(0,0,0,0.08);
+  --radius: 16px;
+  --danger: #d63031;
+  --success: #27ae60;
+  --danger-bg: #fdf0f0;
+  --success-bg: #f0faf4;
+  --qcolor: #999999;
+  --acolor: #1a1a1a;
+  --cap: 400px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ── LOGIN SCREEN ── */
+.login-screen {
+  width: 100%;
+  max-width: var(--cap);
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: 48px 32px;
+  text-align: center;
+}
+.login-screen h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.login-screen .subtitle {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 32px;
+}
+.login-screen input {
+  width: 100%;
+  padding: 14px 16px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 15px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  outline: none;
+  margin-bottom: 14px;
+}
+.login-screen input:focus {
+  border-color: var(--corner);
+}
+.login-screen button {
+  width: 100%;
+  padding: 14px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  background: var(--text);
+  color: #fff;
+  cursor: pointer;
+}
+.login-screen button:active {
+  transform: scale(0.98);
+}
+.login-screen .msg {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--muted);
+  min-height: 20px;
+}
+.login-screen .msg.error { color: var(--danger); }
+.login-screen .msg.ok { color: var(--success); }
+
+/* ── APP ── */
+.app {
+  width: 100%;
+  max-width: var(--cap);
+  height: 100vh;
+  max-height: 720px;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+  border-radius: 20px;
+  overflow: visible;
+  position: relative;
+}
+.app.hidden, .login-screen.hidden { display: none; }
+
+/* ── INFO ROWS ── */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.corner {
+  font-family: 'DM Mono', monospace;
+  font-size: var(--corner-size);
+  font-weight: 400;
+  color: var(--corner);
+  user-select: none;
+}
+.corner .user-email {
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--corner);
+}
+
+/* ── CARD ── */
+.card {
+  flex: 1;
+  position: relative;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  min-height: 0;
+  margin: 14px 0;
+}
+
+/* ── GRAMCAT ── */
+.gramcat-zone {
+  padding: 18px 20px 0 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.gramcat-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #666;
+  background: #f0f0ec;
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin-right: 6px;
+}
+.gramtag-text {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #aaa;
+}
+
+/* ── WORD ZONE ── */
+.word-zone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0 50px 0;
+  overflow: visible;
+  min-height: 0;
+}
+.word-anchor { text-align: center; overflow: visible; }
+.word-text {
+  font-size: 42px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: visible;
+  transition: none;
+}
+.word-text.q-state { color: var(--qcolor); }
+.word-text.a-state { color: var(--acolor); }
+.word-text.system {
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: normal;
+}
+
+/* ── BUTTONS ── */
+.buttons {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0 16px 0;
+  flex-shrink: 0;
+}
+.buttons button {
+  flex: 1;
+  padding: 15px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.08s, filter 0.1s;
+}
+.buttons button:active { transform: scale(0.97); filter: brightness(0.95); }
+.btn-again { background: var(--danger-bg); color: var(--danger); }
+.btn-good { background: var(--success-bg); color: var(--success); }
+.btn-again:disabled, .btn-good:disabled {
+  cursor: default;
+  transform: none !important;
+  filter: none !important;
+}
+
+/* ── PROGRESS ── */
+.progress-wrap { padding: 0 0 14px 0; flex-shrink: 0; }
+.progress-track { height: 4px; background: #eee; border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0%; background: var(--success); transition: width 0.2s ease; border-radius: 99px; }
+
+@media (max-width: 440px) {
+  .app { max-height: 100vh; border-radius: 0; }
+  .word-text { font-size: 36px; }
+  .login-screen { border-radius: 0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════ LOGIN ════════ -->
+<div class="login-screen" id="loginScreen">
+  <h1>WordDock Pro</h1>
+  <p class="subtitle">NL → RU | v.0.1</p>
+  <input type="email" id="emailInput" placeholder="e-mailadres" autocomplete="email" />
+  <button id="loginBtn">Verstuur magic link</button>
+  <div class="msg" id="loginMsg"></div>
+</div>
+
+<!-- ════════ APP ════════ -->
+<div class="app hidden" id="appScreen">
+  <div class="info-row">
+    <div class="corner" id="cornerTL">A1.01</div>
+    <div class="corner" id="cornerTR">NL-RU | v.0.1</div>
+  </div>
+
+  <div class="card" id="card">
+    <div class="gramcat-zone" id="gramcatZone">
+      <span class="gramcat-badge" id="gcatBadge">werkwoord</span>
+      <span class="gramtag-text" id="gtagText">beweging</span>
+    </div>
+    <div class="word-zone">
+      <div class="word-anchor">
+        <div class="word-text q-state" id="wordText">...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="buttons">
+    <button class="btn-again" id="btnAgain">Opnieuw</button>
+    <button class="btn-good" id="btnGood">Goed</button>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <div class="info-row">
+    <div class="corner"><span class="user-email" id="userEmail" title="Klik om uit te loggen">WordDock Pro</span></div>
+    <div class="corner" id="cornerBR">1 / 10</div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   SUPABASE
+   ═══════════════════════════════════════ */
+const SUPA_URL = "https://xpnkhxzuxlqwwmoqxdhf.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhwbmtoeHp1eGxxd3dtb3F4ZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExNjk2ODYsImV4cCI6MjA4Njc0NTY4Nn0.sqYu_nwx_2Zqyb69rzhYyaX6sbpZCyWliG2fIrfCwhk";
+const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+/* ═══════════════════════════════════════
+   DATASET
+   ═══════════════════════════════════════ */
+const LEMMAS = [{"id":"NLRU01_0001","serial":1,"lemma":"а","freq":1,"lvl":"A1","gcat":"voegwoord","gtag":"","topic":"","fields":[{"q":"maar","a":"а"}]},{"id":"NLRU01_0002","serial":2,"lemma":"ходить","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"to go (on foot) (multidirectional)","a":"ходи́ть"},{"q":"vervoeg  multidirectional","a":"хожу́ - хо́дишь - хо́дят"},{"q":"gaan (te voet) [OneDir] [imPERFECTIEF]","a":"идти́ "},{"q":"vervoeg imperfectief","a":"иду́ - идёшь - иду́т"},{"q":"gaan (te voet) [OneDir] [PERFECTIEF]","a":"пойти́"},{"q":"vervoeg PERFECTIEF","a":"пойду́ - пойдёшь - пойду́т"},{"q":"Ik ga vaak naar de bioscoop.","a":"Я ча́сто хожу́ в кино́."},{"q":"Ik ga (nu) naar de bioscoop.","a":"Я иду́ в кино́."},{"q":"Ik ben naar de bioscoop gegaan.","a":"Я пошёл в кино́."}]},{"id":"NLRU01_0003","serial":3,"lemma":"бегать","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"lopen/rennen (multidirectional)","a":"бе́гать"},{"q":"vervoeg  multidirectional","a":"бе́гаю - бе́гаешь - бе́гают"},{"q":"lopen/rennen [OneDir] [imPERFECTIEF]","a":"бежа́ть"},{"q":"vervoeg imperfectief","a":"бегу́ - бежи́шь - бегу́т"},{"q":"lopen/rennen [OneDir] [PERFECTIEF]","a":"побежа́ть"},{"q":"vervoeg PERFECTIEF","a":"побегу́ - побежи́шь - побегу́т"},{"q":"Ik loop elke ochtend in het park.","a":"Я бе́гаю по па́рку ка́ждое у́тро."},{"q":"Ik ren naar huis.","a":"Я бегу́ домо́й."},{"q":"Ik ben naar huis beginnen lopen.","a":"Я побежа́л домо́й."}]},{"id":"NLRU01_0004","serial":4,"lemma":"летать","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"vliegen (multidirectional)","a":"лета́ть"},{"q":"vervoeg  multidirectional","a":"лета́ю - лета́ешь - лета́ют"},{"q":"vliegen [OneDir] [imPERFECTIEF]","a":"лете́ть"},{"q":"vervoeg imperfectief","a":"лечу́ - лети́шь - летя́т"},{"q":"vliegen [OneDir] [PERFECTIEF]","a":"полете́ть"},{"q":"vervoeg PERFECTIEF","a":"полечу́ - полети́шь - полетя́т"},{"q":"De vogels vliegen boven het bos.","a":"Пти́цы лета́ют над ле́сом."},{"q":"De vogel vliegt naar het noorden.","a":"Пти́ца лети́т на се́вер."},{"q":"De vogel is naar het noorden gevlogen.","a":"Пти́ца полете́ла на се́вер."}]},{"id":"NLRU01_0005","serial":5,"lemma":"плавать","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"zwemmen/varen (multidirectional)","a":"пла́вать"},{"q":"vervoeg  multidirectional","a":"пла́ваю - пла́ваешь - пла́вают"},{"q":"zwemmen/varen [OneDir] [imPERFECTIEF]","a":"плыть"},{"q":"vervoeg imperfectief","a":"плыву́ - плывёшь - плыву́т"},{"q":"zwemmen/varen [OneDir] [PERFECTIEF]","a":"поплы́ть"},{"q":"vervoeg PERFECTIEF","a":"поплыву́ - поплывёшь - поплыву́т"},{"q":"Wij zwemmen vaak in het meer.","a":"Мы ча́сто пла́ваем в о́зере."},{"q":"We zwemmen naar de oever.","a":"Мы плывём к бе́регу."},{"q":"We zijn naar de oever gezwommen.","a":"Мы поплы́ли к бе́регу."}]},{"id":"NLRU01_0006","serial":6,"lemma":"ездить","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"rijden (met voertuig) (multidirectional)","a":"е́здить"},{"q":"vervoeg  multidirectional","a":"е́зжу - е́здишь - е́здят"},{"q":"rijden (met voertuig) [OneDir] [imPERFECTIEF]","a":"е́хать"},{"q":"vervoeg imperfectief","a":"е́ду - е́дешь - е́дут"},{"q":"rijden (met voertuig) [OneDir] [PERFECTIEF]","a":"пое́хать"},{"q":"vervoeg PERFECTIEF","a":"пое́ду - пое́дешь - пое́дут"},{"q":"Ik reis vaak naar Moskou.","a":"Я ча́сто е́зжу в Москву́."},{"q":"Ik ga (nu) naar Moskou.","a":"Я е́ду в Москву́."},{"q":"Ik ben naar Moskou vertrokken.","a":"Я пое́хал в Москву́."}]},{"id":"NLRU01_0007","serial":7,"lemma":"носить","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"(in de hand) dragen (multidirectional)","a":"носи́ть"},{"q":"vervoeg  multidirectional","a":"ношу́ - но́сишь - но́сят"},{"q":"dragen (in de hand) [OneDir] [imPERFECTIEF]","a":"нести́ "},{"q":"vervoeg imperfectief","a":"несу́ - несёшь - несу́т"},{"q":"dragen (in de hand) [OneDir] [PERFECTIEF]","a":"понести́"},{"q":"vervoeg PERFECTIEF","a":"понесу́ - понесёшь - понесу́т"},{"q":"Hij draagt zware tassen.","a":"Он но́сит тяжёлые су́мки."},{"q":"Hij draagt (nu) een tas.","a":"Он несёт су́мку."},{"q":"Hij begon de tas te dragen.","a":"Он понёс су́мку."}]},{"id":"NLRU01_0008","serial":8,"lemma":"водить","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"leiden/begeleiden te voet (multidirectional)","a":"води́ть"},{"q":"vervoeg  multidirectional","a":"вожу́ - во́дишь - во́дят"},{"q":"leiden/begeleiden te voet [OneDir] [imPERFECTIEF]","a":"вести́ "},{"q":"vervoeg imperfectief","a":"веду́ - ведёшь - веду́т"},{"q":"leiden/begeleiden te voet [OneDir] [PERFECTIEF]","a":"повести́"},{"q":"vervoeg PERFECTIEF","a":"поведу́ - поведёшь - поведу́т"},{"q":"Hij rijdt elke dag met de auto.","a":"Он во́дит маши́ну ка́ждый день."},{"q":"Hij bestuurt de auto.","a":"Он ведёт маши́ну."},{"q":"Hij reed (begon te rijden) met de auto.","a":"Он повёл маши́ну."}]},{"id":"NLRU01_0009","serial":9,"lemma":"возить","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"vervoeren (met voertuig) (multidirectional)","a":"вози́ть"},{"q":"vervoeg  multidirectional","a":"вожу́ - во́зишь - во́зят"},{"q":"vervoeren (met voertuig) [OneDir] [imPERFECTIEF]","a":"везти́ "},{"q":"vervoeg imperfectief","a":"везу́ - везёшь - везу́т"},{"q":"vervoeren (met voertuig) [OneDir] [PERFECTIEF]","a":"повезти́"},{"q":"vervoeg PERFECTIEF","a":"повезу́ - повезёшь - повезу́т"},{"q":"Vader brengt de kinderen vaak naar school.","a":"Оте́ц ча́сто во́зит дете́й в шко́лу."},{"q":"Vader brengt de kinderen naar school.","a":"Оте́ц везёт дете́й в шко́лу."},{"q":"Vader heeft de kinderen naar school gebracht.","a":"Оте́ц повёз дете́й в шко́лу."}]},{"id":"NLRU01_0010","serial":10,"lemma":"ползать","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"kruipen (multidirectional)","a":"по́лзать"},{"q":"vervoeg  multidirectional","a":"по́лзаю - по́лзаешь - по́лзают"},{"q":"kruipen [OneDir] [imPERFECTIEF]","a":"ползти́ "},{"q":"vervoeg imperfectief","a":"ползу́ - ползёшь - ползу́т"},{"q":"kruipen [OneDir] [PERFECTIEF]","a":"поползти́"},{"q":"vervoeg PERFECTIEF","a":"поползу́ - поползёшь - поползу́т"},{"q":"De baby kruipt over de vloer.","a":"Ребёнок по́лзает по полу́."},{"q":"De baby kruipt naar mama.","a":"Ребёнок ползёт к ма́ме."},{"q":"De baby is naar mama gekropen.","a":"Ребёнок попо́лз к ма́ме."}]},{"id":"NLRU01_0011","serial":11,"lemma":"лазить","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"klauteren/omhoog kruipen (multidirectional)","a":"ла́зать/ла́зить"},{"q":"vervoeg  multidirectional","a":"ла́заю - ла́заешь - ла́зают\nла́жу - ла́зишь - ла́зят"},{"q":"klauteren/omhoog kruipen [OneDir] [imPERFECTIEF]","a":"лезть"},{"q":"vervoeg imperfectief","a":"ле́зу - ле́зешь - ле́зут"},{"q":"klauteren/omhoog kruipen [OneDir] [PERFECTIEF]","a":"поле́зть"},{"q":"vervoeg PERFECTIEF","a":"полéзу - полéзешь - полéзут"},{"q":"Ik klim vaak in bomen.","a":"Я ча́сто ла́жу по дере́вьям."},{"q":"Ik klim op een boom.","a":"Я ле́зу на де́рево."},{"q":"Ik ben op de boom geklommen.","a":"Я поле́з на де́рево."}]},{"id":"NLRU01_0012","serial":12,"lemma":"бродить","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"rondzwerven (multidirectional)","a":"броди́ть"},{"q":"vervoeg  multidirectional","a":"брожу́ - бро́дишь - бро́дят"},{"q":"rondzwerven [OneDir] [imPERFECTIEF]","a":"брести́ "},{"q":"vervoeg imperfectief","a":"бреду́ - бредёшь - бреду́т"},{"q":"rondzwerven [OneDir] [PERFECTIEF]","a":"побрести́"},{"q":"vervoeg PERFECTIEF","a":"побреду́ - побредёшь - побреду́т"},{"q":"We dwalen door de stad zonder doel.","a":"Мы бро́дим по го́роду без це́ли."},{"q":"We lopen (doelloos) over straat.","a":"Мы бредём по у́лице."},{"q":"We gingen over straat dwalen.","a":"Мы побрели́ по у́лице."}]},{"id":"NLRU01_0013","serial":13,"lemma":"гонять","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"achterna zitten/jagen (multidirectional)","a":"гоня́ть"},{"q":"vervoeg  multidirectional","a":"гоня́ю - гоня́ешь - гоня́ют"},{"q":"achterna zitten/jagen [OneDir] [imPERFECTIEF]","a":"гнать"},{"q":"vervoeg imperfectief","a":"гоню́ - го́нишь - го́нят"},{"q":"achterna zitten/jagen [OneDir] [PERFECTIEF]","a":"погна́ть"},{"q":"vervoeg PERFECTIEF","a":"погоню́ - пого́нишь - пого́нят"},{"q":"De jongen speelt met de bal op de binnenplaats.","a":"Ма́льчик гоня́ет мя́ч во дворе́."},{"q":"De jongen jaagt de kat weg.","a":"Ма́льчик го́нит ко́шку."},{"q":"De jongen heeft de kat weggejaagd.","a":"Ма́льчик погна́л ко́шку."}]},{"id":"NLRU01_0014","serial":14,"lemma":"таскать","freq":1,"lvl":"A1","gcat":"werkwoord","gtag":"beweging","topic":"ww van beweging","fields":[{"q":"sleuren/slepen (multidirectional)","a":"таска́ть"},{"q":"vervoeg  multidirectional","a":"таска́ю - таска́ешь - таска́ют"},{"q":"sleuren/slepen [OneDir] [imPERFECTIEF]","a":"тащи́ть"},{"q":"vervoeg imperfectief","a":"тащу́ - тащи́шь - тащу́т"},{"q":"sleuren/slepen [OneDir] [PERFECTIEF]","a":"потащи́ть"},{"q":"vervoeg PERFECTIEF","a":"потащу́ - потащи́шь - потащу́т"},{"q":"Hij sleept vaak hout uit het bos.","a":"Он ча́сто таска́ет дрова́ из леса."},{"q":"Hij draagt hout uit het bos.","a":"Он несёт дрова́ из леса."},{"q":"Hij is begonnen het hout te dragen.","a":"Он понёс дрова́ из леса."}]},{"id":"NLRU01_0015","serial":15,"lemma":"подвиг","freq":1,"lvl":"A1","gcat":"zelfst. nmw.","gtag":"mannelijk","topic":"","fields":[{"q":"prestatie, heldendaad","a":"по́двиг"}]},{"id":"NLRU01_0016","serial":16,"lemma":"дети","freq":1,"lvl":"A1","gcat":"zelfst. nmw.","gtag":"mannelijke; plural","topic":"","fields":[{"q":"kinderen","a":"де́ти"},{"q":"gen.","a":"дете́й"},{"q":"dat.","a":"де́тям"},{"q":"acc.","a":"дете́й"},{"q":"instr.","a":"детьми́"},{"q":"prep.","a":"де́тях"}]},{"id":"NLRU01_0017","serial":17,"lemma":"дерево","freq":1,"lvl":"A1","gcat":"zelfst. nmw.","gtag":"onzijdig","topic":"","fields":[{"q":"boom","a":"де́рево"},{"q":"ENKV nom-gen-dat","a":"де́рево - де́рева - де́реву"},{"q":"ENKV acc-inst-prep","a":"де́рево - де́ревом - де́реве"},{"q":"MV nom-gen-dat","a":"дере́вья - дере́вьев - дере́вьям"},{"q":"MV acc-inst-prep","a":"дере́вья - дере́вьями - дере́вьях"},{"q":"De boom heeft water nodig.","a":"Де́реву нужна́ вода́"},{"q":"Aan de bomen groeien groene bladeren.","a":"На дере́вьях расту́т зелёные ли́стья."}]},{"id":"NLRU01_0018","serial":18,"lemma":"и","freq":1,"lvl":"A1","gcat":"voegwoord","gtag":"","topic":"","fields":[{"q":"en","a":"и"},{"q":"jij en ik","a":"я и ты"}]},{"id":"NLRU01_0019","serial":19,"lemma":"в","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ prepositionalis; plaats (ingesloten)","topic":"","fields":[{"q":"in, op","a":"в + prep."},{"q":"in het boek","a":"в кни́ге"}]},{"id":"NLRU01_0020","serial":20,"lemma":"в","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ accusatief; motion (ingesloten)","topic":"","fields":[{"q":"naar","a":"в + acc."},{"q":"naar school","a":"в шко́лу"}]},{"id":"NLRU01_0021","serial":21,"lemma":"не","freq":1,"lvl":"A1","gcat":"partikel","gtag":"","topic":"","fields":[{"q":"niet","a":"не"},{"q":"ik weet het niet","a":"я не зна́ю"}]},{"id":"NLRU01_0022","serial":22,"lemma":"на","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ prepositionalis; plaats (open)","topic":"","fields":[{"q":"in, op","a":"на + prep."},{"q":"op het werk","a":"на рабо́те"}]},{"id":"NLRU01_0023","serial":23,"lemma":"на","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ accusatief; motion (open)","topic":"","fields":[{"q":"naar","a":"на + acc."},{"q":"hij zet het glas op de tafel","a":"он ста́вит стака́н на стол"}]},{"id":"NLRU01_0024","serial":24,"lemma":"я","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"persoonlijk","topic":"","fields":[{"q":"ik","a":"я"},{"q":"ik spreek","a":"я говорю́"},{"q":"jij","a":"ты"},{"q":"hij","a":"он"},{"q":"zij","a":"она́"},{"q":"wij","a":"мы"},{"q":"jullie","a":"вы"},{"q":"zij (meervoud)","a":"они́"},{"q":"zij spreken","a":"они́ говоря́т"}]},{"id":"NLRU01_0025","serial":25,"lemma":"ты","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"persoonlijk","topic":"","fields":[{"q":"jij","a":"ты"},{"q":"jij spreekt","a":"ты говори́шь"}]},{"id":"NLRU01_0026","serial":26,"lemma":"он","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"persoonlijk","topic":"","fields":[{"q":"hij","a":"он"},{"q":"hij spreekt","a":"он говори́т"}]},{"id":"NLRU01_0027","serial":27,"lemma":"она","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"personal; singular","topic":"","fields":[{"q":"zij","a":"она́"},{"q":"zij spreekt","a":"она́ говори́т"}]},{"id":"NLRU01_0028","serial":28,"lemma":"что","freq":1,"lvl":"A1","gcat":"voegwoord","gtag":"","topic":"","fields":[{"q":"dat","a":"что"},{"q":"Ik denk dat hij thuis is.","a":"Я ду́маю, что он до́ма."}]},{"id":"NLRU01_0029","serial":29,"lemma":"что?","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"vragend","topic":"","fields":[{"q":"wat?","a":"что?"},{"q":"Wat is dit?","a":"Что э́то?"}]},{"id":"NLRU01_0030","serial":30,"lemma":"с (со)","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ instrumentalis","topic":"","fields":[{"q":"met","a":"с (со)"},{"q":"met citroen","a":"с лимо́ном"}]},{"id":"NLRU01_0031","serial":31,"lemma":"с (со)","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ genitief","topic":"","fields":[{"q":"van(af)","a":"с (со)"},{"q":"van de tafel","a":"со стола́"}]},{"id":"NLRU01_0032","serial":32,"lemma":"это","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"aanwijzend; onzijdig","topic":"","fields":[{"q":"dit","a":"э́то"},{"q":"Dit is een vliegtuig.","a":"э́то самолёт."}]},{"id":"NLRU01_0033","serial":33,"lemma":"а","freq":1,"lvl":"A1","gcat":"voegwoord","gtag":"","topic":"","fields":[{"q":"maar","a":"а"}]},{"id":"NLRU01_0034","serial":34,"lemma":"весь","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"bepalend","topic":"","fields":[{"q":"alles","a":"весь"}]},{"id":"NLRU01_0035","serial":35,"lemma":"они","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"persoonlijk","topic":"","fields":[{"q":"zij (mv.)","a":"они́"}]},{"id":"NLRU01_0036","serial":36,"lemma":"как","freq":1,"lvl":"A1","gcat":"bijwoord","gtag":"vragend","topic":"","fields":[{"q":"hoe","a":"как"}]},{"id":"NLRU01_0037","serial":37,"lemma":"как","freq":1,"lvl":"A1","gcat":"voegwoord","gtag":"","topic":"","fields":[{"q":"zoals","a":"как"}]},{"id":"NLRU01_0038","serial":38,"lemma":"мы","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"persoonlijk","topic":"","fields":[{"q":"wij","a":"мы"}]},{"id":"NLRU01_0039","serial":39,"lemma":"к","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ datief","topic":"","fields":[{"q":"naar","a":"к + dat."}]},{"id":"NLRU01_0040","serial":40,"lemma":"у","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ genitief","topic":"","fields":[{"q":"bij","a":"у + gen."}]},{"id":"NLRU01_0041","serial":41,"lemma":"ты","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"persoonlijk","topic":"","fields":[{"q":"jij","a":"ты"}]},{"id":"NLRU01_0042","serial":42,"lemma":"этот","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"aanwijzend","topic":"","fields":[{"q":"deze","a":"э́тот"}]},{"id":"NLRU01_0043","serial":43,"lemma":"вы","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"persoonlijk","topic":"","fields":[{"q":"jullie","a":"вы"}]},{"id":"NLRU01_0044","serial":44,"lemma":"за","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ accusatief","topic":"","fields":[{"q":"voor","a":"за + acc."},{"q":"betalen voor het water","a":"плати́ть за во́дку"}]},{"id":"NLRU01_0045","serial":45,"lemma":"за","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ instrumentalis","topic":"","fields":[{"q":"achter","a":"за + instr."},{"q":"achter het huis","a":"за до́мом"}]},{"id":"NLRU01_0046","serial":46,"lemma":"тот","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"aanwijzend","topic":"","fields":[{"q":"die","a":"тот"}]},{"id":"NLRU01_0047","serial":47,"lemma":"но","freq":1,"lvl":"A1","gcat":"voegwoord","gtag":"","topic":"","fields":[{"q":"maar","a":"но"}]},{"id":"NLRU01_0048","serial":48,"lemma":"по","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ datief","topic":"","fields":[{"q":"op, langs, over","a":"по + dat."},{"q":"Ik wandel over straat","a":"Я гуля́ю по у́лице."}]},{"id":"NLRU01_0049","serial":49,"lemma":"из","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ genitief","topic":"","fields":[{"q":"van, uit","a":"из"}]},{"id":"NLRU01_0050","serial":50,"lemma":"о (об, обо)","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ prepositionalis","topic":"","fields":[{"q":"over","a":"о (об, обо́)"}]},{"id":"NLRU01_0051","serial":51,"lemma":"свой","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"bezittelijk","topic":"","fields":[{"q":"zijn","a":"свой"}]},{"id":"NLRU01_0052","serial":52,"lemma":"так","freq":1,"lvl":"A1","gcat":"bijwoord","gtag":"","topic":"","fields":[{"q":"zo","a":"так"}]},{"id":"NLRU01_0053","serial":53,"lemma":"один","freq":1,"lvl":"A1","gcat":"telwoord","gtag":"","topic":"","fields":[{"q":"één","a":"оди́н"}]},{"id":"NLRU01_0054","serial":54,"lemma":"вот","freq":1,"lvl":"A1","gcat":"partikel","gtag":"","topic":"","fields":[{"q":"ziehier","a":"вот"}]},{"id":"NLRU01_0055","serial":55,"lemma":"который","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"relative","topic":"","fields":[{"q":"die","a":"кото́рый"}]},{"id":"NLRU01_0056","serial":56,"lemma":"который","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"vragend","topic":"","fields":[{"q":"welk","a":"кото́рый"}]},{"id":"NLRU01_0057","serial":57,"lemma":"наш","freq":1,"lvl":"A1","gcat":"voornaamwoord","gtag":"bezittelijk","topic":"","fields":[{"q":"ons","a":"наш"}]},{"id":"NLRU01_0058","serial":58,"lemma":"только","freq":1,"lvl":"A1","gcat":"bijwoord","gtag":"","topic":"","fields":[{"q":"slechts, alleen","a":"то́лько"}]},{"id":"NLRU01_0059","serial":59,"lemma":"ещё","freq":1,"lvl":"A1","gcat":"bijwoord","gtag":"","topic":"","fields":[{"q":"nog (steeds)","a":"ещё"}]},{"id":"NLRU01_0060","serial":60,"lemma":"от","freq":1,"lvl":"A1","gcat":"voorzetsel","gtag":"+ genitief","topic":"","fields":[{"q":"(weg) van","a":"от"}]},{"id":"NLRU01_0061","serial":61,"lemma":"что ты будешь есть","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"wat ga jij eten","a":"что ты бу́дешь есть"}]},{"id":"NLRU01_0062","serial":62,"lemma":"ваша ванна готова","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"uw bad is klaar","a":"ва́ша ва́нна гото́ва"}]},{"id":"NLRU01_0063","serial":63,"lemma":"расскажи мне об этом","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"vertel me erover","a":"расскажи́ мне об э́том"}]},{"id":"NLRU01_0064","serial":64,"lemma":"ты можешь решить эту проблему","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"je kunt dit probleem oplossen","a":"ты мо́жешь реши́ть э́ту пробле́му"}]},{"id":"NLRU01_0065","serial":65,"lemma":"у меня много друзей за границей","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ik heb veel vrienden in het buitenland","a":"у меня́ мно́го друзе́й за грани́цей"}]},{"id":"NLRU01_0066","serial":66,"lemma":"сейчас она занимается скрипкой","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"nu studeert ze viool","a":"сейча́с она́ занима́ется скри́пкой"}]},{"id":"NLRU01_0067","serial":67,"lemma":"это ваша первая поездка за границу","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"is dit uw eerste reis naar het buitenland","a":"э́то ва́ша пе́рвая пое́здка за грани́цу"}]},{"id":"NLRU01_0068","serial":68,"lemma":"я никого из них не знаю","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"Ik ken niemand van hen","a":"я никого́ из них не зна́ю"}]},{"id":"NLRU01_0069","serial":69,"lemma":"я занимаюсь два часа","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ik studeer twee uur","a":"я занима́юсь два часа́"}]},{"id":"NLRU01_0070","serial":70,"lemma":"это зависит от тебя","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"het hangt van jou af","a":"э́то зави́сит от тебя́"}]},{"id":"NLRU01_0071","serial":71,"lemma":"мягкий","freq":1,"lvl":"A1","gcat":"adjectief","gtag":"","topic":"","fields":[{"q":"zacht","a":"мя́гкий"}]},{"id":"NLRU01_0072","serial":72,"lemma":"активный","freq":1,"lvl":"A1","gcat":"adjectief","gtag":"","topic":"","fields":[{"q":"actief","a":"акти́вный"}]},{"id":"NLRU01_0073","serial":73,"lemma":"жёлтый","freq":1,"lvl":"A1","gcat":"adjectief","gtag":"","topic":"","fields":[{"q":"geel","a":"жёлтый"}]},{"id":"NLRU01_0074","serial":74,"lemma":"мокрый","freq":1,"lvl":"A1","gcat":"adjectief","gtag":"","topic":"","fields":[{"q":"nat","a":"мо́крый"}]},{"id":"NLRU01_0075","serial":75,"lemma":"винительный падеж","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"accusatieve naamval","a":"вини́тельный паде́ж"}]},{"id":"NLRU01_0076","serial":76,"lemma":"она совершенно права","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ze heeft volkomen gelijk","a":"она́ соверше́нно пра́ва"}]},{"id":"NLRU01_0077","serial":77,"lemma":"вчера я поймал трёх рыб","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"gisteren ving ik drie vissen","a":"вчера́ я пойма́л трёх рыб"}]},{"id":"NLRU01_0078","serial":78,"lemma":"я буду с тобой через секунду","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ik ben zo bij je","a":"я бу́ду с тобо́й че́рез секу́нду"}]},{"id":"NLRU01_0079","serial":79,"lemma":"небо","freq":1,"lvl":"A1","gcat":"zelfst. nmw.","gtag":"onzijdig","topic":"","fields":[{"q":"lucht, hemel","a":"не́бо"}]},{"id":"NLRU01_0080","serial":80,"lemma":"они никогда не лгут","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ze liegen nooit","a":"они́ никогда́ не лгут"}]},{"id":"NLRU01_0081","serial":81,"lemma":"викторина","freq":1,"lvl":"A1","gcat":"zelfst. nmw.","gtag":"vrouwelijk","topic":"","fields":[{"q":"quiz","a":"виктори́на"}]},{"id":"NLRU01_0082","serial":82,"lemma":"шланг","freq":1,"lvl":"A1","gcat":"zelfst. nmw.","gtag":"mannelijk","topic":"","fields":[{"q":"tuinslang, waterslang","a":"шланг"}]},{"id":"NLRU01_0083","serial":83,"lemma":"труба","freq":1,"lvl":"A1","gcat":"zelfst. nmw.","gtag":"vrouwelijk","topic":"","fields":[{"q":"buis, trompet","a":"труба́"}]},{"id":"NLRU01_0084","serial":84,"lemma":"они заставили меня пойти туда","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ze dwongen mij daarheen te gaan","a":"они́ заста́вили меня́ пойти́ туда́"}]},{"id":"NLRU01_0085","serial":85,"lemma":"Париж столица франции","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"Parijs is de hoofdstad van frankrijk","a":"Пари́ж столи́ца фра́нции"}]},{"id":"NLRU01_0086","serial":86,"lemma":"губы","freq":1,"lvl":"A1","gcat":"zelfst. nmw.","gtag":"vrouwelijk","topic":"","fields":[{"q":"lippen","a":"губы́"}]},{"id":"NLRU01_0087","serial":87,"lemma":"он сегодня вернулся из Сиднея","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"hij is vandaag teruggekeerd uit Sydney","a":"он сего́дня верну́лся из Си́днея"}]},{"id":"NLRU01_0088","serial":88,"lemma":"водитель спал в машине","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"de bestuurder lag in de auto te slapen","a":"води́тель спал в маши́не"}]},{"id":"NLRU01_0089","serial":89,"lemma":"я должен гладить свою рубашку","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ik moet mijn overhemd strijken","a":"я до́лжен гла́дить свою́ руба́шку"}]},{"id":"NLRU01_0090","serial":90,"lemma":"мне нужен новый велосипед","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ik heb een nieuwe fiets nodig","a":"мне ну́жен но́вый велосипе́д"}]},{"id":"NLRU01_0091","serial":91,"lemma":"они встретили меня с улыбкой","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ze begroetten me met een glimlach","a":"они́ встре́тили меня́ с улы́бкой"}]},{"id":"NLRU01_0092","serial":92,"lemma":"сегодня понедельник","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"vandaag is het maandag","a":"сего́дня понеде́льник"}]},{"id":"NLRU01_0093","serial":93,"lemma":"я вернусь","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ik zal terugkomen","a":"я верну́сь"}]},{"id":"NLRU01_0094","serial":94,"lemma":"ты закончил читать роман","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"heb je de roman uitgelezen","a":"ты зако́нчил чита́ть рома́н"}]},{"id":"NLRU01_0095","serial":95,"lemma":"у тебя сегодня небольшая жара не так ли","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"je voelt je een beetje koortsig vandaag, nietwaar?","a":"у тебя́ сего́дня небольша́я жара́ не так ли"}]},{"id":"NLRU01_0096","serial":96,"lemma":"у них свои проблемы","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"zij hebben hun eigen problemen","a":"у них свои́ пробле́мы"}]},{"id":"NLRU01_0097","serial":97,"lemma":"я не знаю где мои часы","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ik weet niet waar mijn horloge is","a":"я не зна́ю где мои́ часы́"}]},{"id":"NLRU01_0098","serial":98,"lemma":"он был терпелив","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"hij was geduldig","a":"он был терпели́в"}]},{"id":"NLRU01_0099","serial":99,"lemma":"меня только что укусил комар","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"ik ben net gebeten door een mug","a":"меня́ то́лько что укуси́л кома́р"}]},{"id":"NLRU01_0100","serial":100,"lemma":"рядом с чем-то","freq":1,"lvl":"A1","gcat":"zin","gtag":"","topic":"","fields":[{"q":"naast iets","a":"ря́дом с че́м-то"}]}];
+
+/* ═══════════════════════════════════════
+   AUTH
+   ═══════════════════════════════════════ */
+let currentUser = null;
+let RS = {}; // { lemma_id: rs_value }
+
+const $login = document.getElementById("loginScreen");
+const $app = document.getElementById("appScreen");
+const $emailInput = document.getElementById("emailInput");
+const $loginBtn = document.getElementById("loginBtn");
+const $loginMsg = document.getElementById("loginMsg");
+const $userEmail = document.getElementById("userEmail");
+
+$loginBtn.onclick = async () => {
+  const email = $emailInput.value.trim();
+  if (!email) { showMsg("Vul je e-mailadres in", "error"); return; }
+  $loginBtn.disabled = true;
+  $loginBtn.textContent = "Bezig...";
+  const { error } = await supabase.auth.signInWithOtp({ email });
+  if (error) {
+    showMsg(error.message, "error");
+  } else {
+    showMsg("Check je inbox — klik de magic link!", "ok");
+  }
+  $loginBtn.disabled = false;
+  $loginBtn.textContent = "Verstuur magic link";
+};
+
+$emailInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") $loginBtn.click();
+});
+
+function showMsg(txt, cls) {
+  $loginMsg.textContent = txt;
+  $loginMsg.className = "msg " + (cls || "");
+}
+
+// Listen for auth changes (magic link callback)
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    currentUser = session.user;
+    await loadRS();
+    startApp();
+  } else {
+    currentUser = null;
+    $login.classList.remove("hidden");
+    $app.classList.add("hidden");
+  }
+});
+
+// Check existing session on load
+(async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    await loadRS();
+    startApp();
+  }
+})();
+
+// Logout
+$userEmail.onclick = async () => {
+  if (confirm("Uitloggen?")) {
+    await supabase.auth.signOut();
+    RS = {};
+    currentUser = null;
+    $login.classList.remove("hidden");
+    $app.classList.add("hidden");
+  }
+};
+
+/* ═══════════════════════════════════════
+   SUPABASE RS SYNC
+   ═══════════════════════════════════════ */
+async function loadRS() {
+  RS = {};
+  if (!currentUser) return;
+  const { data, error } = await supabase
+    .from("user_progress")
+    .select("lemma_id, rs")
+    .eq("user_id", currentUser.id);
+  if (data) {
+    for (const row of data) RS[row.lemma_id] = row.rs;
+  }
+}
+
+async function saveRS(updates) {
+  // updates: { lemma_id: delta } e.g. { "NLRU01_0001": +1, "NLRU01_0005": -1 }
+  if (!currentUser) return;
+  const upserts = [];
+  for (const [lemma_id, delta] of Object.entries(updates)) {
+    const oldRS = RS[lemma_id] ?? 0;
+    const newRS = Math.max(0, oldRS + delta);
+    RS[lemma_id] = newRS;
+    upserts.push({
+      user_id: currentUser.id,
+      lemma_id,
+      rs: newRS,
+      updated_at: new Date().toISOString()
+    });
+  }
+  if (upserts.length > 0) {
+    await supabase
+      .from("user_progress")
+      .upsert(upserts, { onConflict: "user_id,lemma_id" });
+  }
+}
+
+function getRS(id) { return RS[id] ?? 0; }
+
+/* ═══════════════════════════════════════
+   DECK ASSEMBLY
+   ═══════════════════════════════════════ */
+const DECK_SIZE = 10;
+
+function assembleDeck() {
+  const pool = LEMMAS.map(l => ({ ...l, _rs: getRS(l.id) }));
+  pool.sort((a, b) => {
+    if (a._rs !== b._rs) return a._rs - b._rs;
+    if (a.serial !== b.serial) return a.serial - b.serial;
+    return 0;
+  });
+  return pool.slice(0, DECK_SIZE);
+}
+
+/* ═══════════════════════════════════════
+   PIPE ENGINE
+   ═══════════════════════════════════════
+
+   pipe[]: array of 10 slots, each slot is a pipe entry:
+   {
+     lemma: <lemma object>,
+     fieldIdx: 0,
+     dirtyCount: 0,       // how many times Opnieuw happened across all passes
+     isRedeeming: false,   // true = this is the redemption pass
+     completed: false       // true = this lemma had a clean pass
+   }
+
+   The user always studies pipe[0].
+   After a clean pass: entry moves to pipe[9] (back), shift forward.
+   After a dirty pass:  restudy from field 0 immediately, then move to pipe[3], shift.
+   Deck is done when all entries have completed === true.
+*/
+
+let pipe = [];
+let showingAnswer = false;
+let currentEntry = null;
+let deckDirtyMap = {}; // { lemma_id: dirtyCount } for RS calc at end
+
+function initPipe() {
+  const deck = assembleDeck();
+  deckDirtyMap = {};
+  pipe = deck.map(lemma => ({
+    lemma,
+    fieldIdx: 0,
+    dirtyCount: 0,
+    currentPassDirty: false,
+    isRedeeming: false,
+    completed: false
+  }));
+}
+
+function countCompleted() {
+  return pipe.filter(e => e.completed).length;
+}
+
+/* Move pipe[0] to a target position, shift others forward */
+function rotateTo(targetPos) {
+  const entry = pipe.shift();
+  // targetPos is 0-indexed: position 10 = index 9, position 4 = index 3
+  const insertAt = Math.min(targetPos, pipe.length);
+  pipe.splice(insertAt, 0, entry);
+}
+
+/* ═══════════════════════════════════════
+   UI
+   ═══════════════════════════════════════ */
+const $word = document.getElementById("wordText");
+const $gcat = document.getElementById("gcatBadge");
+const $gtag = document.getElementById("gtagText");
+const $gcatZone = document.getElementById("gramcatZone");
+const $mastery = document.getElementById("cornerTL");
+const $counter = document.getElementById("cornerBR");
+const $progress = document.getElementById("progressFill");
+const $btnAgain = document.getElementById("btnAgain");
+const $btnGood = document.getElementById("btnGood");
+
+function setButtonsEnabled(enabled) {
+  $btnAgain.disabled = !enabled;
+  $btnGood.disabled = !enabled;
+}
+
+function render() {
+  showingAnswer = false;
+  setButtonsEnabled(false);
+
+  currentEntry = pipe[0];
+
+  if (!currentEntry) {
+    $word.textContent = "Geen kaarten";
+    $word.className = "word-text system";
+    $gcatZone.style.visibility = "hidden";
+    return;
+  }
+
+  const lemma = currentEntry.lemma;
+  const field = lemma.fields[currentEntry.fieldIdx];
+
+  $word.textContent = field ? field.q : "—";
+  $word.className = "word-text q-state";
+
+  if (lemma.gcat) {
+    $gcatZone.style.visibility = "visible";
+    $gcat.textContent = lemma.gcat;
+    $gtag.textContent = lemma.gtag || "";
+    $gtag.style.display = lemma.gtag ? "inline" : "none";
+  } else {
+    $gcatZone.style.visibility = "hidden";
+  }
+
+  const done = countCompleted();
+  $counter.textContent = `${done} / ${DECK_SIZE}`;
+  $progress.style.width = (done / DECK_SIZE * 100) + "%";
+  $mastery.textContent = lemma.lvl + "." + String(getRS(lemma.id)).padStart(2, "0");
+}
+
+function reveal() {
+  if (showingAnswer || !currentEntry) return;
+  showingAnswer = true;
+  setButtonsEnabled(true);
+
+  const field = currentEntry.lemma.fields[currentEntry.fieldIdx];
+  $word.textContent = field ? field.a : "—";
+  $word.className = "word-text a-state";
+}
+
+async function grade(isGood) {
+  if (!currentEntry || !showingAnswer) return;
+
+  if (isGood) {
+    // Advance to next field
+    currentEntry.fieldIdx++;
+
+    if (currentEntry.fieldIdx >= currentEntry.lemma.fields.length) {
+      // All fields done for this pass
+      if (currentEntry.currentPassDirty) {
+        // This pass had errors — restudy immediately from field 0
+        currentEntry.fieldIdx = 0;
+        currentEntry.currentPassDirty = false;
+        currentEntry.isRedeeming = true;
+        // Stay at pipe[0], render field 0 again
+        render();
+        return;
+      } else {
+        // Clean pass!
+        currentEntry.completed = true;
+        currentEntry.fieldIdx = 0;
+        // Move to back of pipe (position 10 = index 9)
+        rotateTo(9);
+
+        // Check if deck is done
+        if (countCompleted() >= DECK_SIZE) {
+          await onDeckComplete();
+          return;
+        }
+      }
+    }
+    render();
+
+  } else {
+    // OPNIEUW — mark dirty
+    currentEntry.currentPassDirty = true;
+    currentEntry.dirtyCount = Math.min(currentEntry.dirtyCount + 1, 2);
+    // Track for RS calculation
+    deckDirtyMap[currentEntry.lemma.id] = Math.min(
+      (deckDirtyMap[currentEntry.lemma.id] || 0) + 1, 2
+    );
+    // Re-show same field (user must get it right)
+    render();
+  }
+}
+
+async function onDeckComplete() {
+  // Calculate RS deltas
+  const updates = {};
+  for (const entry of pipe) {
+    const id = entry.lemma.id;
+    const dirty = deckDirtyMap[id] || 0;
+    if (dirty === 0) {
+      updates[id] = +1;
+    } else if (dirty === 1) {
+      updates[id] = -1;
+    } else {
+      updates[id] = -2;
+    }
+  }
+
+  // Save to Supabase
+  await saveRS(updates);
+
+  // Show completion message
+  $word.textContent = "Deck voltooid! Laden...";
+  $word.className = "word-text system";
+  $gcatZone.style.visibility = "hidden";
+  setButtonsEnabled(false);
+  $counter.textContent = `${DECK_SIZE} / ${DECK_SIZE}`;
+  $progress.style.width = "100%";
+
+  // Start new deck after short pause
+  setTimeout(() => {
+    initPipe();
+    render();
+  }, 1500);
+}
+
+/* ═══════════════════════════════════════
+   KEYBOARD
+   ═══════════════════════════════════════ */
+document.addEventListener("keydown", e => {
+  if ($app.classList.contains("hidden")) return;
+  if (e.code === "Space" || e.code === "Enter") {
+    e.preventDefault();
+    if (!showingAnswer) reveal();
+    else grade(true);
+  }
+  if (e.code === "ArrowLeft") { e.preventDefault(); grade(false); }
+  if (e.code === "ArrowRight") { e.preventDefault(); grade(true); }
+});
+
+$btnAgain.onclick = () => grade(false);
+$btnGood.onclick = () => grade(true);
+
+/* ═══════════════════════════════════════
+   START
+   ═══════════════════════════════════════ */
+function startApp() {
+  $login.classList.add("hidden");
+  $app.classList.remove("hidden");
+  $userEmail.textContent = currentUser.email;
+  initPipe();
+  render();
+}
+</script>
+
+</body>
+</html>
