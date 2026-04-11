@@ -300,7 +300,6 @@ function initDeck(){
   showingA=false;
   $card.style.background="";
   $text.style.color="";
-  $hint.style.color="";
   render();
 }
 
@@ -396,7 +395,6 @@ function render(){
     $cBR.textContent=deckScore+"/12 \u2713";
     $card.style.background="#507693";
     $text.style.color="#ffffff";
-    $hint.style.color="rgba(255,255,255,0.6)";
 	    return;
   }
   const s=cur();
