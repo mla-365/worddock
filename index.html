@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.6";
+const WORDDOCK_VERSION = "v26.7";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -173,35 +173,6 @@ body{
   border-radius:10px;
 }
 
-/* Dropdown menu from the logo: vertical stacked items. */
-.logo-menu{
-  display:none;
-  position:absolute;
-  top:calc(100% + 6px);
-  left:50%;
-  transform:translateX(-50%);
-  background:var(--menu-bg);
-  border:1px solid var(--menu-border);
-  border-radius:12px;
-  padding:6px;
-  min-width:180px;
-  box-shadow:0 12px 32px rgba(0,0,0,0.4);
-  z-index:120;
-}
-.logo-menu.open{display:block}
-
-/* Backdrop that dims the study area while the logo menu is open — the same
-   visual resolution the panels use, so the word no longer competes with
-   the menu. Covers the viewport; the top bar and menu sit above it. */
-.menu-backdrop{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:var(--overlay-bg);
-  z-index:90;
-}
-.menu-backdrop.open{display:block}
-
 /* ─── Reusable in-app dialog ─── */
 .wd-dialog-backdrop{
   position:fixed; inset:0; z-index:1000;
@@ -239,7 +210,7 @@ body{
   padding:1px 5px;border-radius:4px;
   font-size:12.5px;
 }
-/* Optional field area — the Save-as input and the domain picker live here. */
+/* Optional field area — the Save-as input lives here. */
 .wd-dialog-field{
   margin:-8px 0 22px;
 }
@@ -274,27 +245,6 @@ body{
   background:#0a7a0a; color:#ffffff; font-weight:500;
 }
 .wd-dialog-ok:hover{ background:#0a8f0a; }
-.logo-menu-item{
-  display:block;
-  width:100%;
-  text-align:left;
-  padding:11px 14px;
-  background:transparent;
-  border:none;
-  border-radius:8px;
-  color:var(--menu-ink);
-  font-size:14px;
-  font-weight:500;
-  cursor:pointer;
-  outline:none;
-  font-family:inherit;
-}
-.logo-menu-item:hover{background:var(--menu-hover)}
-.logo-menu-sep{
-  height:1px;
-  background:var(--menu-border);
-  margin:6px 8px;
-}
 .logo:hover{background:var(--tab-hover-overlay)}
 .logo-badge{
   width:40px;
@@ -353,10 +303,6 @@ body{
 /* Spacer not needed while pills are hidden */
 .topbar-spacer{ display:none; }
 
-/* Domain/List/Filter pills hidden for now — only WordDock shows in the top
-   zone. The selectors will return (in some form) when navigation is built. */
-#tabDomain, #tabList, #tabFilter{ display:none; }
-
 .tab{
   display:flex;align-items:center;justify-content:center;
   width:140px;
@@ -393,12 +339,6 @@ body{
   max-width:100%;
   line-height:1.4;
 }
-
-/* Per-tab backgrounds: green anchors the Domain (current working context),
-   the rest are graduated navy shades. */
-#tabDomain   { background:var(--domain-bg); }
-#tabList     { background:var(--tab-bg-2); }
-#tabFilter   { background:var(--tab-bg-3); }
 
 /* ─── Stage: a context bar (tag), a centered card (the word), and a
        bottom action zone (buttons + progress). The card is the Q/A zone;
@@ -582,77 +522,6 @@ body{
   overflow:hidden;
   box-shadow:0 10px 40px rgba(0,0,0,0.45);
 }
-.panel-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:14px 18px;
-  border-bottom:1px solid var(--panel-border);
-}
-.panel-title{font-size:15px;font-weight:600;color:var(--panel-ink)}
-.panel-close{
-  background:none;border:none;cursor:pointer;
-  font-size:20px;color:var(--tab-inactive);padding:0 4px;
-}
-.panel-body{
-  padding:18px;
-  overflow-y:auto;
-  flex:1;
-}
-.placeholder-note{
-  font-size:13px;
-  color:var(--tab-inactive);
-  line-height:1.5;
-}
-.placeholder-note strong{color:var(--panel-ink)}
-
-/* ─── List panel internal styling (Layer 2) ─── */
-.list-section{
-  margin-bottom:20px;
-}
-.list-section-title{
-  font-size:11px;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  color:var(--tab-inactive);
-  margin-bottom:8px;
-  font-weight:600;
-}
-.list-entries{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
-.list-entry{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:10px 12px;
-  border-radius:8px;
-  font-size:14px;
-  color:var(--panel-ink);
-  cursor:pointer;
-  background:rgba(255,255,255,0.03);
-  transition:background-color .12s;
-}
-.list-entry:hover{background:rgba(255,255,255,0.07)}
-.list-entry.active{
-  background:rgba(0,102,0,0.25);
-  border:1px solid rgba(0,102,0,0.55);
-  padding:9px 11px;
-}
-.list-entry-tag{
-  font-size:11px;
-  color:var(--tab-inactive);
-  margin-left:8px;
-  letter-spacing:.05em;
-}
-.list-entry.active .list-entry-tag{color:var(--panel-ink);opacity:.75}
-.list-actions{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
 .list-btn{
   background:var(--btn-good-bg);
   color:var(--btn-ink);
@@ -707,13 +576,6 @@ body{
   border-radius:8px;
 }
 .info-close:hover{color:var(--ink);background:var(--menu-hover)}
-.info-intro{
-  font-size:15px !important;
-  color:var(--ink) !important;
-  line-height:1.55;
-  margin-bottom:26px;
-  padding-top:20px;       /* clear the corner close button */
-}
 .infopage h3{
   font-size:15px;
   font-weight:600;
@@ -734,32 +596,6 @@ body{
   border-radius:3px;
   font-size:.92em;
   color:#c0c8d2;
-}
-.info-more{
-  margin:4px 0 10px;
-}
-.info-more summary{
-  font-size:13px;
-  color:var(--tag);
-  cursor:pointer;
-  outline:none;
-  list-style:none;
-  user-select:none;
-  padding:2px 0;
-}
-.info-more summary::-webkit-details-marker{display:none}
-.info-more summary::before{
-  content:"▸ ";
-  font-size:11px;
-}
-.info-more[open] summary::before{
-  content:"▾ ";
-}
-.info-more summary:hover{color:var(--ink)}
-.info-more p{
-  margin-top:8px;
-  padding-left:14px;
-  border-left:2px solid var(--menu-border);
 }
 .infopage .warn{
   background:rgba(212,164,74,0.12);
@@ -872,12 +708,6 @@ body{
 .browser.open{display:flex}
 .browser-head,
 .browser-panes,
-.browser-foot{
-  width:100%;
-  max-width:860px;       /* centered column, not full-bleed */
-  margin-left:auto;
-  margin-right:auto;
-}
 .browser-head{
   display:flex;
   align-items:stretch;
@@ -957,35 +787,6 @@ body{
 .about-rules li{margin-bottom:8px;}
 .about-rules code{font-size:12.5px;}
 
-.rail-meta{
-  flex-shrink:0;
-  margin-top:14px;
-  padding-top:12px;
-  border-top:1px solid var(--menu-border);
-}
-/* Footer items are NAVIGATION, so they look like the domain folders above —
-   left-aligned, same size. The centered-hairline treatment is reserved for
-   zone LABELS, which aren't clickable. Shape follows behaviour. */
-.rail-meta-item{
-  display:flex;align-items:center;
-  padding:9px 11px;border-radius:9px;
-  font-family:'Poppins',sans-serif;
-  font-size:14px;color:#c0c8d2;
-  cursor:pointer;margin-bottom:2px;
-  transition:background-color .12s,color .12s;
-  border:2px solid transparent;
-  user-select:none;
-}
-.rail-meta-item:hover{background:var(--menu-hover);color:var(--ink)}
-.rail-meta-item.active{
-  background:var(--browsing-bg);
-  border:2px solid rgba(173,196,224,0.85);
-  color:var(--ink);
-}
-.rail-label{
-  font-size:10px;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--tag);margin:6px 8px 10px;
-}
 /* Zone headers (ACTIVE / MY LISTS / MORE) — centered, with hairlines running
    out to each side. Centering is what makes them read as headers: the domains
    below them are larger and often bold, so a small left-aligned label got lost
@@ -1078,7 +879,6 @@ body{
 .list-row.active .list-row-cue{color:#fff}
 .list-row-main{min-width:0}
 .list-row-name{font-size:15px;color:var(--ink);font-weight:500;margin-bottom:3px}
-.list-row-name .dim{color:var(--tag);font-weight:400}
 /* Global-actions zone beneath the lists: sync (primary) then backup. Set off
    from the list rows by a top border and spacing, so it reads as a distinct
    page-level zone rather than another list item. */
@@ -1122,55 +922,6 @@ body{
   .list-row-cue{opacity:.65}
 }
 .list-row-actions{display:flex;gap:3px;flex-shrink:0;margin-left:10px}
-/* Scores view — three columns: domain · breadth · depth. The sum is the number
-   people watch go up, so it gets the weight; the word count keeps it honest. */
-/* Action button rows (Progress). This had no rule at all, so the
-   buttons sat flush against each other. */
-.setting-actions{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  margin-top:14px;
-}
-.scores-table{
-  margin:6px 0 22px;
-}
-.scores-line{
-  display:flex;align-items:baseline;gap:12px;
-  padding:11px 2px;
-  border-bottom:1px solid var(--menu-border);
-  font-size:14px;
-}
-.scores-domain{flex:1;color:var(--ink);font-weight:600}
-.scores-words{color:var(--tag);font-size:13px}
-.scores-sum{
-  min-width:64px;text-align:right;
-  color:var(--ink);font-weight:700;
-  font-variant-numeric:tabular-nums;
-}
-/* Coverage percentage — the headline number on the Progress page. */
-.scores-cov{
-  min-width:56px;text-align:right;
-  color:var(--ink);font-weight:700;
-  font-variant-numeric:tabular-nums;
-}
-/* Orphan pools — real progress, but for a list that isn't here. They come LAST
-   and they look quiet: bold is for live domains. A dead thing that shouts over
-   the backup warning has the hierarchy exactly backwards. */
-.scores-orphan-head{
-  margin:34px 0 8px;
-  padding-top:22px;
-  border-top:1px solid var(--menu-border);
-  font-size:10px;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--tag);
-}
-.scores-orphan .scores-domain{font-weight:400;color:var(--tag)}
-.scores-orphan .scores-sum{font-weight:400;color:var(--tag)}
-.scores-forget{
-  margin-left:12px;flex-shrink:0;
-  background:none;border:none;cursor:pointer;
-  color:var(--tag);padding:2px 6px;border-radius:7px;
-}
 .list-row-actions button{
   background:none;border:none;color:var(--tag);
   font-size:19px;line-height:1;cursor:pointer;
@@ -1247,18 +998,6 @@ body{
   background:var(--menu-hover);
 }
 .import-rules-help:hover .rules-word{max-width:170px;opacity:1}
-/* Info page: the file-requirements checklist. */
-.info-rules-title{
-  margin:22px 0 6px;font-size:15px;color:var(--ink);
-}
-.info-rules{
-  margin:0 0 12px;padding-left:20px;
-  line-height:1.75;
-}
-.info-rules li{margin-bottom:7px}
-.info-rules-note{
-  font-size:13px;color:var(--tag);font-style:italic;
-}
 .upload-row{
   position:relative;
   margin-top:6px;
@@ -1281,7 +1020,6 @@ body{
 .detail-view .infopage-inner{max-width:none;margin:0;padding:0}
 .detail-view .info-close{display:none}   /* close handled by logo toggle / back */
 .detail-view .settings-title{display:none}  /* pane header already shows the title */
-.detail-view .info-intro{padding-top:0}     /* fix #2: no extra top push in panes */
 
 /* Mobile: stack to tabs (handled with a class toggle in JS) */
 @media (max-width:560px){
@@ -1310,8 +1048,8 @@ body{
   }
   .browser.show-detail .browser-head-detail{flex:1 1 auto}
 
-  /* Touch targets: rail rows and footer items need a thumb-sized hit area. */
-  .folder,.rail-meta-item,.rail-import{min-height:46px;display:flex;align-items:center}
+  /* Touch targets: rail rows need a thumb-sized hit area. */
+  .folder,.rail-import{min-height:46px;display:flex;align-items:center}
 }
 </style>
 </head>
@@ -1324,30 +1062,20 @@ body{
       <span class="logo-badge">W</span>
       <span class="logo-word">ordDock</span>
     </button>
-    <div class="logo-hover-list" id="logoHoverList">
+    <div class="logo-hover-list">
       <div class="logo-hover-label">Studying now:</div>
       <div id="logoHoverName"></div>
     </div>
-    <!-- logo menu retired: the logo now toggles study <-> browser directly.
-         Empty element kept so existing JS refs stay valid (no-op). -->
-    <div class="logo-menu" id="logoMenu" hidden></div>
   </div>
-  <!-- hidden selector pills retired with the menu; kept hidden for any legacy refs -->
   <div class="topbar-spacer"></div>
-  <button class="tab" id="tabDomain" data-tab="domain" hidden><span class="tab-content" id="tabDomainValue">—</span></button>
-  <button class="tab" id="tabList" data-tab="list" hidden><span class="tab-content" id="tabListValue">—</span></button>
-  <button class="tab" id="tabFilter" data-tab="filter" hidden><span class="tab-content" id="tabFilterValue">No filter</span></button>
 </div>
-
-<!-- backdrop retired with the menu; kept (no-op) so JS refs stay valid -->
-<div class="menu-backdrop" id="menuBackdrop" hidden></div>
 
 <!-- ─── Reusable in-app dialog (replaces native confirm) ─── -->
 <div class="wd-dialog-backdrop" id="wdDialogBackdrop" hidden>
   <div class="wd-dialog" role="dialog" aria-modal="true">
     <div class="wd-dialog-title" id="wdDialogTitle"></div>
     <div class="wd-dialog-body" id="wdDialogBody"></div>
-    <!-- Optional field area: used by the Save-as and domain-picker dialogs.
+    <!-- Optional field area: used by the Save-as dialog.
          Hidden for a plain confirm. -->
     <div class="wd-dialog-field" id="wdDialogField" hidden>
       <input type="text" id="wdDialogInput" class="wd-dialog-input" autocomplete="off" spellcheck="false">
@@ -1433,7 +1161,7 @@ body{
   <div class="browser-head">
     <div class="browser-head-rail clickable">About</div>
     <div class="browser-head-detail">
-      <span class="surface-title" id="aboutPaneTitle">WordDock</span>
+      <span class="surface-title">WordDock</span>
     </div>
   </div>
   <div class="browser-panes">
@@ -2334,9 +2062,7 @@ function switchActiveList(listId){
   if (list.domain !== DOMAIN_RUNTIME){
     DOMAIN_RUNTIME = list.domain;
     loadRS();   // re-reads wd_rs_<domain>
-    $tabDomainValue.textContent = DOMAIN_RUNTIME;
   }
-  $tabListValue.textContent = activeListName;
   document.getElementById("logoHoverName").textContent =
     DOMAIN_RUNTIME + "\u00B7" + activeListName;
   saveLastList(list.listId);   // resume here on the next boot
@@ -2362,9 +2088,6 @@ function paintCounter(score, done){
   $counterNum.innerHTML =
     '<span class="counter-n">' + score + "</span>/12" + (done ? " \u2713" : "");
 }
-const $tabDomainValue = document.getElementById("tabDomainValue");
-const $tabListValue   = document.getElementById("tabListValue");
-const $tabFilterValue = document.getElementById("tabFilterValue");
 
 /* ─── Domain surface ─── */
 /* MY LISTS is NOT a domain — it is a display ZONE in the rail that gathers
@@ -2640,10 +2363,6 @@ document.addEventListener("keydown", e => {
     if (e.key === "Escape") closeAllSurfaces();
     return;
   }
-  if (document.getElementById("logoMenu").classList.contains("open")) {
-    if (e.key === "Escape") closeLogoMenu();
-    return;
-  }
   if (e.key === " " || e.key === "Enter"){
     e.preventDefault();
     if (deckDone)  { initDeck(); return; }
@@ -2659,10 +2378,7 @@ document.addEventListener("keydown", e => {
 
 /* ─── Tabs & panels ─── */
 const tabs = {
-  wd:     document.getElementById("tabWordDock"),
-  domain: document.getElementById("tabDomain"),
-  list:   document.getElementById("tabList"),
-  filter: document.getElementById("tabFilter")
+  wd: document.getElementById("tabWordDock")
 };
 const overlays = {};   // (all overlays retired; kept empty so loops are no-ops)
 const $domainpage = document.getElementById("domainpage");
@@ -2670,7 +2386,6 @@ const $aboutbrowser = document.getElementById("aboutbrowser");
 const $domainCurrent = document.getElementById("domainCurrent");
 const $domainUniverse = document.getElementById("domainUniverse");
 const $listbrowser = document.getElementById("listbrowser");
-const $logoMenu = document.getElementById("logoMenu");
 
 /* ─── In-app confirm dialog (promise-based; replaces native confirm) ─── */
 function wdConfirm(title, body, okLabel = "OK", cancelLabel = "Cancel", isHtml = false){
@@ -2845,17 +2560,6 @@ function openSurface(which){
   }
 }
 
-/* ─── Logo dropdown menu ─── */
-const $menuBackdrop = document.getElementById("menuBackdrop");
-function toggleLogoMenu(){
-  const open = $logoMenu.classList.toggle("open");
-  $menuBackdrop.classList.toggle("open", open);
-}
-function closeLogoMenu(){
-  $logoMenu.classList.remove("open");
-  $menuBackdrop.classList.remove("open");
-}
-
 // Domain page close button
 document.getElementById("domainBack").addEventListener("click", () => {
   closeAllSurfaces();
@@ -2870,45 +2574,12 @@ tabs.wd.addEventListener("click", (e) => {
     $listbrowser.classList.contains("open") ||
     $aboutbrowser.classList.contains("open") ||
     document.querySelector(".overlay.open");
-  closeLogoMenu();
   if (surfaceOpen){
     closeAllSurfaces();
   } else {
     openSurface("list");
   }
 });
-
-// Clicking the backdrop closes the menu
-$menuBackdrop.addEventListener("click", closeLogoMenu);
-
-// Menu items route to their surfaces
-$logoMenu.querySelectorAll(".logo-menu-item").forEach(item => {
-  item.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const which = item.dataset.menu;
-    closeLogoMenu();
-    if (which === "domain"){
-      openSurface("domain");
-    } else if (which === "list"){
-      openSurface("list");
-    } else if (overlays[which]){
-      openSurface(which);
-    }
-  });
-});
-
-// Clicking anywhere outside the menu closes it
-document.addEventListener("click", (e) => {
-  if (!$logoMenu.contains(e.target) && !tabs.wd.contains(e.target)){
-    closeLogoMenu();
-  }
-});
-
-// The pills are hidden (nav goes through the logo menu). These remain wired
-// in case the pills are ever shown again — each just opens its surface.
-tabs.domain.addEventListener("click", () => openSurface("domain"));
-tabs.list  .addEventListener("click", () => openSurface("list"));
-tabs.filter.addEventListener("click", () => openSurface("filter"));
 
 // close affordances
 document.querySelectorAll("[data-close]").forEach(b =>
@@ -4107,8 +3778,6 @@ function readLastList(){
   resolveIdLists(bootDomain, fullRows);   // stored slices of this domain can now resolve
 
   loadRS();
-  $tabDomainValue.textContent = DOMAIN_RUNTIME;
-  $tabFilterValue.textContent = "No filter";
 
   // Resume the last list if it still exists; otherwise the domain's Full-List.
   const resume = (wanted && LISTS[wanted]) ? wanted : ("embedded_" + bootDomain);
