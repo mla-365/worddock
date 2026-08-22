@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.7";
+const WORDDOCK_VERSION = "v26.8";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -707,7 +707,12 @@ body{
 }
 .browser.open{display:flex}
 .browser-head,
-.browser-panes,
+.browser-panes{
+  width:100%;
+  max-width:860px;       /* centered column, not full-bleed */
+  margin-left:auto;
+  margin-right:auto;
+}
 .browser-head{
   display:flex;
   align-items:stretch;
