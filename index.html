@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.9";
+const WORDDOCK_VERSION = "v26.10";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1247,18 +1247,33 @@ const LISTS_DIR = "lists/";
 const catalog = {
   // The list of available masters. Adding a domain = adding an entry here
   // plus hosting its <domain>.json file next to index.html.
+  //
+  // No typed row counts. A domain's size is known only from its file: live
+  // once fetched this session (loadMaster sets rowCount), or remembered in
+  // localStorage from an earlier fetch in this browser (knownCount). Until
+  // one of those exists the size is null and the folder renders bare —
+  // a hand-typed number would drift as the corpus grows, and a mastery
+  // percentage against a wrong total is a quiet lie.
   _domains: [
-    { domain: "NL-RU", display: { EN: "Dutch → Russian", NL: "Nederlands → Russisch" }, rowCount: 675 },
-    { domain: "NL-IT", display: { EN: "Dutch → Italian", NL: "Nederlands → Italiaans" }, rowCount: 22 },
-    { domain: "NL-FR", display: { EN: "Dutch → French", NL: "Nederlands → Frans" }, rowCount: 6 },
-    { domain: "NL-LA", display: { EN: "Dutch → Latin", NL: "Nederlands → Latijn" }, rowCount: 10 }
+    { domain: "NL-RU", display: { EN: "Dutch → Russian", NL: "Nederlands → Russisch" } },
+    { domain: "NL-IT", display: { EN: "Dutch → Italian", NL: "Nederlands → Italiaans" } },
+    { domain: "NL-FR", display: { EN: "Dutch → French", NL: "Nederlands → Frans" } },
+    { domain: "NL-LA", display: { EN: "Dutch → Latin", NL: "Nederlands → Latijn" } }
   ],
+  // The remembered size: written by loadMaster on every successful fetch,
+  // so it is at most one corpus-edit out of date and heals at the next visit.
+  knownCount(domain){
+    try {
+      const n = parseInt(localStorage.getItem("wd_rowcount_" + domain), 10);
+      return Number.isInteger(n) && n > 0 ? n : null;
+    } catch { return null; }
+  },
   manifest(){
     return this._domains.map(d => ({
       domain: d.domain,
       display: d.display,
       version: SCHEMA_VERSION,
-      rowCount: d.rowCount
+      rowCount: Number.isInteger(d.rowCount) ? d.rowCount : this.knownCount(d.domain)
     }));
   },
   async loadMaster(domain){
@@ -1276,18 +1291,16 @@ const catalog = {
     if (!resp.ok) throw new Error("Could not fetch " + path + " (HTTP " + resp.status + ")");
     const rows = await resp.json();
 
-    // The file has arrived, so the typed rowCount above is now the second-best
-    // answer to a question we can answer exactly. Overwrite it.
-    //
-    // rowCount is the denominator of the mastery percentage, and it is typed by
-    // hand when a domain is added. Grow a list without editing that number and
-    // the percentage reports against a total that no longer exists — quietly,
-    // with nothing on screen looking wrong. Letting the corpus correct the
-    // catalog removes the chance to forget, rather than asking us to remember.
-    // The typed number survives only as a placeholder for a domain nobody has
-    // opened yet.
+    // The file has arrived — the one exact answer to "how many rows". Keep it
+    // twice: on the entry for this session (the live count), and in
+    // localStorage for every future session in this browser (the remembered
+    // count that knownCount reads). The corpus informs the catalog; nothing
+    // is typed, so nothing can drift.
     const entry = this._domains.find(d => d.domain === domain);
-    if (entry && Array.isArray(rows)) entry.rowCount = rows.length;
+    if (entry && Array.isArray(rows)){
+      entry.rowCount = rows.length;
+      try { localStorage.setItem("wd_rowcount_" + domain, String(rows.length)); } catch {}
+    }
 
     return rows;
   },
