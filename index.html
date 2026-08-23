@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.8";
+const WORDDOCK_VERSION = "v26.9";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1942,7 +1942,7 @@ function renderSyncSection(root){
    Every failure is swallowed. Local storage remains the source of truth, so a
    failed sync costs nothing and the next foreground heals it. */
 
-const SYNC_API = "https://worddock-sync.michellanssens.workers.dev";
+const SYNC_API = "https://sync.worddock.app";
 let syncBusy = false;
 
 function allPools(){
@@ -2015,8 +2015,7 @@ async function syncPush(){
   if (!key) return;
   const body = JSON.stringify({
     key,
-    progress: allPools(),
-    lastList: readLastList() || null
+    progress: allPools()
   });
   try {
     // keepalive lets the request survive the page being backgrounded or closed
