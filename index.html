@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.10";
+const WORDDOCK_VERSION = "v26.11";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -622,19 +622,12 @@ body{
   color:#9aa3b0;
 }
 
-/* Scores backup: action row + message */
+/* Sync section: action row */
 .scores-actions{
   display:flex;
   gap:10px;
   flex-wrap:wrap;
   margin-top:12px;
-}
-.scores-msg{
-  font-size:13px;
-  line-height:1.5;
-  color:var(--tag);
-  margin-top:10px;
-  min-height:1em;
 }
 
 /* ─── Domain page ─── */
@@ -770,6 +763,7 @@ body{
 .browser-footer{
   text-align:center;padding:16px 0 26px;
 }
+.sync-anchor{display:inline-block;margin-bottom:6px}
 .browser-footer a{
   color:var(--counter);text-decoration:none;font-size:13px;
 }
@@ -884,29 +878,12 @@ body{
 .list-row.active .list-row-cue{color:#fff}
 .list-row-main{min-width:0}
 .list-row-name{font-size:15px;color:var(--ink);font-weight:500;margin-bottom:3px}
-/* Global-actions zone beneath the lists: sync (primary) then backup. Set off
-   from the list rows by a top border and spacing, so it reads as a distinct
+/* Global-actions zone beneath the lists: the sync section. Set off from the
+   list rows by a top border and spacing, so it reads as a distinct
    page-level zone rather than another list item. */
-.browser-global-zone{
-  margin-top:26px;padding-top:22px;
-  border-top:1px solid var(--menu-border);
-}
-/* The zone already draws a top border, so its FIRST section heading must not
-   draw its own — that stacked two lines and doubled the gap above "Sync". */
+/* An overlay panel's FIRST section heading must not draw its own top border. */
 .gz-first .section-title:first-child{
   border-top:none;padding-top:0;margin-top:0;
-}
-.gz-backup{margin-top:8px}
-.gz-backup-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.gz-info-toggle{
-  width:26px;height:26px;flex-shrink:0;
-  border:1px solid var(--menu-border);border-radius:50%;
-  background:transparent;color:var(--tag);cursor:pointer;
-  font-size:13px;line-height:1;
-}
-.gz-info-toggle:hover{color:var(--ink);border-color:var(--ink)}
-.gz-backup-info{
-  font-size:13px;line-height:1.55;color:#9aa3b0;margin:12px 2px 0;
 }
 
 .list-row-meta{font-size:12px;color:var(--tag)}
@@ -1139,9 +1116,7 @@ body{
         <div id="browserLists" class="browser-lists"></div>
         <div class="upload-row" id="browserUpload">+ Import a list (.xlsx)<button type="button" id="importRulesHelp" class="import-rules-help" aria-label="What a WordDock file needs"><span>?</span><span class="rules-word">What a file needs</span></button></div>
         <div id="listMessage" class="list-message"></div>
-        <!-- Global-actions zone: sync + backup. Flows beneath the lists (not
-             pinned) — page-level, since these act on ALL progress, not a list. -->
-        <div id="browserGlobalZone" class="browser-global-zone"></div>
+
       </div>
       <!-- ABOUT WORDDOCK view (content injected from the about page source) -->
     </div>
@@ -1149,10 +1124,14 @@ body{
   <!-- Site footer: opens the About surface — a twin of this browser, staying
        inside WordDock. The About logo returns to study, the same gate as here. -->
   <div class="browser-footer">
+    <!-- Sync anchor: the ONE browser-wide sync entry point. Sync is global,
+         so it lives here, not under every domain's list panel. Tapping opens
+         the sync panel (wd-dialog clothing). Placement beside vs above the
+         About link is a W11 form decision. -->
+    <a href="#" id="syncAnchor" class="sync-anchor"></a>
     <a href="#" id="aboutFooterLink">About WordDock</a>
   </div>
   <input type="file" id="fileInput" accept=".xlsx" hidden>
-  <input type="file" id="scoresFileInput" accept=".json,application/json" hidden>
 </div>
 
 <!-- ─── About WordDock (twin of the browser: same layout, same logo, same
@@ -1675,9 +1654,9 @@ function showStudyToast(text){
    Why a key rather than a magic-link email: it needs no email-sending service
    (a whole third-party dependency, an API key, a sender domain), and email
    delivery is unreliable in exactly the places a phone-first audience lives.
-   The cost is that losing every device loses the account — acceptable here,
-   because RS is a proxy for mastery, not the asset: it is rebuilt by studying,
-   and the scores file is the real backup.
+   The cost is that losing every device AND the key loses the cloud copy —
+   acceptable here, because RS is a proxy for mastery, not the asset: it is
+   rebuilt by studying, and the key kept outside the devices is the net.
 
    Alphabet excludes 0/O and 1/I/L — a key is read off one screen and typed on
    another, so characters that can be misread would cost more than the entropy
@@ -1726,7 +1705,7 @@ function clearSyncKey(){
 /* A plain text prompt. wdPromptName() is filename-specific (it validates and
    previews a list name); this is the general one. Resolves to the typed string,
    or null if cancelled. */
-function wdPrompt(title, body, placeholder, okLabel){
+function wdPrompt(title, body, placeholder, okLabel, uppercase){
   return new Promise(resolve => {
     const back   = document.getElementById("wdDialogBackdrop");
     const field  = document.getElementById("wdDialogField");
@@ -1744,6 +1723,11 @@ function wdPrompt(title, body, placeholder, okLabel){
     prev.textContent = "";
     input.value = "";
     input.placeholder = placeholder || "";
+    // Live-uppercase (sync keys): lowercase in = capitals shown, so Shift is
+    // never needed — which also sidesteps Windows' Shift+numpad arrow quirk.
+    input.oninput = uppercase
+      ? (e) => { e.target.value = e.target.value.toUpperCase(); }
+      : null;
     back.hidden = false;
     back.classList.add("open");
     requestAnimationFrame(() => requestAnimationFrame(() => input.focus()));
@@ -1768,173 +1752,6 @@ function wdPrompt(title, body, placeholder, okLabel){
     cancel.addEventListener("click", onCancel);
     input.addEventListener("keydown", onKey);
   });
-}
-
-/* The Sync section of the Progress pane. Rendered fresh each time it opens.
-
-   The comparison is not decoration: the user must be able to see, BEFORE
-   opting in, exactly what does and does not leave their browser. Off-grid is
-   the default and stays fully functional forever — sync is a convenience
-   layer, never a requirement, and saying so plainly is what makes the default
-   an honest one rather than a hidden downgrade. */
-function renderSyncSection(root){
-  if (!root) return;
-  root.innerHTML = "";
-  const key = getSyncKey();
-
-  const h = document.createElement("h2");
-  h.className = "section-title";
-  h.textContent = "Sync";
-  root.appendChild(h);
-
-  if (!key){
-    const p = document.createElement("p");
-    p.className = "setting-desc";
-    p.innerHTML =
-      "Right now your progress lives <b>only in this browser</b> \u2014 nothing " +
-      "leaves it. Turn sync on and this browser's progress is also kept on " +
-      "WordDock's server, so your other devices can pick it up.<br><br>" +
-      "There are no accounts, no email, no password. Sync uses a random key " +
-      "you carry to your other device. WordDock never learns who you are \u2014 " +
-      "only that some key has some scores.";
-    root.appendChild(p);
-
-    const warn = document.createElement("div");
-    warn.className = "warn";
-    warn.innerHTML =
-      "<strong>Sharing this computer?</strong> Progress belongs to the browser, " +
-      "so everyone studying here already shares one set of scores \u2014 and sync " +
-      "would carry all of it to your devices. If more than one person uses this " +
-      "computer, give each their own browser profile (or a different browser) " +
-      "first.";
-    root.appendChild(warn);
-
-    const actions = document.createElement("div");
-    actions.className = "scores-actions";
-
-    const on = document.createElement("button");
-    on.className = "list-btn";
-    on.type = "button";
-    on.textContent = "Turn on sync";
-    on.addEventListener("click", async () => {
-      // Claim at the server so two users can never share a key. The client
-      // generates offline, so a collision is possible in principle; this makes
-      // it impossible in fact. Retry a few times — with 853 billion keys, one
-      // collision would already be remarkable.
-      let fresh = null;
-      for (let attempt = 0; attempt < 5 && !fresh; attempt++){
-        fresh = await syncClaim(generateSyncKey());
-      }
-      if (!fresh){
-        await wdConfirm(
-          "Couldn't set up sync",
-          "Something went wrong claiming a key. Your progress is untouched \u2014 " +
-          "try again in a moment.",
-          "OK", null
-        );
-        return;
-      }
-      setSyncKey(fresh);
-      renderSyncSection(root);
-      syncPush();                        // seed the server with what's here
-      await wdConfirm(
-        "Sync is on",
-        "Your key is " + formatSyncKey(fresh) + ". On your other device open " +
-        "Sync \u2192 \u201CI have a key\u201D and type it in. " +
-        "The key stays visible here, so you can come back for it.",
-        "OK", null
-      );
-    });
-
-    const have = document.createElement("button");
-    have.className = "list-btn";
-    have.type = "button";
-    have.textContent = "I have a key";
-    have.addEventListener("click", async () => {
-      const typed = await wdPrompt(
-        "Enter your key",
-        "Type the key shown under Sync on your other device. The dash is " +
-        "optional and capitals don't matter \u2014 just the 8 characters is " +
-        "enough.",
-        "e.g. 7K2M-9XQF", "Connect"
-      );
-      if (typed === null) return;
-      const raw = normalizeSyncKey(typed);
-      if (!isValidSyncKey(raw)){
-        await wdConfirm(
-          "That key doesn't look right",
-          "A WordDock key is 8 characters, like 7K2M-9XQF. Check it " +
-          "against the other device and try again.",
-          "OK", null
-        );
-        return;
-      }
-      setSyncKey(raw);
-      renderSyncSection(root);
-      // Pull straight away: the whole point of typing a key is to see the
-      // other device's progress here, now, rather than at some later moment.
-      await syncPull();
-      renderSyncSection(root);
-      // Progress now shows inline (domain rail + list rows), so refresh the
-      // browser, not a separate pane.
-      if (browserPane === "lists") renderBrowser();
-      renderBrowserRail();
-    });
-
-    actions.appendChild(on);
-    actions.appendChild(have);
-    root.appendChild(actions);
-    return;
-  }
-
-  // ── Sync is on ──────────────────────────────────────────────────────────
-  const p = document.createElement("p");
-  p.className = "setting-desc";
-  p.textContent = "Enter the key below on another device \u2014 your progress " +
-    "will then sync to both.";
-  root.appendChild(p);
-
-  const keyBox = document.createElement("div");
-  keyBox.className = "sync-key";
-  keyBox.textContent = formatSyncKey(key);
-  root.appendChild(keyBox);
-
-  const actions = document.createElement("div");
-  actions.className = "scores-actions";
-
-  const copy = document.createElement("button");
-  copy.className = "list-btn";
-  copy.type = "button";
-  copy.textContent = "Copy key";
-  copy.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(formatSyncKey(key));
-      copy.textContent = "Copied";
-    } catch {
-      copy.textContent = "Select it above";
-    }
-    setTimeout(() => { copy.textContent = "Copy key"; }, 1600);
-  });
-
-  const off = document.createElement("button");
-  off.className = "list-btn";
-  off.type = "button";
-  off.textContent = "Turn off sync";
-  off.addEventListener("click", async () => {
-    const ok = await wdConfirm(
-      "Turn off sync?",
-      "This browser stops syncing. Your progress here is untouched, and the " +
-      "copy on the server stays \u2014 entering this key again reconnects you.",
-      "Turn off", "Keep sync on"
-    );
-    if (!ok) return;
-    clearSyncKey();
-    renderSyncSection(root);
-  });
-
-  actions.appendChild(copy);
-  actions.appendChild(off);
-  root.appendChild(actions);
 }
 
 /* ─── Sync client ──────────────────────────────────────────────────────────
@@ -2287,6 +2104,7 @@ function gradeGood(){
       localStorage.setItem(poolKey, JSON.stringify(pool));
       RS = pool;   // keep the in-memory copy in sync with the store
       markStudied(DOMAIN_RUNTIME);   // for ACTIVE ordering
+      maybeAskToKeepSafe();          // consent cascade — fires at most twice, ever
     }
     render();
     return;
@@ -2315,12 +2133,7 @@ function moveTo(targetIdx){
 function render(){
   if (deckDone){
     // The green tint and the "done" message stay — that is the reward for
-    // finishing a deck. What was removed here: the one-line backup nudge and
-    // the "back up now?" celebration prompt that used to appear on top of it.
-    // Backup is no longer pushed at the user; it is a choice they make on the
-    // Progress page, where the passive "since last backup" number is the only
-    // signal. An interruption that fires on a schedule is exactly the kind of
-    // active nag we set out to remove.
+    // finishing a deck.
     $card.classList.add("deck-done");
     $cardTag.textContent  = "";
     paintCounter(deckScore, true);
@@ -2794,46 +2607,361 @@ function listCoverage(list){
   return (points / (list.rows.length * MASTERY_RS)) * 100;
 }
 
-/* The global-actions zone — sync and backup — flowing beneath the lists.
+/* ── Sync: one browser-wide state, one quiet door ─────────────────────────
+   Sync is global (it acts on ALL progress), so it no longer renders under
+   every domain's list panel. Its home is the footer anchor; tapping opens
+   this panel in wd-dialog clothing. The standing lines are STATEMENTS, not
+   instructions — the how-to lives behind the "?" (same pattern as the
+   import "?": a dialog, via wdConfirm with HTML).
 
-   It is GLOBAL, not per-list: sync connects all your progress, backup writes
-   every pool to one file. So it sits below the lists as a page-level zone, not
-   on any list row. Sync comes first because it's the median user's real want
-   (progress on their phone and laptop); backup sits below, always available —
-   never nested behind sync, because the UN-synced user is the one whose only
-   safety net is a file, so they must never have to find it inside sync's
-   controls. Rendered fresh each open so sync's connected/disconnected state is
-   never stale. */
-function renderGlobalZone(){
-  const host = document.getElementById("browserGlobalZone");
-  if (!host) return;
-  host.innerHTML = "";
+   States (per BROWSER, keyed on the stored sync key):
+     A-early : no key, no progress yet  → line + [I have a key] + ?
+               (a returning user on a fresh device needs the key door
+               BEFORE any deck; Turn-on would protect an empty pool —
+               "the server stores learners, not passers-by")
+     A-full  : no key, some progress    → line + [Turn on sync]
+                                          [I have a key] + ?
+     B       : key present              → "Sync is on." + key + [Copy]
+                                          [Turn off sync] + ?           */
 
-  // ── Sync (primary) ──
-  const syncHost = document.createElement("div");
-  syncHost.className = "sync-section gz-first";   // gz-first suppresses the
-  host.appendChild(syncHost);                     // section-title's own border,
-  renderSyncSection(syncHost);                    // since the zone already has one
+function hasAnyProgress(){
+  try {
+    for (let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if (k && k.startsWith("wd_rs_")){
+        const map = JSON.parse(localStorage.getItem(k)) || {};
+        for (const id in map){ if (map[id] !== 0) return true; }
+      }
+    }
+  } catch {}
+  return false;
+}
 
-  // ── Backup (secondary, always available) ──
-  const backup = document.createElement("div");
-  backup.className = "gz-backup";
-  backup.innerHTML =
-    '<h2 class="section-title">Backup</h2>' +
-    '<div class="gz-backup-actions">' +
-      '<button class="list-btn js-export-scores" type="button">↓ Back up scores</button>' +
-      '<button class="list-btn js-import-scores" type="button">↑ Restore from file</button>' +
-      '<button class="gz-info-toggle" type="button" aria-label="About backups">?</button>' +
-    '</div>' +
-    '<p class="gz-backup-info" hidden>A backup file is the only true snapshot of ' +
-      'your progress. Connecting devices keeps them in step, but if you ever ' +
-      'clear all of them, a file is what brings your progress back.</p>' +
-    '<div class="scores-msg"></div>';
-  host.appendChild(backup);
+const SYNC_HELP_HTML =
+  "<p>Sync keeps your progress safe on WordDock's server, under a random " +
+  "key. There are no accounts, no email, no password \u2014 WordDock never " +
+  "learns who you are, only that some key has some scores.</p>" +
+  "<p><b>Your key is your safety net.</b> If you lose your phone or clear " +
+  "your browser, your progress in WordDock can be restored. If you enter " +
+  "your key on any device, your progress returns. Keep your key somewhere " +
+  "outside your devices, like an email to yourself.</p>" +
+  "<p><b>Sharing this computer?</b> Progress belongs to the browser, so " +
+  "everyone studying here shares one set of scores \u2014 and sync would " +
+  "carry all of it. Give each person their own browser profile first.</p>";
 
-  const toggle = backup.querySelector(".gz-info-toggle");
-  const info   = backup.querySelector(".gz-backup-info");
-  toggle.addEventListener("click", () => { info.hidden = !info.hidden; });
+function showSyncHelp(){
+  wdConfirm("About sync", SYNC_HELP_HTML, "OK", null, true);
+}
+
+/* ── Consent cascade & shared key flows ──────────────────────────────────
+   Asked at most TWICE, ever (wd_sync_asked: "" → "1" → "2"), both times at
+   a deck completion — the one moment progress is real and fresh:
+     ask #1: the first completed deck, no key yet;
+     ask #2 (final): still no key, and total positive RS ≥ 1000 — real
+             stakes now exist. After that: eternal silence; the sync panel
+             remains for whoever changes their mind. No clocks anywhere —
+             the threshold is earned points, nothing else.                */
+
+const SYNC_ASKED_KEY = "wd_sync_asked";
+const FINAL_ASK_RS   = 1000;
+
+function totalPositiveRS(){
+  let sum = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if (k && k.startsWith("wd_rs_")){
+        const map = JSON.parse(localStorage.getItem(k)) || {};
+        for (const id in map){ if (map[id] > 0) sum += map[id]; }
+      }
+    }
+  } catch {}
+  return sum;
+}
+
+async function claimFreshKey(){
+  // Claim at the server so two users can never share a key. The client
+  // generates offline, so a collision is possible in principle; this makes
+  // it impossible in fact.
+  let fresh = null;
+  for (let attempt = 0; attempt < 5 && !fresh; attempt++){
+    fresh = await syncClaim(generateSyncKey());
+  }
+  return fresh;
+}
+
+/* Step 2 of the cascade — and the ONE key-shown dialog everywhere (the
+   section's Turn-on uses it too): key big, Copy present, one keep-it-safe
+   line. Pairing instructions live in the "?" dialog and the key-entry
+   prompt, not here. */
+function showKeyDialog(key){
+  return new Promise(resolve => {
+    const bd = document.createElement("div");
+    bd.className = "wd-dialog-backdrop open";
+    bd.innerHTML =
+      '<div class="wd-dialog">' +
+        '<div class="wd-dialog-title">Sync is on.</div>' +
+        '<div class="wd-dialog-body">Your key:</div>' +
+        '<div class="sync-key">' + formatSyncKey(key) + '</div>' +
+        '<div class="wd-dialog-body">Keep your key somewhere outside your ' +
+          'devices \u2014 for example, copy it into an email or message to ' +
+          'yourself.</div>' +
+        '<div class="wd-dialog-actions">' +
+          '<button class="wd-dialog-btn" type="button" data-act="copy">Copy key</button>' +
+          '<button class="wd-dialog-btn wd-dialog-ok" type="button" data-act="ok">OK</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(bd);
+    const copyBtn = bd.querySelector('[data-act="copy"]');
+    copyBtn.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(formatSyncKey(key)); copyBtn.textContent = "Copied"; }
+      catch { copyBtn.textContent = "Select it above"; }
+      setTimeout(() => { copyBtn.textContent = "Copy key"; }, 1600);
+    });
+    bd.querySelector('[data-act="ok"]').addEventListener("click", () => {
+      bd.remove(); resolve();
+    });
+  });
+}
+
+async function turnOnSyncFlow(){
+  const fresh = await claimFreshKey();
+  if (!fresh){
+    await wdConfirm(
+      "Couldn't set up sync",
+      "Something went wrong claiming a key. Your progress is untouched \u2014 " +
+      "try again in a moment.",
+      "OK", null
+    );
+    return false;
+  }
+  setSyncKey(fresh);
+  syncPush();                        // seed the server with what's here
+  renderSyncPanelBody();
+  renderSyncAnchor();
+  await showKeyDialog(fresh);
+  return true;
+}
+
+async function connectWithExistingKey(){
+  const typed = await wdPrompt(
+    "Enter your key",
+    "Type the key shown under Sync on your other device. The dash is " +
+    "optional \u2014 just the 8 characters is enough.",
+    "e.g. 7K2M-9XQF", "Connect", true
+  );
+  if (typed === null) return false;
+  const raw = normalizeSyncKey(typed);
+  if (!isValidSyncKey(raw)){
+    await wdConfirm(
+      "That key doesn't look right",
+      "A WordDock key is 8 characters, like 7K2M-9XQF. Check it " +
+      "against the other device and try again.",
+      "OK", null
+    );
+    return false;
+  }
+  setSyncKey(raw);
+  // Pull straight away: the whole point of typing a key is to see the
+  // other device's progress here, now, rather than at some later moment.
+  await syncPull();
+  renderSyncPanelBody();
+  renderSyncAnchor();
+  if (browserPane === "lists") renderBrowser();
+  renderBrowserRail();
+  return true;
+}
+
+/* Step 1 (and the final ask): one question, three doors. The yes-door is
+   first and green; "I have a key" is a quiet line, not a third button —
+   it answers a different question ("I'm not new"). */
+function showConsentDialog(finalAsk){
+  return new Promise(resolve => {
+    const bd = document.createElement("div");
+    bd.className = "wd-dialog-backdrop open";
+    const bodyTop = finalAsk
+      ? "You\u2019ve built real progress. WordDock can keep it safe in the " +
+        "cloud \u2014 anonymously: just numbers under a random key. No " +
+        "account, no email, no name."
+      : "WordDock can store your scores in the cloud \u2014 anonymously: " +
+        "just numbers under a random key. No account, no email, no name. " +
+        "Then a lost phone or a cleared browser can\u2019t take your progress.";
+    const bodyTail = finalAsk
+      ? '<div class="wd-dialog-body">We won\u2019t ask again. Sync stays ' +
+        'available under <b>Sync</b> at the bottom of the browse page.</div>'
+      : "";
+    bd.innerHTML =
+      '<div class="wd-dialog">' +
+        '<div class="wd-dialog-title">' +
+          (finalAsk ? "Keep your progress safe?" : "Keep your progress safe?") +
+        '</div>' +
+        '<div class="wd-dialog-body">' + bodyTop + '</div>' + bodyTail +
+        '<div class="wd-dialog-actions">' +
+          '<button class="wd-dialog-btn wd-dialog-ok" type="button" data-act="yes">Yes, keep it safe</button>' +
+          '<button class="wd-dialog-btn" type="button" data-act="later">Not now</button>' +
+        '</div>' +
+        '<div class="wd-dialog-body" style="margin-top:2px">Already use WordDock ' +
+          'on another device? <a href="#" data-act="havekey">I have a key</a></div>' +
+      '</div>';
+    document.body.appendChild(bd);
+    function done(v){ bd.remove(); resolve(v); }
+    bd.querySelector('[data-act="yes"]').addEventListener("click", () => done("yes"));
+    bd.querySelector('[data-act="later"]').addEventListener("click", () => done("later"));
+    bd.querySelector('[data-act="havekey"]').addEventListener("click", (e) => {
+      e.preventDefault(); done("havekey");
+    });
+    bd.addEventListener("click", (e) => { if (e.target === bd) done("later"); });
+  });
+}
+
+async function maybeAskToKeepSafe(){
+  if (getSyncKey()) return;                          // already protected
+  let asked = "";
+  try { asked = localStorage.getItem(SYNC_ASKED_KEY) || ""; } catch {}
+  if (asked === "2") return;                         // eternal silence
+  const finalAsk = asked === "1";
+  if (finalAsk && totalPositiveRS() < FINAL_ASK_RS) return;
+
+  const choice = await showConsentDialog(finalAsk);
+  const next = finalAsk ? "2" : "1";
+  try { localStorage.setItem(SYNC_ASKED_KEY, next); } catch {}
+  if (choice === "yes")          await turnOnSyncFlow();
+  else if (choice === "havekey") await connectWithExistingKey();
+  // "later": nothing — the anchor and panel remain.
+}
+
+function renderSyncSection(root){
+  if (!root) return;
+  root.innerHTML = "";
+  const key = getSyncKey();
+
+  const h = document.createElement("h2");
+  h.className = "section-title";
+  h.textContent = "Sync";
+  root.appendChild(h);
+
+  const line = document.createElement("p");
+  line.className = "setting-desc";
+  root.appendChild(line);
+
+  const actions = document.createElement("div");
+  actions.className = "scores-actions";
+
+  const help = document.createElement("button");
+  help.className = "list-btn";
+  help.type = "button";
+  help.textContent = "?";
+  help.setAttribute("aria-label", "About sync");
+  help.addEventListener("click", showSyncHelp);
+
+  if (!key){
+    line.textContent = "Your progress lives only in this browser.";
+
+    if (hasAnyProgress()){
+      const on = document.createElement("button");
+      on.className = "list-btn";
+      on.type = "button";
+      on.textContent = "Turn on sync";
+      on.addEventListener("click", () => { turnOnSyncFlow(); });
+      actions.appendChild(on);
+    }
+
+    const have = document.createElement("button");
+    have.className = "list-btn";
+    have.type = "button";
+    have.textContent = "I have a key";
+    have.addEventListener("click", () => { connectWithExistingKey(); });
+    actions.appendChild(have);
+    actions.appendChild(help);
+    root.appendChild(actions);
+    return;
+  }
+
+  // ── B: sync is on ──
+  line.textContent = "Sync is on. This is your key:";
+
+  const keyBox = document.createElement("div");
+  keyBox.className = "sync-key";
+  keyBox.textContent = formatSyncKey(key);
+  root.appendChild(keyBox);
+
+  const copy = document.createElement("button");
+  copy.className = "list-btn";
+  copy.type = "button";
+  copy.textContent = "Copy key";
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(formatSyncKey(key));
+      copy.textContent = "Copied";
+    } catch {
+      copy.textContent = "Select it above";
+    }
+    setTimeout(() => { copy.textContent = "Copy key"; }, 1600);
+  });
+
+  const off = document.createElement("button");
+  off.className = "list-btn";
+  off.type = "button";
+  off.textContent = "Turn off sync";
+  off.addEventListener("click", async () => {
+    const ok = await wdConfirm(
+      "Turn off sync?",
+      "This browser stops syncing. Your progress here is untouched, and the " +
+      "copy on the server stays \u2014 entering this key again reconnects you.",
+      "Turn off", "Keep sync on"
+    );
+    if (!ok) return;
+    clearSyncKey();
+    renderSyncPanelBody();
+    renderSyncAnchor();
+  });
+
+  actions.appendChild(copy);
+  actions.appendChild(off);
+  actions.appendChild(help);
+  root.appendChild(actions);
+}
+
+/* The sync panel: wd-dialog clothing, own backdrop, own close. Content is
+   renderSyncSection into its body; re-rendered in place on state changes. */
+function ensureSyncPanel(){
+  let bd = document.getElementById("syncPanelBackdrop");
+  if (bd) return bd;
+  bd = document.createElement("div");
+  bd.className = "wd-dialog-backdrop";
+  bd.id = "syncPanelBackdrop";
+  bd.hidden = true;
+  bd.innerHTML = '<div class="wd-dialog"><div id="syncPanelBody"></div>' +
+    '<div class="wd-dialog-actions">' +
+    '<button class="wd-dialog-btn" type="button" id="syncPanelClose">Close</button>' +
+    '</div></div>';
+  document.body.appendChild(bd);
+  bd.addEventListener("click", (e) => { if (e.target === bd) hideSyncPanel(); });
+  bd.querySelector("#syncPanelClose").addEventListener("click", hideSyncPanel);
+  return bd;
+}
+function renderSyncPanelBody(){
+  const body = document.getElementById("syncPanelBody");
+  if (body) renderSyncSection(body);
+}
+function showSyncPanel(){
+  const bd = ensureSyncPanel();
+  renderSyncPanelBody();
+  bd.hidden = false;
+  bd.classList.add("open");
+}
+function hideSyncPanel(){
+  const bd = document.getElementById("syncPanelBackdrop");
+  if (!bd) return;
+  bd.classList.remove("open");
+  bd.hidden = true;
+}
+
+/* The footer anchor: one quiet line of truth. */
+function renderSyncAnchor(){
+  const a = document.getElementById("syncAnchor");
+  if (!a) return;
+  a.textContent = getSyncKey() ? "Sync is on" : "Sync is off";
 }
 
 function renderBrowserLists(){
@@ -2962,7 +3090,6 @@ function renderBrowserLists(){
     });
     $browserLists.appendChild(row);
   }
-  renderGlobalZone();   // sync + backup, flowing beneath the lists
 }
 
 // Full browser render: rail + detail. Keeps browserDomain sensible.
@@ -2973,7 +3100,7 @@ function renderBrowserLists(){
    layout code changes. Kept flat for now; grouping under super-headers could be
    added later without disturbing this shape. Content reuses the app's own text
    styles (.section-title, .setting-desc), so the guide reads exactly like the
-   sync/backup prose already in the browser. */
+   sync prose already in the browser. */
 /* WORDDOCK_VERSION is declared in the head script at the top of this file.
    It is shown quietly in About so the DEPLOYED build can be checked from the
    app itself (phone included), not just by viewing source. */
@@ -3040,8 +3167,8 @@ const aboutTopics = [
     'if it spots this.</li>' +
     '</ol>' },
 
-  { id:"devices", title:"Devices &amp; backup", html:
-    '<h2 class="section-title gz-first">Devices &amp; backup</h2>' +
+  { id:"devices", title:"Devices &amp; your key", html:
+    '<h2 class="section-title gz-first">Devices &amp; your key</h2>' +
     '<p class="setting-desc">Your scores stay on your device, in your browser. ' +
     'Nothing leaves it unless you choose to connect another device.</p>' +
     '<p class="setting-desc">If you study on more than one device, open <b>Sync</b> ' +
@@ -3049,9 +3176,10 @@ const aboutTopics = [
     'account, no email, no password \u2014 WordDock only ever sees the key, never ' +
     'who you are. Connecting always raises a device to the highest progress across ' +
     'your devices; it never lowers a score another has already earned.</p>' +
-    '<p class="setting-desc">A <b>backup file</b> is the only true snapshot of your ' +
-    'progress. Connecting devices keeps them in step, but if you ever clear the ' +
-    'data on all of them, a file is what brings your progress back.</p>' +
+    '<p class="setting-desc"><b>Your key is your safety net.</b> If you lose your ' +
+    'phone or clear your browser, your progress in WordDock can be restored. If you ' +
+    'enter your key on any device, your progress returns. Keep your key somewhere ' +
+    'outside your devices, like an email to yourself.</p>' +
     '<p class="setting-desc">Sharing a computer? Progress belongs to the browser, ' +
     'so everyone studying in the same one shares one set of scores. A separate ' +
     'browser profile keeps progress apart.</p>' },
@@ -3507,6 +3635,9 @@ document.getElementById("browserDomainsHeader").addEventListener("click", () => 
 
 // About WordDock: footer opens it; its own nav mirrors the browser's.
 const $aboutFooterLink = document.getElementById("aboutFooterLink");
+const $syncAnchor = document.getElementById("syncAnchor");
+$syncAnchor.addEventListener("click", (e) => { e.preventDefault(); showSyncPanel(); });
+renderSyncAnchor();
 // The version rides on the browse-page footer, so the DEPLOYED build shows the
 // moment the browser opens (one click on the logo) — no need to enter About.
 // Sourced from the one constant, so it never drifts from the top-of-file marker.
@@ -3556,180 +3687,6 @@ document.getElementById("importRulesHelp").addEventListener("click", (e) => {
 // not which pane you clicked from. (The pane used to seed a picker's default;
 // the picker is gone, so the context signal has no job.)
 document.getElementById("browserUpload").addEventListener("click", () => $fileInput.click());
-
-/* ════════════════════════════════════════════════════════════════════════
-   Score backup — export / import ALL domains as one JSON file.
-   RS lives only in localStorage (one bucket per domain, key wd_rs_<DOMAIN>).
-   This is the sole durable backup + the transport path between devices.
-   ════════════════════════════════════════════════════════════════════════ */
-
-const SCORES_FILE_TYPE = "worddock-scores";
-
-// Stable key ordering, so "identical" comparisons don't trip on order.
-function sortedObj(o){
-  const out = {};
-  for (const k of Object.keys(o || {}).sort()) out[k] = o[k];
-  return out;
-}
-
-// Read a domain's stored scores, keeping only non-zero entries (0 is implicit).
-function readDomainScores(domain){
-  let map = {};
-  try { map = JSON.parse(localStorage.getItem("wd_rs_" + domain)) || {}; }
-  catch (e) { map = {}; }
-  const nz = {};
-  for (const id in map){ if (map[id] !== 0) nz[id] = map[id]; }
-  return nz;
-}
-
-// Gather every domain that has any non-zero score.
-function gatherAllScores(){
-  const scores = {};
-  for (let i = 0; i < localStorage.length; i++){
-    const k = localStorage.key(i);
-    if (k && k.startsWith("wd_rs_")){
-      const domain = k.slice("wd_rs_".length);
-      const nz = readDomainScores(domain);
-      if (Object.keys(nz).length) scores[domain] = nz;
-    }
-  }
-  return scores;
-}
-
-// Update every visible scores-message element (original + cloned settings).
-function setScoresMsg(text){
-  document.querySelectorAll(".scores-msg").forEach(el => { el.textContent = text || ""; });
-}
-
-function exportScores(){
-  const scores = gatherAllScores();
-  const domainCount = Object.keys(scores).length;
-  if (!domainCount){
-    setScoresMsg("Nothing to export yet — scores build up as you complete decks.");
-    return null;
-  }
-  const now = new Date();
-  const today = now.toISOString().split("T")[0];
-  const payload = { type: SCORES_FILE_TYPE, version: 1, exported: today, scores };
-  const blob = new Blob([JSON.stringify(payload, null, 1)], { type: "application/json" });
-  // Time as well as date. The app cannot overwrite a file — the browser owns
-  // everything after the download is handed over — so a second backup on the
-  // same day used to land as "… (1).json", and our "your file is ready: X"
-  // message then named a file that didn't exist. HHMM makes the collision
-  // impossible instead of managing it. Date stays first, so files still sort
-  // chronologically.
-  const hhmm = String(now.getHours()).padStart(2, "0") +
-               String(now.getMinutes()).padStart(2, "0");
-  const filename = "WordDock-scores_" + today + "_" + hhmm + ".json";
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  // "Exported" was the wrong verb (lists are exported; scores are backed up),
-  // and claiming the backup is DONE is not something the app can know: the
-  // browser gives no callback for "user cancelled the save dialog". What IS
-  // certain is that the file was created and handed to the browser. Say that.
-  setScoresMsg("Your backup file is ready: " + filename);
-  return { filename, domainCount };
-}
-
-// Parse + apply an imported scores file. Empty/identical domains merge
-// silently; domains that differ AND already have scores prompt once.
-async function importScoresFromFile(file){
-  let payload;
-  try {
-    payload = JSON.parse(await file.text());
-  } catch (e) {
-    setScoresMsg("Couldn't read that file — it isn't valid JSON.");
-    return;
-  }
-  if (!payload || payload.type !== SCORES_FILE_TYPE || typeof payload.scores !== "object"){
-    setScoresMsg("That doesn't look like a WordDock scores file.");
-    return;
-  }
-  const fileScores = payload.scores;
-  const domains = Object.keys(fileScores);
-  if (!domains.length){
-    setScoresMsg("That file has no scores in it.");
-    return;
-  }
-
-  const silent = [];     // domains to write with no prompt
-  const conflicts = [];  // domains that differ and already have scores
-  for (const domain of domains){
-    const fileMap = sortedObj(fileScores[domain]);
-    const existing = sortedObj(readDomainScores(domain));
-    const isEmpty  = Object.keys(existing).length === 0;
-    const same     = JSON.stringify(existing) === JSON.stringify(fileMap);
-    if (isEmpty || same) silent.push({ domain, map: fileMap });
-    else                 conflicts.push({ domain, map: fileMap });
-  }
-
-  // Apply the safe ones immediately.
-  for (const s of silent) localStorage.setItem("wd_rs_" + s.domain, JSON.stringify(s.map));
-
-  // One confirm covering all conflicting domains.
-  let overwrote = 0;
-  if (conflicts.length){
-    const ok = await wdConfirm(
-      "Replace this browser's scores?",
-      "This browser already has progress. Loading the file replaces it.",
-      "Use the file", "Keep what's here"
-    );
-    if (ok){
-      for (const c of conflicts) localStorage.setItem("wd_rs_" + c.domain, JSON.stringify(c.map));
-      overwrote = conflicts.length;
-    }
-  }
-
-  // Refresh in-memory RS for the active domain (next deck reflects it).
-  loadRS();
-
-  const applied = silent.length + overwrote;
-  if (applied){
-    setScoresMsg("Restored your scores from " + file.name + ".");
-  } else {
-    setScoresMsg("Nothing changed — kept this browser's scores.");
-  }
-
-  // Redraw what the user is looking at. The restore wrote new values, but the
-  // view was rendered BEFORE it — so without this the screen keeps showing the
-  // old numbers and the change looks like it silently failed. Refresh the
-  // browser (inline domain/list %s and the global zone), preserving the
-  // outcome message the restore just set.
-  const msg = document.querySelector(".scores-msg");
-  const keep = msg ? msg.textContent : "";
-  if (browserPane === "lists") renderBrowser();
-  if (keep) setScoresMsg(keep);          // re-render wipes the message; put it back
-  renderBrowserRail();
-}
-
-// Delegated clicks: works for the settings page AND its browser-pane clone.
-document.addEventListener("click", (e) => {
-  const exp = e.target.closest && e.target.closest(".js-export-scores");
-  const imp = e.target.closest && e.target.closest(".js-import-scores");
-  if (exp){
-    e.preventDefault();
-    // Collapse the "?" explanation (if open) before showing the result. You've
-    // acted, so you no longer need "what is a backup?"; you need the outcome —
-    // and hiding the info frees the space so the confirmation isn't pushed below
-    // the fold on a small screen.
-    const info = document.querySelector(".gz-backup-info");
-    if (info) info.hidden = true;
-    exportScores();   // sets the "backup file ready" message via setScoresMsg,
-                      // which writes to the global zone's .scores-msg directly
-  }
-  else if (imp){ e.preventDefault(); document.getElementById("scoresFileInput").click(); }
-});
-
-document.getElementById("scoresFileInput").addEventListener("change", async (e) => {
-  const file = e.target.files && e.target.files[0];
-  e.target.value = "";   // allow re-picking the same file
-  if (!file) return;
-  setScoresMsg("Reading " + file.name + "…");
-  await importScoresFromFile(file);
-});
 
 /* ─── Boot ─── */
 
