@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.11";
+const WORDDOCK_VERSION = "v26.12";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -189,6 +189,9 @@ body{
   max-width:420px; width:100%;
   padding:24px;
   box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+#syncPanelBackdrop .wd-dialog{
+  padding-top:16px;
 }
 .wd-dialog-title{
   font-family:'Poppins',sans-serif; font-size:17px; font-weight:600;
@@ -2904,15 +2907,15 @@ function renderSyncSection(root){
   off.type = "button";
   off.textContent = "Turn off sync";
   off.addEventListener("click", async () => {
+    hideSyncPanel();
     const ok = await wdConfirm(
       "Turn off sync?",
       "This browser stops syncing. Your progress here is untouched, and the " +
       "copy on the server stays \u2014 entering this key again reconnects you.",
       "Turn off", "Keep sync on"
     );
-    if (!ok) return;
+    if (!ok) { showSyncPanel(); return; }
     clearSyncKey();
-    renderSyncPanelBody();
     renderSyncAnchor();
   });
 
