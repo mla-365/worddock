@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.14";
+const WORDDOCK_VERSION = "v26.15";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -192,7 +192,15 @@ body{
 }
 #syncPanelBackdrop .wd-dialog{
   padding-top:16px; padding-bottom:16px;
+  min-height:260px; position:relative;
 }
+#syncPanelClose{
+  position:absolute; top:12px; right:14px;
+  background:none; border:none; cursor:pointer;
+  font-size:18px; line-height:1; color:rgba(255,255,255,0.45);
+  padding:4px 6px; border-radius:6px;
+}
+#syncPanelClose:hover{ color:var(--ink); background:var(--menu-hover); }
 .wd-dialog-title{
   font-family:'Poppins',sans-serif; font-size:17px; font-weight:600;
   color:var(--ink); margin-bottom:10px;
@@ -2708,10 +2716,9 @@ function _syncDesc(text){
 
 function _renderSyncMain(root){
   const key = getSyncKey();
-  root.appendChild(_syncTitle("Sync"));
-
   if (key){
-    root.appendChild(_syncDesc("Sync is on. This is your key:"));
+    root.appendChild(_syncTitle("Sync is on"));
+    root.appendChild(_syncDesc("This is your key:"));
     const keyBox = document.createElement("div");
     keyBox.className = "sync-key";
     keyBox.textContent = formatSyncKey(key);
@@ -2730,6 +2737,7 @@ function _renderSyncMain(root){
       _syncBtn("?", "", () => setSyncState("help"))
     ));
   } else {
+    root.appendChild(_syncTitle("Sync is off"));
     root.appendChild(_syncDesc("Your progress lives only in this browser."));
     root.appendChild(_syncActions(
       _syncBtn("I have a key", "", () => setSyncState("enter-key")),
@@ -2747,7 +2755,7 @@ function _renderSyncHelp(root){
     "If you lose your phone or wipe your browser, entering your key on any device will restore your progress. " +
     "Keep your key somewhere safe - email or text it to yourself.";
   root.appendChild(p);
-  root.appendChild(_syncActions(_syncBtn("Close", "", () => setSyncState("main"))));
+  root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"))));
 }
 
 function _renderSyncConfirmOff(root){
@@ -2964,10 +2972,10 @@ function ensureSyncPanel(){
   bd.className = "wd-dialog-backdrop";
   bd.id = "syncPanelBackdrop";
   bd.hidden = true;
-  bd.innerHTML = '<div class="wd-dialog"><div id="syncPanelBody"></div>' +
-    '<div class="wd-dialog-actions">' +
-    '<button class="wd-dialog-btn" type="button" id="syncPanelClose">Close</button>' +
-    '</div></div>';
+  bd.innerHTML = '<div class="wd-dialog">' +
+    '<button type="button" id="syncPanelClose" aria-label="Close">\u00d7</button>' +
+    '<div id="syncPanelBody"></div>' +
+    '</div>';
   document.body.appendChild(bd);
   bd.addEventListener("click", (e) => { if (e.target === bd) hideSyncPanel(); });
   bd.querySelector("#syncPanelClose").addEventListener("click", hideSyncPanel);
