@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.19";
+const WORDDOCK_VERSION = "v26.20";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -791,13 +791,27 @@ body{
 /* Site footer — echoes the study counter (same 13px, white) for spatial
    stability across modes. No top border: the line was clutter, not structure. */
 .browser-footer{
-  text-align:center;padding:16px 0 26px;
+  width:100%;max-width:860px;margin:0 auto;
+  display:flex;align-items:center;
+  padding:16px 0 26px;
 }
-.sync-anchor{display:inline-block;margin-bottom:6px}
+.footer-rail-zone{
+  width:200px;flex-shrink:0;padding:0 10px;text-align:left;
+}
+.footer-detail-zone{
+  flex:1;text-align:center;
+}
+#aboutFooterLink{font-weight:600;}
 .browser-footer a{
   color:var(--counter);text-decoration:none;font-size:13px;
 }
 .browser-footer a:hover{color:var(--tag);}
+.sync-dot{
+  display:inline-block;width:8px;height:8px;border-radius:50%;
+  border:1px solid var(--counter);margin-right:6px;
+  vertical-align:middle;position:relative;top:-1px;
+}
+.sync-dot.on{background:#0a8f0a;border-color:#0a8f0a;}
 
 /* About topics — a static table of contents, styled like the domain rows but
    without their dynamic zones. Always all shown, in order. */
@@ -1040,6 +1054,7 @@ body{
     overflow-y:auto;                 /* MY LISTS, MORE and the footer must reach */
   }
   .browser-panes{flex-direction:column}
+  .footer-rail-zone{width:auto}
   .browser.show-detail .browser-rail{display:none}
   .browser.show-rail   .browser-detail{display:none}
 
@@ -1158,8 +1173,12 @@ body{
          so it lives here, not under every domain's list panel. Tapping opens
          the sync panel (wd-dialog clothing). Placement beside vs above the
          About link is a W11 form decision. -->
-    <a href="#" id="syncAnchor" class="sync-anchor"></a>
-    <a href="#" id="aboutFooterLink">About WordDock</a>
+    <div class="footer-rail-zone">
+      <a href="#" id="syncAnchor" class="sync-anchor"></a>
+    </div>
+    <div class="footer-detail-zone">
+      <a href="#" id="aboutFooterLink">About WordDock</a>
+    </div>
   </div>
   <input type="file" id="fileInput" accept=".xlsx" hidden>
 </div>
@@ -2807,7 +2826,8 @@ function _renderSyncHelp(root){
   const p = document.createElement("p");
   p.className = "setting-desc";
   p.textContent = "Sync keeps your progress in WordDock safe under a random key without an account. " +
-    "If you lose your phone or wipe your browser, entering your key on any device will restore your progress. " +
+    "Enter your key on other browsers or devices and they all share the same progress. " +
+    "If you lose your phone or wipe your browser, your key restores your progress. " +
     "Keep your key somewhere safe - email or text it to yourself.";
   pane.appendChild(p);
   root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"))));
@@ -2836,7 +2856,7 @@ function _renderSyncEnterKey(root){
   const center = document.createElement("div");
   center.className = "sync-center";
   center.appendChild(_syncDesc(
-    "Enter the key (dash is optional) shown on your other device to connect your progress."
+    "Enter the key (dash is optional) shown on your other device to connect your progress:"
   ));
 
   const inp = document.createElement("input");
@@ -3028,7 +3048,9 @@ function hideSyncPanel(){
 function renderSyncAnchor(){
   const a = document.getElementById("syncAnchor");
   if (!a) return;
-  a.textContent = getSyncKey() ? "Sync is on" : "Sync is off";
+  const on = !!getSyncKey();
+  a.innerHTML = '<span class="sync-dot' + (on ? ' on' : '') + '"></span>' +
+    (on ? "Sync is on" : "Sync is off");
 }
 
 function renderBrowserLists(){
