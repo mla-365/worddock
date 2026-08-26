@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.15";
+const WORDDOCK_VERSION = "v26.16";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -192,7 +192,16 @@ body{
 }
 #syncPanelBackdrop .wd-dialog{
   padding-top:16px; padding-bottom:16px;
-  min-height:260px; position:relative;
+  position:relative;
+}
+#syncPanelBackdrop .wd-dialog-actions{
+  margin-top:16px;
+}
+#syncPanelBackdrop #syncPanelBody{
+  max-height:55vh; overflow-y:auto;
+}
+#syncPanelBackdrop .section-title{
+  margin:0 0 8px; padding-top:0; border-top:none;
 }
 #syncPanelClose{
   position:absolute; top:12px; right:14px;
@@ -2684,18 +2693,19 @@ function renderSyncPanelBody(){
   _renderSyncMain(body);
 }
 
-function _syncBtn(label, cls, onClick){
+function _syncBtn(label, cls, onClick, extraStyle){
   const b = document.createElement("button");
-  b.className = "list-btn" + (cls ? " " + cls : "");
+  b.className = "wd-dialog-btn" + (cls ? " " + cls : "");
   b.type = "button";
   b.textContent = label;
+  if (extraStyle) b.style.cssText = extraStyle;
   b.addEventListener("click", onClick);
   return b;
 }
 
 function _syncActions(...btns){
   const d = document.createElement("div");
-  d.className = "scores-actions";
+  d.className = "wd-dialog-actions";
   btns.forEach(b => d.appendChild(b));
   return d;
 }
@@ -2730,11 +2740,11 @@ function _renderSyncMain(root){
         copy.textContent = "Copied";
       } catch { copy.textContent = "Select it above"; }
       setTimeout(() => { copy.textContent = "Copy key"; }, 1600);
-    });
+    }, "min-width:100px");
     root.appendChild(_syncActions(
       copy,
       _syncBtn("Turn off sync", "", () => setSyncState("confirm-off")),
-      _syncBtn("?", "", () => setSyncState("help"))
+      _syncBtn("?", "wd-dialog-cancel", () => setSyncState("help"))
     ));
   } else {
     root.appendChild(_syncTitle("Sync is off"));
@@ -2742,7 +2752,7 @@ function _renderSyncMain(root){
     root.appendChild(_syncActions(
       _syncBtn("I have a key", "", () => setSyncState("enter-key")),
       _syncBtn("Turn on sync", "", () => { hideSyncPanel(); turnOnSyncFlow(); }),
-      _syncBtn("?", "", () => setSyncState("help"))
+      _syncBtn("?", "wd-dialog-cancel", () => setSyncState("help"))
     ));
   }
 }
