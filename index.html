@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.13";
+const WORDDOCK_VERSION = "v26.14";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -2652,8 +2652,161 @@ const SYNC_HELP_HTML =
   "everyone studying here shares one set of scores \u2014 and sync would " +
   "carry all of it. Give each person their own browser profile first.</p>";
 
-function showSyncHelp(){
-  wdConfirm("About sync", SYNC_HELP_HTML, "OK", null, true);
+/* ── Sync panel state machine ────────────────────────────────────────────
+   One stable frame; content switches between four states:
+     main        — sync on or off (the default view)
+     help        — About sync text
+     confirm-off — Turn off sync? confirmation
+     enter-key   — I have a key input
+   No external dialogs (wdConfirm/wdPrompt) are used from within the panel.
+   ──────────────────────────────────────────────────────────────────────── */
+
+let _syncState = "main";
+
+function setSyncState(s){ _syncState = s; renderSyncPanelBody(); }
+
+function renderSyncPanelBody(){
+  const body = document.getElementById("syncPanelBody");
+  if (!body) return;
+  body.innerHTML = "";
+
+  if (_syncState === "help")        return _renderSyncHelp(body);
+  if (_syncState === "confirm-off") return _renderSyncConfirmOff(body);
+  if (_syncState === "enter-key")   return _renderSyncEnterKey(body);
+  _renderSyncMain(body);
+}
+
+function _syncBtn(label, cls, onClick){
+  const b = document.createElement("button");
+  b.className = "list-btn" + (cls ? " " + cls : "");
+  b.type = "button";
+  b.textContent = label;
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+function _syncActions(...btns){
+  const d = document.createElement("div");
+  d.className = "scores-actions";
+  btns.forEach(b => d.appendChild(b));
+  return d;
+}
+
+function _syncTitle(text){
+  const h = document.createElement("h2");
+  h.className = "section-title";
+  h.textContent = text;
+  return h;
+}
+
+function _syncDesc(text){
+  const p = document.createElement("p");
+  p.className = "setting-desc";
+  p.textContent = text;
+  return p;
+}
+
+function _renderSyncMain(root){
+  const key = getSyncKey();
+  root.appendChild(_syncTitle("Sync"));
+
+  if (key){
+    root.appendChild(_syncDesc("Sync is on. This is your key:"));
+    const keyBox = document.createElement("div");
+    keyBox.className = "sync-key";
+    keyBox.textContent = formatSyncKey(key);
+    root.appendChild(keyBox);
+
+    const copy = _syncBtn("Copy key", "wd-dialog-ok", async () => {
+      try {
+        await navigator.clipboard.writeText(formatSyncKey(key));
+        copy.textContent = "Copied";
+      } catch { copy.textContent = "Select it above"; }
+      setTimeout(() => { copy.textContent = "Copy key"; }, 1600);
+    });
+    root.appendChild(_syncActions(
+      copy,
+      _syncBtn("Turn off sync", "", () => setSyncState("confirm-off")),
+      _syncBtn("?", "", () => setSyncState("help"))
+    ));
+  } else {
+    root.appendChild(_syncDesc("Your progress lives only in this browser."));
+    root.appendChild(_syncActions(
+      _syncBtn("I have a key", "", () => setSyncState("enter-key")),
+      _syncBtn("Turn on sync", "", () => { hideSyncPanel(); turnOnSyncFlow(); }),
+      _syncBtn("?", "", () => setSyncState("help"))
+    ));
+  }
+}
+
+function _renderSyncHelp(root){
+  root.appendChild(_syncTitle("About sync"));
+  const p = document.createElement("p");
+  p.className = "setting-desc";
+  p.textContent = "Sync keeps your progress in WordDock safe under a random key without an account. " +
+    "If you lose your phone or wipe your browser, entering your key on any device will restore your progress. " +
+    "Keep your key somewhere safe - email or text it to yourself.";
+  root.appendChild(p);
+  root.appendChild(_syncActions(_syncBtn("Close", "", () => setSyncState("main"))));
+}
+
+function _renderSyncConfirmOff(root){
+  root.appendChild(_syncTitle("Turn off sync?"));
+  root.appendChild(_syncDesc(
+    "WordDock will stop syncing your progress as it stands now. " +
+    "You will be able to turn on sync again - with your current key or a new one."
+  ));
+  root.appendChild(_syncActions(
+    _syncBtn("Keep sync on", "wd-dialog-ok", () => setSyncState("main")),
+    _syncBtn("Turn off", "", () => {
+      clearSyncKey();
+      renderSyncAnchor();
+      setSyncState("main");
+    })
+  ));
+}
+
+function _renderSyncEnterKey(root){
+  root.appendChild(_syncTitle("Enter your key"));
+  root.appendChild(_syncDesc(
+    "Enter the key (dash is optional) shown on your other device to connect your progress."
+  ));
+
+  const inp = document.createElement("input");
+  inp.className = "wd-dialog-input";
+  inp.type = "text";
+  inp.placeholder = "e.g. 7K2M-9XQF";
+  inp.setAttribute("autocomplete", "off");
+  inp.setAttribute("spellcheck", "false");
+  root.appendChild(inp);
+
+  const err = document.createElement("p");
+  err.className = "setting-desc";
+  err.style.cssText = "color:#c44;margin-top:6px;min-height:1.2em";
+  root.appendChild(err);
+
+  const connect = _syncBtn("Connect", "wd-dialog-ok", async () => {
+    const raw = normalizeSyncKey(inp.value);
+    if (!isValidSyncKey(raw)){
+      err.textContent = "A WordDock key is 8 characters, like 7K2M-9XQF. Check it and try again.";
+      return;
+    }
+    connect.textContent = "Connecting...";
+    connect.disabled = true;
+    setSyncKey(raw);
+    await syncPull();
+    renderSyncAnchor();
+    if (browserPane === "lists") renderBrowser();
+    renderBrowserRail();
+    setSyncState("main");
+  });
+
+  root.appendChild(_syncActions(
+    connect,
+    _syncBtn("Cancel", "", () => setSyncState("main"))
+  ));
+
+  setTimeout(() => inp.focus(), 50);
 }
 
 /* ── Consent cascade & shared key flows ──────────────────────────────────
@@ -2732,46 +2885,17 @@ async function turnOnSyncFlow(){
   if (!fresh){
     await wdConfirm(
       "Couldn't set up sync",
-      "Something went wrong claiming a key. Your progress is untouched \u2014 " +
+      "Something went wrong claiming a key. Your progress is untouched - " +
       "try again in a moment.",
       "OK", null
     );
     return false;
   }
   setSyncKey(fresh);
-  syncPush();                        // seed the server with what's here
-  renderSyncPanelBody();
+  syncPush();
   renderSyncAnchor();
   await showKeyDialog(fresh);
-  return true;
-}
-
-async function connectWithExistingKey(){
-  const typed = await wdPrompt(
-    "Enter your key",
-    "Type the key shown under Sync on your other device. The dash is " +
-    "optional \u2014 just the 8 characters is enough.",
-    "e.g. 7K2M-9XQF", "Connect", true
-  );
-  if (typed === null) return false;
-  const raw = normalizeSyncKey(typed);
-  if (!isValidSyncKey(raw)){
-    await wdConfirm(
-      "That key doesn't look right",
-      "A WordDock key is 8 characters, like 7K2M-9XQF. Check it " +
-      "against the other device and try again.",
-      "OK", null
-    );
-    return false;
-  }
-  setSyncKey(raw);
-  // Pull straight away: the whole point of typing a key is to see the
-  // other device's progress here, now, rather than at some later moment.
-  await syncPull();
-  renderSyncPanelBody();
-  renderSyncAnchor();
-  if (browserPane === "lists") renderBrowser();
-  renderBrowserRail();
+  showSyncPanel();
   return true;
 }
 
@@ -2829,104 +2953,10 @@ async function maybeAskToKeepSafe(){
   const next = finalAsk ? "2" : "1";
   try { localStorage.setItem(SYNC_ASKED_KEY, next); } catch {}
   if (choice === "yes")          await turnOnSyncFlow();
-  else if (choice === "havekey") await connectWithExistingKey();
+  else if (choice === "havekey"){ showSyncPanel(); setSyncState("enter-key"); }
   // "later": nothing — the anchor and panel remain.
 }
 
-function renderSyncSection(root){
-  if (!root) return;
-  root.innerHTML = "";
-  const key = getSyncKey();
-
-  const h = document.createElement("h2");
-  h.className = "section-title";
-  h.textContent = "Sync";
-  root.appendChild(h);
-
-  const line = document.createElement("p");
-  line.className = "setting-desc";
-  root.appendChild(line);
-
-  const actions = document.createElement("div");
-  actions.className = "scores-actions";
-
-  const help = document.createElement("button");
-  help.className = "list-btn";
-  help.type = "button";
-  help.textContent = "?";
-  help.setAttribute("aria-label", "About sync");
-  help.addEventListener("click", showSyncHelp);
-
-  if (!key){
-    line.textContent = "Your progress lives only in this browser.";
-
-    if (hasAnyProgress()){
-      const on = document.createElement("button");
-      on.className = "list-btn";
-      on.type = "button";
-      on.textContent = "Turn on sync";
-      on.addEventListener("click", () => { turnOnSyncFlow(); });
-      actions.appendChild(on);
-    }
-
-    const have = document.createElement("button");
-    have.className = "list-btn";
-    have.type = "button";
-    have.textContent = "I have a key";
-    have.addEventListener("click", () => { connectWithExistingKey(); });
-    actions.appendChild(have);
-    actions.appendChild(help);
-    root.appendChild(actions);
-    return;
-  }
-
-  // ── B: sync is on ──
-  line.textContent = "Sync is on. This is your key:";
-
-  const keyBox = document.createElement("div");
-  keyBox.className = "sync-key";
-  keyBox.textContent = formatSyncKey(key);
-  root.appendChild(keyBox);
-
-  const copy = document.createElement("button");
-  copy.className = "list-btn wd-dialog-ok";
-  copy.type = "button";
-  copy.textContent = "Copy key";
-  copy.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(formatSyncKey(key));
-      copy.textContent = "Copied";
-    } catch {
-      copy.textContent = "Select it above";
-    }
-    setTimeout(() => { copy.textContent = "Copy key"; }, 1600);
-  });
-
-  const off = document.createElement("button");
-  off.className = "list-btn";
-  off.type = "button";
-  off.textContent = "Turn off sync";
-  off.addEventListener("click", async () => {
-    hideSyncPanel();
-    const keep = await wdConfirm(
-      "Turn off sync?",
-      "This browser stops syncing. Your progress here is untouched, and the " +
-      "copy on the server stays \u2014 entering this key again reconnects you.",
-      "Keep sync on", "Turn off"
-    );
-    if (keep) { showSyncPanel(); return; }
-    clearSyncKey();
-    renderSyncAnchor();
-  });
-
-  actions.appendChild(copy);
-  actions.appendChild(off);
-  actions.appendChild(help);
-  root.appendChild(actions);
-}
-
-/* The sync panel: wd-dialog clothing, own backdrop, own close. Content is
-   renderSyncSection into its body; re-rendered in place on state changes. */
 function ensureSyncPanel(){
   let bd = document.getElementById("syncPanelBackdrop");
   if (bd) return bd;
@@ -2943,12 +2973,9 @@ function ensureSyncPanel(){
   bd.querySelector("#syncPanelClose").addEventListener("click", hideSyncPanel);
   return bd;
 }
-function renderSyncPanelBody(){
-  const body = document.getElementById("syncPanelBody");
-  if (body) renderSyncSection(body);
-}
 function showSyncPanel(){
   const bd = ensureSyncPanel();
+  _syncState = "main";
   renderSyncPanelBody();
   bd.hidden = false;
   bd.classList.add("open");
