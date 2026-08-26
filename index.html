@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.26";
+const WORDDOCK_VERSION = "v26.27";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3203,7 +3203,7 @@ const aboutTopics = [
     'right moment — your weakest word, not a random one. WordDock keeps a running ' +
     'score for every word and always builds your next deck from the ones you know ' +
     'least well. No streaks, no penalties, no pressure: just your weakest words, ' +
-    'surfaced first, until they aren\u2019t weak any more.</p>' },
+    'surfaced first, until they aren\u2019t weak any more.</p><a id="more-idea" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-idea</a>' },
 
   { id:"studying", title:"Studying", html:
     '<h2 class="section-title gz-first">Studying</h2>' +
@@ -3217,7 +3217,7 @@ const aboutTopics = [
     'you did. That one score does three jobs at once: it tallies how well you know ' +
     'the word, it decides which words come up next (lowest first), and \u2014 past ' +
     'a mark of <b>10</b> \u2014 it counts the word as mastered. Nothing about time ' +
-    'enters into it: no decay, no \u201Cdays since review.\u201D</p>' },
+    'enters into it: no decay, no \u201Cdays since review.\u201D</p><a id="more-studying" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-studying</a>' },
 
   { id:"progress", title:"Progress &amp; mastery", html:
     '<h2 class="section-title gz-first">Progress &amp; mastery</h2>' +
@@ -3227,7 +3227,7 @@ const aboutTopics = [
     'domain\u2019s number is the slower, truer measure of how far through the ' +
     'subject you\u2019ve come. A word counts as mastered once its score reaches ' +
     '<b>10</b>, about ten clean recalls; 100% means every word is at mastery or ' +
-    'beyond.</p>' },
+    'beyond.</p><a id="more-progress" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-progress</a>' },
 
   { id:"domains", title:"Domains &amp; lists", html:
     '<h2 class="section-title gz-first">Domains &amp; lists</h2>' +
@@ -3235,7 +3235,7 @@ const aboutTopics = [
     'like <code>NL-RU</code>, or a field. Within it, the <b>Full-List</b> is the ' +
     'complete set WordDock provides; your own imported files sit alongside it. ' +
     'Progress is shared across a whole domain, so studying any list in it builds ' +
-    'the same scores.</p>' },
+    'the same scores.</p><a id="more-domains" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-domains</a>' },
 
   { id:"ownlists", title:"Your own lists", html:
     '<h2 class="section-title gz-first">Your own lists</h2>' +
@@ -3256,7 +3256,7 @@ const aboutTopics = [
     'numbering. Progress is tracked per ID, so two files both starting at ' +
     '<code>0001</code> would make different words share scores. WordDock warns you ' +
     'if it spots this.</li>' +
-    '</ol>' },
+    '</ol><a id="more-ownlists" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-ownlists</a>' },
 
   { id:"devices", title:"Devices &amp; your key", html:
     '<h2 class="section-title gz-first">Devices &amp; your key</h2>' +
@@ -3273,7 +3273,19 @@ const aboutTopics = [
     'outside your devices, like an email to yourself.</p>' +
     '<p class="setting-desc">Sharing a computer? Progress belongs to the browser, ' +
     'so everyone studying in the same one shares one set of scores. A separate ' +
-    'browser profile keeps progress apart.</p>' },
+    'browser profile keeps progress apart.</p><a id="more-devices" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-devices</a>' },
+
+  { id:"more", title:"More", html:
+    '<h2 class="section-title gz-first">More</h2>' +
+    '<p class="setting-desc">Work in progress. Each anchor below links to deeper background on the corresponding About section - methodology, spec details, academic references.</p>' +
+    '<ul class="about-rules">' +
+    '<li><a href="#more-idea">#more-idea</a> - The idea: weakest-first, RS mechanics, methodology</li>' +
+    '<li><a href="#more-studying">#more-studying</a> - Studying: deck logic, grading rules, 12-pass contract</li>' +
+    '<li><a href="#more-progress">#more-progress</a> - Progress: coverage metric, two-number principle</li>' +
+    '<li><a href="#more-domains">#more-domains</a> - Domains: shared scores, domain permanence</li>' +
+    '<li><a href="#more-ownlists">#more-ownlists</a> - Your own lists: SF25 spec, ID rule, curator notes</li>' +
+    '<li><a href="#more-devices">#more-devices</a> - Devices: sync protocol, privacy, key rotation policy</li>' +
+    '</ul>' },
 ];
 
 let aboutTopicId = aboutTopics[0].id;   // first topic auto-selected
