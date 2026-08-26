@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.16";
+const WORDDOCK_VERSION = "v26.17";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -198,7 +198,7 @@ body{
   margin-top:16px;
 }
 #syncPanelBackdrop #syncPanelBody{
-  max-height:55vh; overflow-y:auto;
+  min-height:180px; max-height:55vh; overflow-y:auto;
 }
 #syncPanelBackdrop .section-title{
   margin:0 0 8px; padding-top:0; border-top:none;
@@ -2868,36 +2868,6 @@ async function claimFreshKey(){
    section's Turn-on uses it too): key big, Copy present, one keep-it-safe
    line. Pairing instructions live in the "?" dialog and the key-entry
    prompt, not here. */
-function showKeyDialog(key){
-  return new Promise(resolve => {
-    const bd = document.createElement("div");
-    bd.className = "wd-dialog-backdrop open";
-    bd.innerHTML =
-      '<div class="wd-dialog">' +
-        '<div class="wd-dialog-title">Sync is on.</div>' +
-        '<div class="wd-dialog-body">Your key:</div>' +
-        '<div class="sync-key">' + formatSyncKey(key) + '</div>' +
-        '<div class="wd-dialog-body">Keep your key somewhere outside your ' +
-          'devices \u2014 for example, copy it into an email or message to ' +
-          'yourself.</div>' +
-        '<div class="wd-dialog-actions">' +
-          '<button class="wd-dialog-btn" type="button" data-act="copy">Copy key</button>' +
-          '<button class="wd-dialog-btn wd-dialog-ok" type="button" data-act="ok">OK</button>' +
-        '</div>' +
-      '</div>';
-    document.body.appendChild(bd);
-    const copyBtn = bd.querySelector('[data-act="copy"]');
-    copyBtn.addEventListener("click", async () => {
-      try { await navigator.clipboard.writeText(formatSyncKey(key)); copyBtn.textContent = "Copied"; }
-      catch { copyBtn.textContent = "Select it above"; }
-      setTimeout(() => { copyBtn.textContent = "Copy key"; }, 1600);
-    });
-    bd.querySelector('[data-act="ok"]').addEventListener("click", () => {
-      bd.remove(); resolve();
-    });
-  });
-}
-
 async function turnOnSyncFlow(){
   const fresh = await claimFreshKey();
   if (!fresh){
@@ -2912,7 +2882,6 @@ async function turnOnSyncFlow(){
   setSyncKey(fresh);
   syncPush();
   renderSyncAnchor();
-  await showKeyDialog(fresh);
   showSyncPanel();
   return true;
 }
