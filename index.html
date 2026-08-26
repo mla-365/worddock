@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.18";
+const WORDDOCK_VERSION = "v26.19";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -202,6 +202,10 @@ body{
 }
 #syncPanelBackdrop .sync-pane{
   flex:1; overflow-y:auto; min-height:0;
+  display:flex; flex-direction:column;
+}
+#syncPanelBackdrop .sync-center{
+  flex:1; display:flex; flex-direction:column; justify-content:center;
 }
 #syncPanelBackdrop .wd-dialog-actions{
   flex:none;
@@ -2743,11 +2747,14 @@ function _renderSyncMain(root){
 
   if (key){
     pane.appendChild(_syncTitle("Sync is on"));
-    pane.appendChild(_syncDesc("This is your key:"));
+    const center = document.createElement("div");
+    center.className = "sync-center";
+    center.appendChild(_syncDesc("This is your key:"));
     const keyBox = document.createElement("div");
     keyBox.className = "sync-key";
     keyBox.textContent = formatSyncKey(key);
-    pane.appendChild(keyBox);
+    center.appendChild(keyBox);
+    pane.appendChild(center);
 
     const copy = _syncBtn("Copy key", "wd-dialog-ok", async () => {
       try {
@@ -2787,7 +2794,7 @@ function _renderSyncMain(root){
     });
 
     root.appendChild(_syncActions(
-      _syncBtn("I have a key", "", () => setSyncState("enter-key")),
+      _syncBtn("I have a key", "wd-dialog-ok", () => setSyncState("enter-key")),
       on,
       _syncBtn("?", "wd-dialog-cancel", () => setSyncState("help"))
     ));
@@ -2826,7 +2833,9 @@ function _renderSyncConfirmOff(root){
 function _renderSyncEnterKey(root){
   const pane = _syncPane(root);
   pane.appendChild(_syncTitle("Enter your key"));
-  pane.appendChild(_syncDesc(
+  const center = document.createElement("div");
+  center.className = "sync-center";
+  center.appendChild(_syncDesc(
     "Enter the key (dash is optional) shown on your other device to connect your progress."
   ));
 
@@ -2836,12 +2845,13 @@ function _renderSyncEnterKey(root){
   inp.placeholder = "e.g. 7K2M-9XQF";
   inp.setAttribute("autocomplete", "off");
   inp.setAttribute("spellcheck", "false");
-  pane.appendChild(inp);
+  center.appendChild(inp);
 
   const err = document.createElement("p");
   err.className = "setting-desc";
   err.style.cssText = "color:#c44;margin-top:6px;min-height:1.2em";
-  pane.appendChild(err);
+  center.appendChild(err);
+  pane.appendChild(center);
 
   const connect = _syncBtn("Connect", "wd-dialog-ok", async () => {
     const raw = normalizeSyncKey(inp.value);
