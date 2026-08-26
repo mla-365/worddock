@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.20";
+const WORDDOCK_VERSION = "v26.21";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -2830,7 +2830,7 @@ function _renderSyncHelp(root){
     "If you lose your phone or wipe your browser, your key restores your progress. " +
     "Keep your key somewhere safe - email or text it to yourself.";
   pane.appendChild(p);
-  root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"))));
+  root.appendChild(_syncActions(_syncBtn("Back", "wd-dialog-cancel", () => setSyncState("main"), "margin-right:auto")));
 }
 
 function _renderSyncConfirmOff(root){
