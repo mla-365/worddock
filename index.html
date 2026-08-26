@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.25";
+const WORDDOCK_VERSION = "v26.26";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -826,8 +826,8 @@ body{
   margin-bottom:4px;
 }
 .about-topic:hover{background:var(--menu-hover);color:var(--ink);}
-.about-topic.active{background:var(--menu-hover);color:var(--ink);
-  border-left:3px solid var(--ink);padding-left:10px;}
+.about-topic.active{background:#006600;color:#fff;
+  border-left:3px solid #006600;padding-left:10px;}
 /* Content: headed prose, reusing the app's own text styles. */
 .about-content{max-width:640px;}
 .about-content .section-title:first-child{margin-top:0;}
@@ -1197,7 +1197,6 @@ body{
   <div class="browser-head">
     <div class="browser-head-rail clickable">About</div>
     <div class="browser-head-detail">
-      <span class="surface-title">WordDock</span>
     </div>
   </div>
   <div class="browser-panes">
