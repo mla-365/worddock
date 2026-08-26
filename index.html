@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.22";
+const WORDDOCK_VERSION = "v26.23";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -201,8 +201,11 @@ body{
   height:210px; display:flex; flex-direction:column;
 }
 #syncPanelBackdrop .sync-pane{
-  flex:1; overflow-y:auto; min-height:0;
+  flex:1; overflow:hidden; min-height:0;
   display:flex; flex-direction:column;
+}
+#syncPanelBackdrop .sync-scroll{
+  flex:1; overflow-y:auto; min-height:0; padding-right:6px;
 }
 #syncPanelBackdrop .sync-center{
   flex:1; display:flex; flex-direction:column; justify-content:center;
@@ -978,8 +981,6 @@ body{
    header already shows it. */
 .section-title{
   margin:34px 0 10px;
-  padding-top:26px;
-  border-top:1px solid var(--menu-border);
   font-size:17px;font-weight:600;color:var(--ink);
 }
 
@@ -2824,7 +2825,7 @@ function _renderSyncHelp(root){
   const pane = _syncPane(root);
   pane.appendChild(_syncTitle("About sync"));
   const p = document.createElement("p");
-  p.className = "setting-desc";
+  p.className = "setting-desc sync-scroll";
   p.textContent = "Sync keeps your progress in WordDock safe under a random key without an account. " +
     "Enter your key on other browsers or devices and they all share the same progress. " +
     "If you lose your phone or wipe your browser, your key restores your progress. " +
