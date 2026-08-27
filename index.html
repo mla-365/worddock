@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.28";
+const WORDDOCK_VERSION = "v26.29";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1823,8 +1823,68 @@ function wdPrompt(title, body, placeholder, okLabel, uppercase){
    Every failure is swallowed. Local storage remains the source of truth, so a
    failed sync costs nothing and the next foreground heals it. */
 
+/* ─── Sync protocol timing ──────────────────────────────────────────────────
+   Reads are cheap; writes are not. A pull looks up one row, a push writes one
+   — at the database a write costs a thousand times a read. So the shape is:
+   pull freely, push rarely, and never push nothing.
+
+   THE THREE-WAY PUSH RULE. A push leaves only when all three hold:
+     1. at least one deck finished since the last successful push (the flag),
+     2. a natural moment — backgrounding, leaving, or opening,
+     3. at least SYNC_PUSH_COOLDOWN since the last push went out.
+   Miss any one and nothing leaves. The flag SURVIVES a miss: it lives in
+   localStorage, so a suppressed push is not a lost push — it goes out at the
+   next natural moment, or on the next open if the tab never got one.
+
+   WHY THE FLAG IS STORED, NOT A VARIABLE. A phone may kill a backgrounded tab
+   with no warning at all: no pagehide, no visibilitychange, no last breath.
+   In-memory state dies with it. Written down, the flag is still there when the
+   app next opens, and the catch-up push carries yesterday's decks after all.
+
+   WHY sendBeacon. On the way out, a normal request is often cancelled
+   mid-flight — exactly the moment we need it to complete. sendBeacon hands the
+   payload to the browser, which delivers it after the page is gone. The
+   trade-off is that we never see the reply, which is fine: a push has nothing
+   to tell us. fetch+keepalive is the fallback where sendBeacon is unavailable.
+
+   PULL BEFORE PUSH, ALWAYS. A push REPLACES the cloud row. Pushing before
+   merging would overwrite the cloud with a device that hasn't seen the other
+   device's work yet — silently lowering scores that were already safe. So on
+   open the order is pull, merge, then catch up. Never the other way round.
+
+   ⚑ THE KNOB TO WATCH. These two numbers are estimates, not measurements. The
+   real cost driver at scale is the number of pushes per user per day (target:
+   about two, one per study session) and, close behind it, the hourly pull —
+   because every request costs the same at the door whether it carries data up
+   or down. Divide D1's rows-written-per-day by the number of syncing users to
+   get the true push rate, then tune here. See the FUTURE-TO-DO register. */
 const SYNC_API = "https://sync.worddock.app";
+const SYNC_DIRTY_KEY = "wd_sync_dirty";     // "1" while a finished deck is unpushed
+const SYNC_LASTPUSH_KEY = "wd_sync_lastpush";
+const SYNC_PUSH_COOLDOWN = 10 * 60 * 1000;  // 10 minutes
+const SYNC_PULL_INTERVAL = 60 * 60 * 1000;  // hourly, foreground only
 let syncBusy = false;
+let syncPullTimer = null;
+
+/* Called at deck completion — the ONLY moment a score can change. */
+function markSyncDirty(){
+  try { localStorage.setItem(SYNC_DIRTY_KEY, "1"); } catch {}
+}
+function syncIsDirty(){
+  try { return localStorage.getItem(SYNC_DIRTY_KEY) === "1"; } catch { return false; }
+}
+function clearSyncDirty(){
+  try { localStorage.removeItem(SYNC_DIRTY_KEY); } catch {}
+}
+function syncCooldownPassed(){
+  try {
+    const last = parseInt(localStorage.getItem(SYNC_LASTPUSH_KEY) || "0", 10);
+    return !last || (Date.now() - last) >= SYNC_PUSH_COOLDOWN;
+  } catch { return true; }
+}
+function stampSyncPush(){
+  try { localStorage.setItem(SYNC_LASTPUSH_KEY, String(Date.now())); } catch {}
+}
 
 function allPools(){
   const out = {};
@@ -1882,7 +1942,7 @@ async function syncPull(){
 
     // A running deck is untouched: deck completion re-reads the live pool and
     // applies only its own deltas, so a mid-session pull can no more clobber a
-    // deck than a scores restore can.
+    // deck than an external write to the pool can.
     if (browserPane === "lists") renderBrowser();
   } catch {
     /* offline or server down — local stays authoritative */
@@ -1891,25 +1951,38 @@ async function syncPull(){
   }
 }
 
-async function syncPush(){
+/* The gate. Every caller passes through here; none of them decides for itself
+   whether a push is warranted. `force` is used by nothing today — it exists so
+   a future "push now" affordance cannot be built by loosening the rule. */
+function syncPush(force){
   const key = getSyncKey();
   if (!key) return;
-  const body = JSON.stringify({
-    key,
-    progress: allPools()
-  });
+  if (!force && !syncIsDirty()) return;          // rule 1: nothing new to say
+  if (!force && !syncCooldownPassed()) return;   // rule 3: too soon
+
+  const body = JSON.stringify({ key, progress: allPools() });
+
+  // Stamp and clear BEFORE sending. sendBeacon gives no receipt, so there is
+  // no success to wait for; and a push that silently failed is harmless — the
+  // next finished deck re-raises the flag, and the merge rule makes a repeated
+  // push a no-op. Optimism is the cheap direction to be wrong in.
+  stampSyncPush();
+  clearSyncDirty();
+
   try {
-    // keepalive lets the request survive the page being backgrounded or closed
-    // — without it the push would often be cancelled mid-flight, which is the
-    // one moment we actually need it to complete.
-    await fetch(SYNC_API + "/push", {
+    if (navigator.sendBeacon){
+      const blob = new Blob([body], { type: "application/json" });
+      if (navigator.sendBeacon(SYNC_API + "/push", blob)) return;
+    }
+    // Fallback where sendBeacon is missing or refuses the payload.
+    fetch(SYNC_API + "/push", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body,
       keepalive: true
-    });
+    }).catch(() => {});
   } catch {
-    /* swallowed: the next background push carries the same state */
+    /* swallowed: local stays authoritative, the next deck re-raises the flag */
   }
 }
 
@@ -1931,11 +2004,37 @@ async function syncClaim(key){
   }
 }
 
+/* Catch-up on open: pull and merge FIRST, then push whatever this device still
+   owes. The order is not stylistic — see "pull before push" above. */
+async function syncCatchUp(){
+  await syncPull();
+  syncPush();
+}
+
+/* The hourly pull runs only while the app is in front. A background tab is
+   costing the server nothing and showing the user nothing. */
+function startSyncPullTimer(){
+  stopSyncPullTimer();
+  if (!getSyncKey()) return;
+  syncPullTimer = setInterval(() => {
+    if (document.visibilityState === "visible") syncPull();
+  }, SYNC_PULL_INTERVAL);
+}
+function stopSyncPullTimer(){
+  if (syncPullTimer){ clearInterval(syncPullTimer); syncPullTimer = null; }
+}
+
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") syncPush();
-  else                                       syncPull();
+  if (document.visibilityState === "hidden"){
+    syncPush();                 // natural moment — the gate decides
+    stopSyncPullTimer();
+  } else {
+    syncCatchUp();              // pull, merge, then settle any debt
+    startSyncPullTimer();
+  }
 });
-window.addEventListener("pagehide", syncPush);
+// Leaving for good. sendBeacon is what makes this one actually arrive.
+window.addEventListener("pagehide", () => syncPush());
 
 function switchActiveList(listId){
   const list = LISTS[listId];
@@ -2155,6 +2254,7 @@ function gradeGood(){
       localStorage.setItem(poolKey, JSON.stringify(pool));
       RS = pool;   // keep the in-memory copy in sync with the store
       markStudied(DOMAIN_RUNTIME);   // for ACTIVE ordering
+      markSyncDirty();               // the one moment a score can change
       maybeAskToKeepSafe();          // consent cascade — fires at most twice, ever
     }
     render();
@@ -2923,7 +3023,8 @@ function _renderSyncMain(root){
         return;
       }
       setSyncKey(fresh);
-      syncPush();
+      syncPush(true);       // forced — see turnOnSyncFlow
+      startSyncPullTimer();
       renderSyncAnchor();
       setSyncState("main");
     });
@@ -2960,6 +3061,7 @@ function _renderSyncConfirmOff(root){
     _syncBtn("Keep sync on", "wd-dialog-ok", () => setSyncState("main")),
     _syncBtn("Turn off", "", () => {
       clearSyncKey();
+      stopSyncPullTimer();
       renderSyncAnchor();
       setSyncState("main");
     })
@@ -2999,6 +3101,10 @@ function _renderSyncEnterKey(root){
     connect.disabled = true;
     setSyncKey(raw);
     await syncPull();
+    // Merged state goes back up, forced: this browser's own progress must
+    // reach the other device, and no deck was finished to raise the flag.
+    syncPush(true);
+    startSyncPullTimer();
     renderSyncAnchor();
     if (browserPane === "lists") renderBrowser();
     renderBrowserRail();
@@ -3066,7 +3172,11 @@ async function turnOnSyncFlow(){
     return false;
   }
   setSyncKey(fresh);
-  syncPush();
+  // Forced: the gate would refuse this one (no deck finished since the flag
+  // was last cleared), but a brand-new key must carry the progress this
+  // browser already holds, or the second device would join an empty row.
+  syncPush(true);
+  startSyncPullTimer();
   renderSyncAnchor();
   showSyncPanel();
   return true;
@@ -3997,8 +4107,11 @@ function readLastList(){
 
   // Pull after the app is up and usable, never before: sync is a convenience
   // layer and must not delay the first card by a single frame. If it fails,
-  // nothing here notices.
-  syncPull();
+  // nothing here notices. This is also the catch-up moment — a deck finished
+  // in a session the phone killed still owes the server a push, and this is
+  // where that debt is settled (after the merge, never before it).
+  syncCatchUp();
+  startSyncPullTimer();
 })();
 </script>
 
