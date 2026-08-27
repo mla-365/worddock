@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.27";
+const WORDDOCK_VERSION = "v26.28";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -2287,7 +2287,10 @@ function wdConfirm(title, body, okLabel = "OK", cancelLabel = "Cancel", isHtml =
     if (cancelLabel !== null) cancel.textContent = cancelLabel;
     back.hidden = false;
     back.classList.add("open");
+    // nav: Back cancels, exactly like Escape or the backdrop.
+    navOpen("dialog", () => cleanup(false));
     function cleanup(result){
+      navClosed("dialog");
       cancel.hidden = false;   // restore for the next dialog
       back.classList.remove("open");
       back.hidden = true;
@@ -2349,6 +2352,8 @@ function wdPromptName(title, body, domain, prefill){
 
     back.hidden = false;
     back.classList.add("open");
+    // nav: Back cancels, exactly like Escape or the backdrop.
+    navOpen("dialog", () => cleanup(null));
     // Focus AFTER the dialog has actually painted. Calling focus() while the
     // backdrop is still transitioning in can silently fail — the element isn't
     // laid out yet — which left the field looking dead: correct, but with no
@@ -2359,6 +2364,7 @@ function wdPromptName(title, body, domain, prefill){
     }));
 
     function cleanup(result){
+      navClosed("dialog");
       back.classList.remove("open");
       back.hidden = true;
       field.hidden = true;
@@ -2397,6 +2403,93 @@ function wdPromptName(title, body, domain, prefill){
    Booting a returning learner into a file manager instead of a card would be
    the worse mistake; this avoids it without the developer's annoyance of being
    thrown out of the browser on every refresh. */
+/* ─── Back-button contract ──────────────────────────────────────────────────
+   Back does exactly what the user just did, in reverse: it peels ONE layer.
+   Dialog -> closes. Mobile detail pane -> back to the rail. Surface -> back to
+   studying. Studying -> leaves the app, because an app that will not close
+   when the phone rings is an app in the way.
+
+   HOW IT WORKS. The browser keeps a stack of entries and tells us when the
+   user pops one. Every time the app goes a layer deeper we push an entry that
+   changes nothing visible (no hash, no path — the address bar stays clean) and
+   remember how to undo that layer. On popstate we undo the topmost one.
+
+   THE ONE RULE THAT KEEPS THIS HONEST: every close route reports back. A layer
+   shut by its own × or Cancel calls navClosed(), which drops its entry. Skip
+   that and the stack outlives the screen — then one Back silently eats two
+   layers. navPopping guards the re-entry: while Back is driving, the closers it
+   calls must not report a close of their own.
+
+   ⚑ FLAG FOR THE RAIL REBUILD (Active domains / More). Two couplings live here:
+
+   1. NAV_MOBILE must stay equal to the max-width in the browser's media query
+      (currently 560px). The "pane" layer only exists where the CSS actually
+      hides one pane; on desktop both panes are visible, so registering a layer
+      there would make Back appear to do nothing once — a phantom step.
+
+   2. Exactly four places move between rail and detail today: clicking a domain
+      folder, clicking an About topic, the "Domains" header, and the About
+      header. Each is marked "nav: pane layer". Splitting the rail into zones is
+      presentation and adds no fifth route — the folders are still built by one
+      function. But if the rebuild ever opens the detail pane by some OTHER
+      route, that route MUST call navOpenPane(), or Back will skip the rail and
+      drop the user straight back into studying. */
+const NAV_MOBILE = 560;
+const navStack = [];        // [{ kind, close }], deepest layer last
+let navPopping = false;     // true while Back (or our own history.go) drives
+
+function navIsMobile(){
+  return window.matchMedia("(max-width:" + NAV_MOBILE + "px)").matches;
+}
+
+/* Went a layer deeper. `close` must undo exactly this layer, nothing else. */
+function navOpen(kind, close){
+  navStack.push({ kind, close });
+  try { history.pushState({ wd: navStack.length }, ""); } catch {}
+}
+
+/* A layer closed through its own UI. Drop its entry and any that sat above it
+   (a dialog on top of a pane both vanish when the surface closes). */
+function navClosed(kind){
+  if (navPopping) return;
+  const i = navStack.map(l => l.kind).lastIndexOf(kind);
+  if (i === -1) return;
+  const drop = navStack.length - i;
+  navStack.length = i;
+  navPopping = true;
+  try { history.go(-drop); } catch { navPopping = false; }
+}
+
+/* Surfaces are mutually exclusive, so opening one while another is open is a
+   REPLACEMENT, not a descent: it keeps the single surface entry (Back from
+   About goes to studying, not back to the browser) and drops anything above. */
+function navOpenSurface(close){
+  const i = navStack.map(l => l.kind).lastIndexOf("surface");
+  if (i === -1){ navOpen("surface", close); return; }
+  const above = navStack.length - 1 - i;
+  navStack[i].close = close;
+  if (above > 0){
+    navStack.length = i + 1;
+    navPopping = true;
+    try { history.go(-above); } catch { navPopping = false; }
+  }
+}
+
+/* Mobile only — see flag 2 above. */
+function navOpenPane(close){
+  if (!navIsMobile()) return;
+  if (navStack.some(l => l.kind === "pane")) return;
+  navOpen("pane", close);
+}
+
+window.addEventListener("popstate", () => {
+  if (navPopping){ navPopping = false; return; }   // our own history.go landing
+  const layer = navStack.pop();
+  if (!layer) return;                              // base: the browser leaves
+  navPopping = true;
+  try { layer.close(); } finally { navPopping = false; }
+});
+
 const VIEW_KEY = "wd_view";
 
 function saveView(pane){          // pane = null when the browser is closed
@@ -2409,18 +2502,23 @@ function readView(){
   try { return sessionStorage.getItem(VIEW_KEY); } catch { return null; }
 }
 
-function closeAllSurfaces(){
+/* `silent` is for internal use only: it suppresses the history report when the
+   caller is already managing the stack (Back driving, or openSurface replacing
+   one surface with another). Every user-facing close route calls this bare. */
+function closeAllSurfaces(silent){
   for (const k in overlays) overlays[k].classList.remove("open");
   $domainpage.classList.remove("open");
   $listbrowser.classList.remove("open");
   $aboutbrowser.classList.remove("open");
   for (const k in tabs) tabs[k].classList.remove("active");
   saveView(null);                 // back to study
+  if (!silent) navClosed("surface");
 }
 
 function openSurface(which){
   // surfaces are mutually exclusive
-  closeAllSurfaces();
+  closeAllSurfaces(true);
+  navOpenSurface(() => closeAllSurfaces(true));
   if (which === "domain"){
     renderDomainPage();
     $domainpage.classList.add("open");
@@ -2579,8 +2677,14 @@ function makeFolderEl(domain){
     }
     renderBrowser();
     // mobile: reveal the detail pane after picking a domain
+    // nav: pane layer (1 of 4) — Back returns to the rail
     $listbrowser.classList.remove("show-rail");
     $listbrowser.classList.add("show-detail");
+    navOpenPane(() => {
+      showBrowserPane("lists");
+      $listbrowser.classList.remove("show-detail");
+      $listbrowser.classList.add("show-rail");
+    });
   });
   return f;
 }
@@ -2711,7 +2815,17 @@ const SYNC_HELP_HTML =
 
 let _syncState = "main";
 
-function setSyncState(s){ _syncState = s; renderSyncPanelBody(); }
+/* The panel's sub-states (help, confirm-off, enter-key) are one layer deeper
+   than main, so Back returns to main — the same move as the panel's own Back
+   button. They never nest, so one entry covers all three. */
+function setSyncState(s){
+  _syncState = s;
+  renderSyncPanelBody();
+  if (s === "main") navClosed("syncstate");
+  else if (!navStack.some(l => l.kind === "syncstate")){
+    navOpen("syncstate", () => setSyncState("main"));
+  }
+}
 
 function renderSyncPanelBody(){
   const body = document.getElementById("syncPanelBody");
@@ -3038,12 +3152,14 @@ function showSyncPanel(){
   renderSyncPanelBody();
   bd.hidden = false;
   bd.classList.add("open");
+  navOpen("sync", hideSyncPanel);       // nav: Back closes the panel
 }
 function hideSyncPanel(){
   const bd = document.getElementById("syncPanelBackdrop");
   if (!bd) return;
   bd.classList.remove("open");
   bd.hidden = true;
+  navClosed("sync");                    // drops any sub-state entry with it
 }
 
 /* The footer anchor: one quiet line of truth. */
@@ -3306,9 +3422,14 @@ function renderAbout(){
       renderAbout();
       // Mobile: selecting a topic reveals the content pane (same one-pane
       // behaviour as picking a domain reveals its lists).
+      // nav: pane layer (2 of 4) — Back returns to the topic list
       const ab = document.getElementById("aboutbrowser");
       ab.classList.add("show-detail");
       ab.classList.remove("show-rail");
+      navOpenPane(() => {
+        ab.classList.remove("show-detail");
+        ab.classList.add("show-rail");
+      });
     });
     rail.appendChild(row);
   }
@@ -3734,6 +3855,7 @@ document.getElementById("browserDomainsHeader").addEventListener("click", () => 
   showBrowserPane("lists");                       // detail returns to the lists view
   $listbrowser.classList.remove("show-detail");   // …then, on mobile, show the rail
   $listbrowser.classList.add("show-rail");
+  navClosed("pane");                              // nav: pane layer (3 of 4)
 });
 
 // About WordDock: footer opens it; its own nav mirrors the browser's.
@@ -3755,6 +3877,7 @@ $aboutFooterLink.addEventListener("click", (e) => {
 document.querySelector("#aboutbrowser .browser-head-rail").addEventListener("click", () => {
   $aboutbrowser.classList.remove("show-detail");
   $aboutbrowser.classList.add("show-rail");
+  navClosed("pane");                              // nav: pane layer (4 of 4)
 });
 /* The five requirements, shown on the spot. Clicking through to the whole Info
    page answered a question the user didn't ask ("what is WordDock? how do I
