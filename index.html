@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.29";
+const WORDDOCK_VERSION = "v26.30";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1962,27 +1962,44 @@ function syncPush(force){
 
   const body = JSON.stringify({ key, progress: allPools() });
 
-  // Stamp and clear BEFORE sending. sendBeacon gives no receipt, so there is
-  // no success to wait for; and a push that silently failed is harmless — the
-  // next finished deck re-raises the flag, and the merge rule makes a repeated
-  // push a no-op. Optimism is the cheap direction to be wrong in.
-  stampSyncPush();
-  clearSyncDirty();
+  /* CONTENT TYPE IS LOAD-BEARING. text/plain is one of the three types a
+     browser will send cross-origin without asking permission first.
+     application/json is not: it triggers a preflight OPTIONS, and a beacon
+     leaving as the page disappears rarely survives that round trip — it dies
+     as a CORS error having delivered nothing. (Observed, v26.29.) The Worker
+     never reads this header; it takes the body as text and parses it itself.
+     Do not "tidy" this to application/json. */
+  const CT = "text/plain;charset=UTF-8";
 
+  stampSyncPush();   // the cooldown starts at the attempt, not at the arrival
+
+  /* The flag is cleared only where we can tell the difference. sendBeacon
+     returns true when the browser ACCEPTS the payload, not when it arrives —
+     no receipt ever comes — so with a beacon we clear optimistically and
+     accept that a lost push waits for the next finished deck. The fallback
+     fetch does get an answer, so there we wait for it. Either way a repeated
+     push is harmless: the merge takes the maximum, so re-sending changes
+     nothing. Optimism is the cheap direction to be wrong in. */
   try {
     if (navigator.sendBeacon){
-      const blob = new Blob([body], { type: "application/json" });
-      if (navigator.sendBeacon(SYNC_API + "/push", blob)) return;
+      const blob = new Blob([body], { type: CT });
+      if (navigator.sendBeacon(SYNC_API + "/push", blob)){
+        clearSyncDirty();
+        return;
+      }
     }
-    // Fallback where sendBeacon is missing or refuses the payload.
+    // sendBeacon missing, or it refused the payload (queue full, too large).
     fetch(SYNC_API + "/push", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": CT },
       body,
       keepalive: true
-    }).catch(() => {});
+    })
+      .then(r => { if (r && r.ok) clearSyncDirty(); })
+      .catch(() => {});
   } catch {
-    /* swallowed: local stays authoritative, the next deck re-raises the flag */
+    /* swallowed: local stays authoritative, the flag stands, the next natural
+       moment tries again */
   }
 }
 
