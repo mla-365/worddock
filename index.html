@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.30";
+const WORDDOCK_VERSION = "v26.31";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1420,8 +1420,14 @@ async function parseWordDockXlsx(file){
         `WordDock files use a fixed 25-column order.` };
     }
   }
-  // Capture any extra columns beyond the canonical 25 (preserve through round-trip)
-  const extraColumns = header.slice(COLUMNS.length).filter(h => h);
+  // Capture any extra columns beyond the canonical 25 (preserve through
+  // round-trip). Offsets are kept so values stay aligned to their headers
+  // even if an unnamed (empty-header) column sits between named ones.
+  const extraOffsets = [];
+  for (let i = COLUMNS.length; i < header.length; i++){
+    if (header[i]) extraOffsets.push(i);
+  }
+  const extraColumns = extraOffsets.map(i => header[i]);
 
   // Parse data rows
   const rows = [];
@@ -1464,7 +1470,12 @@ async function parseWordDockXlsx(file){
         L: arr[COL_INDEX.L]     ?? null,
         ENTRY: arr[COL_INDEX.ENTRY] ?? null
       },
-      _extras: null,
+      // WD26 no-wipe: values beyond the canonical 25 are CARRIED, never
+      // interpreted. null when the file has no extra columns.
+      _extras: extraOffsets.length
+        ? extraOffsets.map(i =>
+            (arr[i] === undefined || arr[i] === null || arr[i] === "") ? null : arr[i])
+        : null,
       // Convenience: L is on the row for filtering.
       get L(){ return this._preserved.L; }
     };
@@ -1534,6 +1545,14 @@ function serializeToXlsx(list, exportName){
       const p = row.pairs[i];
       arr[COL_INDEX["Q"+(i+1)]] = p ? p.q : null;
       arr[COL_INDEX["A"+(i+1)]] = p ? p.a : null;
+    }
+    // WD26 no-wipe: extra (beyond-25) values ride back under their own
+    // headers — carried, never interpreted.
+    if (row._extras){
+      const maxExtras = headers.length - COLUMNS.length;
+      for (let i = 0; i < row._extras.length && i < maxExtras; i++){
+        arr[COLUMNS.length + i] = row._extras[i] ?? null;
+      }
     }
     // SF25: RS is NOT written to the file — it lives only in localStorage.
     aoa.push(arr);
@@ -1605,14 +1624,28 @@ function saveLists(){
   const out = {};
   for (const l of Object.values(LISTS)){
     if (l.source !== "imported") continue;          // embedded ones re-fetch
-    const base = { listId: l.listId, name: l.name, domain: l.domain, source: "imported" };
+    const base = { listId: l.listId, name: l.name, domain: l.domain, source: "imported",
+                   extraColumns: l.extraColumns || null };
     if (isCurated(l.domain)){
-      out[l.listId] = { ...base, mode: "ids", ids: l.rows.map(r => r.ID) };
+      // WD26: extras are stored SPARSELY — only rows that actually carry a
+      // value. A handful of marks costs a few hundred bytes, so the
+      // no-duplication economy of ID-mode stands untouched.
+      const extras = {};
+      let anyExtras = false;
+      for (const r of l.rows){
+        if (r._extras && r._extras.some(v => v !== null && v !== "")){
+          extras[r.ID] = r._extras;
+          anyExtras = true;
+        }
+      }
+      out[l.listId] = { ...base, mode: "ids", ids: l.rows.map(r => r.ID),
+                        ...(anyExtras ? { extras } : {}) };
     } else {
       out[l.listId] = { ...base, mode: "rows", rows: l.rows.map(r => ({
         ID: r.ID, CAT: r.CAT, CTAG: r.CTAG,
         L: r._preserved.L, ENTRY: r._preserved.ENTRY,
-        pairs: r.pairs
+        pairs: r.pairs,
+        _extras: r._extras || null
       })) };
     }
   }
@@ -1627,7 +1660,7 @@ function hydrateRow(r){
     ID: r.ID, CAT: r.CAT || "", CTAG: r.CTAG || "",
     pairs: r.pairs || [],
     _preserved: { L: r.L ?? null, ENTRY: r.ENTRY ?? null },
-    _extras: null,
+    _extras: r._extras ?? null,
     get L(){ return this._preserved.L; }
   };
 }
@@ -1648,7 +1681,7 @@ function loadPersistedLists(){
     } else if (Array.isArray(s.rows)){
       LISTS[s.listId] = {
         listId: s.listId, name: s.name, domain: s.domain, source: "imported",
-        extraColumns: null,
+        extraColumns: s.extraColumns || null,
         rows: s.rows.map(hydrateRow)
       };
     }
@@ -1664,11 +1697,26 @@ function resolveIdLists(domain, fullRows){
   for (let i = PENDING_ID_LISTS.length - 1; i >= 0; i--){
     const s = PENDING_ID_LISTS[i];
     if (s.domain !== domain) continue;
-    const rows = s.ids.map(id => byId.get(id)).filter(Boolean);
+    const ex = s.extras || null;
+    const rows = s.ids.map(id => {
+      const base = byId.get(id);
+      if (!base) return null;
+      if (!ex || !ex[id]) return base;      // unmarked rows stay shared
+      // WD26: a marked row gets a per-list clone. Extras belong to the FILE,
+      // not the word — the same word may carry different marks in different
+      // lists, and the shared Full-List row must never be polluted.
+      return {
+        ID: base.ID, CAT: base.CAT, CTAG: base.CTAG,
+        pairs: base.pairs,
+        _preserved: base._preserved,
+        _extras: ex[id],
+        get L(){ return this._preserved.L; }
+      };
+    }).filter(Boolean);
     if (rows.length){
       LISTS[s.listId] = {
         listId: s.listId, name: s.name, domain: s.domain, source: "imported",
-        extraColumns: null, rows
+        extraColumns: s.extraColumns || null, rows
       };
     }
     PENDING_ID_LISTS.splice(i, 1);
@@ -2312,9 +2360,12 @@ function render(){
   $card.classList.remove("deck-done");
   const s     = cur();
   const field = s.row.pairs[s.fi];
-  // CAT-CTAG, uppercase, hyphen-joined; or just CAT if no tag
+  // CAT-CTAG, uppercase, hyphen-joined; or just CAT if no tag.
+  // WD26 pipe cut: only the part BEFORE "|" is shown; everything after is
+  // machine space for future filtering. Display is a lens — the full CTAG
+  // stays intact in data, storage, export and JSON.
   const cat = (s.row.CAT || "").toUpperCase();
-  const tag = (s.row.CTAG || "").toUpperCase();
+  const tag = (s.row.CTAG || "").split("|")[0].trim().toUpperCase();
   $cardTag.textContent = tag ? cat + " \u00B7 " + tag : cat;
   if (showingA){
     if (peeking){
