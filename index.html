@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.31";
+const WORDDOCK_VERSION = "v26.32";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1531,7 +1531,13 @@ function parseFilename(rawName){
 /* Serialize the active list back to a WordDock xlsx (Blob).
    Uses the row's current localStorage RS, not the value that came in from file. */
 function serializeToXlsx(list, exportName){
-  const headers = [...COLUMNS, ...(list.extraColumns || [])];
+  // WD26: every export carries the UTAG header — the export itself teaches
+  // that column Z is the user's space. Appended only when absent (any
+  // casing); an all-empty UTAG stores nothing on re-import (sparse), so
+  // the column costs nothing.
+  const extras = [...(list.extraColumns || [])];
+  if (!extras.some(h => String(h).toLowerCase() === "utag")) extras.push("UTAG");
+  const headers = [...COLUMNS, ...extras];
   const aoa = [headers];
   for (const row of list.rows){
     const arr = new Array(headers.length).fill(null);
@@ -2504,7 +2510,16 @@ function wdPromptName(title, body, domain, prefill){
     input.value = prefill || "";
     input.placeholder = "e.g. vakantie, examen-week";
 
-    function cleanName(v){ return (v || "").trim().replace(/[^\w\-]+/g, "-").replace(/^-+|-+$/g, ""); }
+    // Forgiveness: humans naturally type the full filename. Strip a typed
+    // ".xlsx" and the domain prefix (any casing, even repeated) BEFORE the
+    // character cleaning, so "NL-RU_utagtest.xlsx" and "utagtest" resolve
+    // to the same name — the double prefix becomes impossible.
+    function cleanName(v){
+      let s = (v || "").trim().replace(/\.xlsx$/i, "");
+      const pfx = domain ? (domain + "_").toLowerCase() : null;
+      while (pfx && s.toLowerCase().startsWith(pfx)) s = s.slice(pfx.length);
+      return s.replace(/[^\w\-]+/g, "-").replace(/^-+|-+$/g, "");
+    }
     function refresh(){
       const n = cleanName(input.value);
       const reserved = n.toLowerCase() === FULL_LIST_NAME.toLowerCase();
@@ -3925,9 +3940,10 @@ async function exportList(listId){
   const isFull = (list.name === FULL_LIST_NAME);
   const name = await wdPromptName(
     "Save this list as\u2026",
-    isFull
+    (isFull
       ? "This is the curated " + list.domain + " list. Give your copy a name."
-      : "Name your copy of \u201C" + list.name + "\u201D.",
+      : "Name your copy of \u201C" + list.name + "\u201D.")
+      + " Type only the name \u2014 WordDock puts " + list.domain + "_ in front.",
     list.domain,
     isFull ? "" : list.name
   );
@@ -3944,7 +3960,7 @@ async function exportList(listId){
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setListMessage("Exported as " + filename, "success");
+    setListMessage("Your file " + filename + " is ready to be saved.", "success");
   } catch (e){
     setListMessage("Export failed: " + e.message, "error");
   }
