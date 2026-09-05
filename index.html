@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.32";
+const WORDDOCK_VERSION = "v26.33";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1226,7 +1226,7 @@ body{
 
     <div class="domain-universe-label">All domains</div>
     <div class="domain-universe" id="domainUniverse"></div>
-    <p class="domain-note">Domains are curated. <strong>MY LISTS</strong> gathers anything you import that doesn't match a curated domain — each keeps its own progress. Bold means you've made progress in that domain.</p>
+    <p class="domain-note">WordDock maintains the WD domains. <strong>MY LISTS</strong> holds your user-defined domains — anything you import under a name of your own. Each domain keeps its own progress; bold means you've made progress there.</p>
     <p class="domain-note"><strong>One rule for your own lists:</strong> within a domain, every entry needs its own ID — never restart numbering in a new file. Progress is tracked per ID, so two files that both start at 0001 would share scores between different words. WordDock checks this when you import and warns you.</p>
   </div>
 </div>
@@ -3017,6 +3017,7 @@ function renderSyncPanelBody(){
 
   if (_syncState === "help")        return _renderSyncHelp(body);
   if (_syncState === "confirm-off") return _renderSyncConfirmOff(body);
+  if (_syncState === "confirm-new") return _renderSyncConfirmNew(body);
   if (_syncState === "enter-key")   return _renderSyncEnterKey(body);
   _renderSyncMain(body);
 }
@@ -3095,22 +3096,10 @@ function _renderSyncMain(root){
     err.style.cssText = "color:#c44;margin-top:6px;min-height:1.2em";
     pane.appendChild(err);
 
-    const on = _syncBtn("Turn on sync", "", async () => {
-      on.textContent = "Turning on...";
-      on.disabled = true;
-      const fresh = await claimFreshKey();
-      if (!fresh){
-        on.textContent = "Turn on sync";
-        on.disabled = false;
-        err.textContent = "Couldn't set up sync - try again in a moment.";
-        return;
-      }
-      setSyncKey(fresh);
-      syncPush(true);       // forced — see turnOnSyncFlow
-      startSyncPullTimer();
-      renderSyncAnchor();
-      setSyncState("main");
-    });
+    // R1: never mint a key silently. This device may have HAD a key
+    // (turn-off wipes it locally); a fresh key cannot see that progress.
+    // The question lives one state deeper — same frame, no stacked dialog.
+    const on = _syncBtn("Turn on sync", "", () => setSyncState("confirm-new"));
 
     root.appendChild(_syncActions(
       _syncBtn("I have a key", "wd-dialog-ok", () => setSyncState("enter-key")),
@@ -3131,6 +3120,43 @@ function _renderSyncHelp(root){
     "Keep your key somewhere safe - email or text it to yourself.";
   pane.appendChild(p);
   root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"), "margin-right:auto")));
+}
+
+function _renderSyncConfirmNew(root){
+  const pane = _syncPane(root);
+  pane.appendChild(_syncTitle("Create a new key?"));
+  pane.appendChild(_syncDesc(
+    "This makes a brand-new key, starting from the progress in this " +
+    "browser. Already have a key \u2014 from another device, or from " +
+    "before? Use it instead: a new key can\u2019t see an old key\u2019s progress."
+  ));
+  const err = document.createElement("p");
+  err.className = "setting-desc";
+  err.style.cssText = "color:#c44;margin-top:6px;min-height:1.2em";
+  pane.appendChild(err);
+
+  const create = _syncBtn("Create new key", "", async () => {
+    create.textContent = "Creating...";
+    create.disabled = true;
+    const fresh = await claimFreshKey();
+    if (!fresh){
+      create.textContent = "Create new key";
+      create.disabled = false;
+      err.textContent = "Couldn't set up sync - try again in a moment.";
+      return;
+    }
+    setSyncKey(fresh);
+    syncPush(true);       // forced — see turnOnSyncFlow
+    startSyncPullTimer();
+    renderSyncAnchor();
+    setSyncState("main");
+  });
+
+  root.appendChild(_syncActions(
+    _syncBtn("I have a key", "wd-dialog-ok", () => setSyncState("enter-key")),
+    create,
+    _syncBtn("Cancel", "wd-dialog-cancel", () => setSyncState("main"))
+  ));
 }
 
 function _renderSyncConfirmOff(root){
@@ -3846,7 +3872,10 @@ $fileInput.addEventListener("change", async (e) => {
       "Replace \u201C" + list.name + "\u201D in " + domain + "?",
       domain + " already has a list with this name (" + existing.rows.length +
       " rows). Importing replaces its contents with this file's " +
-      list.rows.length + ". Your progress in " + domain + " is not affected.",
+      list.rows.length + ". Your progress in " + domain + " is not affected." +
+      (existing.listId === activeListId
+        ? " Your current deck restarts from the new content."
+        : ""),
       "Replace", "Cancel"
     );
   } else if (isCurated(domain)){
@@ -3890,6 +3919,15 @@ $fileInput.addEventListener("change", async (e) => {
   }
 
   registerList(list);                  // persists to localStorage
+
+  // (c)-rule: replacing the list you are STUDYING deals a fresh deck from
+  // the new rows at once. Not a silent discard — the Replace dialog said
+  // so, and an unfinished deck has consolidated nothing (RS writes only at
+  // deck completion). The lens must never outlive the shelf copy.
+  if (existing && list.listId === activeListId){
+    ALL = list.rows;
+    initDeck();
+  }
 
   // NOTE: importing writes NOTHING to the RS pool.
   //
@@ -3941,9 +3979,11 @@ async function exportList(listId){
   const name = await wdPromptName(
     "Save this list as\u2026",
     (isFull
-      ? "This is the curated " + list.domain + " list. Give your copy a name."
+      ? "This is the " + list.domain + " Full-List. Give your copy a name."
       : "Name your copy of \u201C" + list.name + "\u201D.")
-      + " Type only the name \u2014 WordDock puts " + list.domain + "_ in front.",
+      + " Type only the name \u2014 WordDock puts " + list.domain +
+      "_ in front: the domain links this file to your " + list.domain +
+      " progress.",
     list.domain,
     isFull ? "" : list.name
   );
