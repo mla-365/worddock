@@ -1,0 +1,120 @@
+# WD_MASTER_TODO — the one list
+
+**Stamped 2026-09-05 · audited against deployed index.html v26.33 (4259 lines)**
+
+> STANDING RULE: never deviate. Items are worked strictly in order, one per
+> session, until the list is finished. New ideas and cosmetic finds are
+> REGISTERED here (below the line), never pursued out of turn.
+> This file supersedes WD_FUTURE_TODO_Michel_v26-30.md and every older TODO.
+
+---
+
+## A. Verified DONE in v26.33 — never rebuild these
+
+Grep-verified in the deployed file on 2026-09-05:
+
+- WD26 pipeline: `_extras` import/persist/export, UTAG header always appended,
+  sparse Option-A storage, name-forgiveness in export dialog (v26.31–32)
+- Replace deck-refresh, option c: "Your current deck restarts from the new content." (v26.33)
+- Terminology sweep: "curated" survives only in code comments, not user copy (v26.33)
+- Back-button contract: navStack + pushState/popstate, layered undo
+- Self-correcting rowCount: hardcoded placeholder overwritten by rows.length after fetch
+  (was "parked idea" — turns out built)
+- Sync core LIVE: pull→merge→push, max-merge per (domain+ID), sendBeacon with
+  load-bearing text/plain, fetch+keepalive fallback
+- Re-key guarded: "I have a key" path + explicit "Create a new key?" confirmation
+  (R1 minimum done); no "multiple keys" promise anywhere in About
+- Worker rate limit per IP: 30/min (verified in deployed Worker 2026-08-27)
+- Score backup/restore JSON machinery: deliberately DELETED — the key is the backup.
+  The gains-100/365 reminder went with it. Do not resurrect.
+
+---
+
+## B. THE LIST — in this order
+
+### 1. Node-20 GitHub Actions fix
+One deploy already failed; every later item ships through this pipeline.
+Bump `actions/checkout` and `actions/upload-artifact` versions in the workflow.
+Smallest item, largest blast radius. Repo-side only, no index.html change.
+
+### 2. Live sync test protocol
+Answers "does sync work perfectly?" with evidence instead of memory.
+Scripted two-device run: fresh key → study on A → open B → max-merge check →
+off/on re-key flow → beacon-on-close check. Findings become list items; no
+code until tested. (Code inspection alone cannot prove sync correctness.)
+
+### 3. Pre-adoption warning dialog (key-collision)
+The one real sync-safety gap: entering a key on a device that already has
+progress merges irreversibly, silently (max only knows up).
+Split syncPull into look-fetch + apply; new sync-panel state `key-collision`
+with three doors: Take the cloud / Merge / Cancel. NOT built — grep confirms
+no such state exists.
+
+### 4. About & copy sweep (docs-in-app)
+Three approved sentences still missing from the app:
+- server-limit ("…syncing stops until the next day. Your scores stay in your browser.")
+- sync promise ("Your progress follows your devices — sometimes a device
+  catches up when you next open it.") — not "always in sync"
+- honest "Turn off sync" label (it disconnects this device; deletes nothing) — R1.3
+Small, pure copy, zero risk.
+
+### 5. Self-host SheetJS + precache converter.html
+index.html line 1235 still loads SheetJS from cdnjs — the last third-party
+runtime dependency, inconsistent with the self-hosted-Poppins principle.
+Vendor the file into the repo, point both index.html and converter.html at it,
+precache. Enables true offline Excel import.
+
+### 6. Mobile pass + rail zone reorder (bundled — same screen region)
+6a. Verify/fix rail footer (Info · Scores · Settings) reachability on mobile —
+the suspected real blocker to sharing the app. Only 3 media queries exist;
+needs live phone test first.
+6b. Michel's flag: domain zones (ACTIVE / MY LISTS / MORE) to be reordered.
+NEEDS MICHEL'S SPEC: target order and reasoning, decided at the start of this item.
+
+### 7. Profiles (WD_Bouwplan_Profielen.md)
+Decided 2026-08-28, fully designed, zero server cost. The biggest build on the
+list: local profiles for shared devices (the classroom scenario), sync under
+profiles, the lazy rule. Four open design questions in the Bouwplan to settle
+first — design session, then build sessions.
+
+### 8. R3 decision: push on large delta
+Decide, don't drift: does deck-completion push when the brake is open, or does
+the three-condition rule stay pure? One session, outcome is either "build it"
+(new item above Archive) or "rejected, logged".
+
+### 9. Archive & prune the project
+The finish line. Move every superseded doc to /docs/archive/ in the repo;
+project knowledge shrinks to: WD_MASTER_TODO.md (final state), WD_STATUS.md,
+current index.html, WD26 standard, Bouwplan (if profiles shipped), converter.
+Everything else out. Re-stamp, close.
+
+---
+
+## C. Below the line — gated, parked (register here, do not start)
+
+| Item | Trigger to promote |
+|---|---|
+| Per-key rate limit on Worker (`ratelimit` binding) | Worker >20k req/day, or hundreds of keys, or unexplained 429 spikes |
+| Weekly usage monitoring routine (dashboard walk in TODO v26-30 Deel 1.2) | first real external users |
+| Workers Paid decision | approaching 100k req/day wall |
+| In-app filter → save-as-slice | demonstrated user need, after sync era stabilizes |
+| `updated_at` from Worker /pull | next bundled Worker deploy |
+| Sync-era Settings stances (privacy-first / convenience-first) | when sync UI is next redesigned |
+| Lieve briefing as clickable infochart | after Lieve's reaction to v1 doc |
+
+## D. Excluded from this list (separate register, never app work)
+
+Corpus curation: NL-RU verb scaffolding 0625–0675, flags 0381 скорый / 0418
+бежать, NL-LA growth with Lieve. Lives outside WordDock, Michel's method.
+
+---
+
+## E. Session protocol (locked)
+
+Open a session with: current deployed index.html attached + this file.
+Claude takes the TOP unfinished item from section B, then:
+1. Verifies in the attached code (grep, not assume) what exists.
+2. Gives context in a few sentences.
+3. Proposes a concrete approach — design only, no code.
+Stop, wait for confirmation. One item per session. After deploy: Michel
+confirms live version, this file is re-stamped, done item moves to section A.
