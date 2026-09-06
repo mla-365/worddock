@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.33";
+const WORDDOCK_VERSION = "v26.34";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -2006,8 +2006,10 @@ async function syncPull(){
 }
 
 /* The gate. Every caller passes through here; none of them decides for itself
-   whether a push is warranted. `force` is used by nothing today — it exists so
-   a future "push now" affordance cannot be built by loosening the rule. */
+   whether a push is warranted. `force` bypasses the rules and is reserved
+   for the administrative handshakes (key creation, key adoption): one-shot
+   pushes behind explicit dialogs, never timers — which is why it cannot
+   chain or loop. */
 function syncPush(force){
   const key = getSyncKey();
   if (!key) return;
@@ -2025,7 +2027,10 @@ function syncPush(force){
      Do not "tidy" this to application/json. */
   const CT = "text/plain;charset=UTF-8";
 
-  stampSyncPush();   // the cooldown starts at the attempt, not at the arrival
+  if (!force) stampSyncPush();   // cooldown starts at the attempt, not the
+                                 // arrival - and only natural pushes start it;
+                                 // forced (administrative) pushes leave the
+                                 // clock alone (v26.34)
 
   /* The flag is cleared only where we can tell the difference. sendBeacon
      returns true when the browser ACCEPTS the payload, not when it arrives —
