@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.41";
+const WORDDOCK_VERSION = "v26.42";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3150,24 +3150,24 @@ function _renderSyncMain(root){
 function _renderSyncHelp(root){
   const pane = _syncPane(root);
   pane.appendChild(_syncTitle("About sync"));
+  // ONE scroll wrapper, plain paragraphs inside (F9: per-paragraph scroll
+  // boxes gave three scrollbars). Michel's wording, v26.42.
+  const wrap = document.createElement("div");
+  wrap.className = "sync-scroll";
   const paras = [
     "Sync keeps your progress in WordDock safe under a random key without an account. " +
-    "Enter your key on other browsers or devices and they all share the same progress. " +
+    "Enter your key on other browsers or devices and they all share the same progress, " +
+    "possibly with a small delay.",
     "If you lose your phone or wipe your browser, your key restores your progress. " +
-    "Keep your key somewhere safe - email or text it to yourself.",
-    "Your progress follows your devices - sometimes a device has to catch up, so two " +
-    "screens may briefly differ. WordDock's server is free and has a daily limit. If " +
-    "it's ever reached, syncing pauses until the next day and your scores stay safe " +
-    "in your browser.",
-    "Sharing this computer? Use a private/incognito window, or give each person " +
-    "their own browser profile."
+    "Keep your key somewhere safe - email or text it to yourself."
   ];
   for (const t of paras){
     const p = document.createElement("p");
-    p.className = "setting-desc sync-scroll";
+    p.className = "setting-desc";
     p.textContent = t;
-    pane.appendChild(p);
+    wrap.appendChild(p);
   }
+  pane.appendChild(wrap);
   root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"), "margin-right:auto")));
 }
 
