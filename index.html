@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.38";
+const WORDDOCK_VERSION = "v26.39";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -4366,7 +4366,29 @@ function readLastList(){
   }
   if (!catalog.isAvailable(bootDomain)) bootDomain = "NL-RU";           // uncurated own list:
                                                                         // still fetch a Source
-  const rawRows = await catalog.loadMaster(bootDomain);
+  // The one fetch the boot depends on. Offline with this list never cached, it
+  // throws — and without this guard the app hangs on the loading dots forever
+  // (observed v26.38). We don't silently swap in another language: the user is
+  // the captain of their own study. Reveal the stage, land on the list
+  // overview, and say plainly what happened so they can choose. (Item 5,
+  // hardening 2026-09-07.)
+  let rawRows;
+  try {
+    rawRows = await catalog.loadMaster(bootDomain);
+  } catch {
+    loadRS();
+    document.documentElement.classList.remove("restoring-view");
+    openSurface("list");
+    showBrowserPane("lists");
+    startSyncPullTimer();
+    await wdConfirm(
+      "This list isn't on this device yet",
+      "Go online and open it once - it's saved for offline use after that. " +
+      "Or pick another list that's available offline.",
+      "Pick a list", null
+    );
+    return;
+  }
   const fullRows = normalizeEmbeddedRows(rawRows);
   registerList({
     listId: "embedded_" + bootDomain,
