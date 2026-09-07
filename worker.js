@@ -1,5 +1,8 @@
 /* WordDock sync Worker — the entire server side.
 
+   v2 (2026-08-23): lastList removed from the protocol. Each browser keeps its
+   own last-studied list locally; sync carries progress, never place. The last_list column was dropped from the table on 2026-09-07.
+
    It is deliberately stupid. It stores a blob under a key and gives it back.
    It never merges, never computes, never interprets a score. All the thinking
    (the max-merge) happens in the browser. That is what keeps this cheap at any
@@ -12,9 +15,9 @@
    learn that somebody, somewhere, knows some Russian words.
 
    ENDPOINTS
-     POST /claim   { key }                     -> { ok } | { taken: true }
-     GET  /pull?key=XXXXXXXX                   -> { progress, lastList } | { empty: true }
-     POST /push    { key, progress, lastList } -> { ok }
+     POST /claim   { key }            -> { ok } | { taken: true }
+     GET  /pull?key=XXXXXXXX          -> { progress } | { empty: true }
+     POST /push    { key, progress }  -> { ok }
 */
 
 const KEY_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
@@ -122,8 +125,8 @@ export default {
         if (row) return json({ taken: true });
 
         await env.DB
-          .prepare("INSERT INTO progress (key, blob, last_list, updated_at) VALUES (?, ?, ?, ?)")
-          .bind(key, "{}", null, Date.now()).run();
+          .prepare("INSERT INTO progress (key, blob, updated_at) VALUES (?, ?, ?)")
+          .bind(key, "{}", Date.now()).run();
         return json({ ok: true });
       }
 
@@ -135,14 +138,11 @@ export default {
         if (!validKey(key)) return json({ error: "bad key" }, 400);
 
         const row = await env.DB
-          .prepare("SELECT blob, last_list FROM progress WHERE key = ?")
+          .prepare("SELECT blob FROM progress WHERE key = ?")
           .bind(key).first();
         if (!row) return json({ empty: true });
 
-        return json({
-          progress: JSON.parse(row.blob || "{}"),
-          lastList: row.last_list || null
-        });
+        return json({ progress: JSON.parse(row.blob || "{}") });
       }
 
       /* ── push ─────────────────────────────────────────────────────────────
@@ -155,18 +155,18 @@ export default {
         const body = await request.text();
         if (body.length > MAX_BYTES) return json({ error: "too large" }, 413);
 
-        const { key, progress, lastList } = JSON.parse(body);
+        const { key, progress } = JSON.parse(body);
         if (!validKey(key)) return json({ error: "bad key" }, 400);
         if (!progress || typeof progress !== "object")
           return json({ error: "bad payload" }, 400);
 
         await env.DB
           .prepare(
-            "INSERT INTO progress (key, blob, last_list, updated_at) VALUES (?, ?, ?, ?) " +
+            "INSERT INTO progress (key, blob, updated_at) VALUES (?, ?, ?) " +
             "ON CONFLICT(key) DO UPDATE SET blob = excluded.blob, " +
-            "last_list = excluded.last_list, updated_at = excluded.updated_at"
+            "updated_at = excluded.updated_at"
           )
-          .bind(key, JSON.stringify(progress), lastList || null, Date.now())
+          .bind(key, JSON.stringify(progress), Date.now())
           .run();
 
         return json({ ok: true });
