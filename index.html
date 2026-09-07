@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.39";
+const WORDDOCK_VERSION = "v26.40";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1005,7 +1005,7 @@ body{
 }
 /* Quiet until wanted, but not timid: a curator reaching for the file rules
    shouldn't have to hunt for a 22px dot. It announces itself on hover with the
-   same "say what this does before you click it" logic as the list rows — but
+   same "say what this does before you click it" logic as the list rows - but
    with its own label, since the import row has no cue element and inventing a
    second message zone would be two mechanisms doing one job. */
 .import-rules-help{
@@ -1062,7 +1062,7 @@ body{
   .browser.show-rail   .browser-detail{display:none}
 
   /* One pane at a time means one header at a time. Showing both left a dead
-     "Domains" column beside the lists — it looked like a control, highlighted
+     "Domains" column beside the lists - it looked like a control, highlighted
      on touch, and did nothing. */
   .browser.show-rail .browser-head-detail{display:none}
   .browser.show-rail .browser-head-rail{width:100%;border-right:none}
@@ -1187,9 +1187,9 @@ body{
 </div>
 
 <!-- ─── About WordDock (twin of the browser: same layout, same logo, same
-     counter-positioned title — consistency by REUSING the browser's classes,
+     counter-positioned title - consistency by REUSING the browser's classes,
      never copying them. Left = a static, always-visible topic list (NOT the
-     domain rail's dynamic zones — a guide's table of contents shows every entry
+     domain rail's dynamic zones - a guide's table of contents shows every entry
      always). Right = the selected topic as headed prose. Topics are data
      (aboutTopics), so growing to ~10 sections is an array edit, not a layout
      change. Reached from the footer; the logo returns to study. ─── -->
@@ -1226,8 +1226,8 @@ body{
 
     <div class="domain-universe-label">All domains</div>
     <div class="domain-universe" id="domainUniverse"></div>
-    <p class="domain-note">WordDock maintains the WD domains. <strong>MY LISTS</strong> holds your user-defined domains — anything you import under a name of your own. Each domain keeps its own progress; bold means you've made progress there.</p>
-    <p class="domain-note"><strong>One rule for your own lists:</strong> within a domain, every entry needs its own ID — never restart numbering in a new file. Progress is tracked per ID, so two files that both start at 0001 would share scores between different words. WordDock checks this when you import and warns you.</p>
+    <p class="domain-note">WordDock maintains the WD domains. <strong>MY LISTS</strong> holds your user-defined domains - anything you import under a name of your own. Each domain keeps its own progress; bold means you've made progress there.</p>
+    <p class="domain-note"><strong>One rule for your own lists:</strong> within a domain, every entry needs its own ID - never restart numbering in a new file. Progress is tracked per ID, so two files that both start at 0001 would share scores between different words. WordDock checks this when you import and warns you.</p>
   </div>
 </div>
 
@@ -1511,7 +1511,7 @@ async function parseWordDockXlsx(file){
    Underscore is the separator; everything after the first one is the name
    (so "NL-RU_zomer_2026" → name "zomer_2026"). Hyphens are ordinary name
    characters, which is why domain codes (NL-RU) and Full-List both work.
-   Returns domain:null when the leading token isn't a plausible domain — the
+   Returns domain:null when the leading token isn't a plausible domain - the
    import dialog then asks the user instead of guessing. */
 function parseFilename(rawName){
   const base = (rawName || "").replace(/\.xlsx$/i, "").trim();
@@ -1601,7 +1601,7 @@ let peeking = false;
    Embedded Sources (fetched from <DOMAIN>.json) are NOT persisted: they are
    re-fetched on every boot, so storing 675 rows twice would be waste.
    Imported lists ARE persisted (wd_lists), because nothing else can bring
-   them back — the user's file lives on their disk, not on our server. */
+   them back - the user's file lives on their disk, not on our server. */
 const LISTS = {};
 
 /* The one reserved list name: the curated master shipped with a domain.
@@ -1903,7 +1903,7 @@ function wdPrompt(title, body, placeholder, okLabel, uppercase){
 
    PULL BEFORE PUSH, ALWAYS. A push REPLACES the cloud row. Pushing before
    merging would overwrite the cloud with a device that hasn't seen the other
-   device's work yet — silently lowering scores that were already safe. So on
+   device's work yet - silently lowering scores that were already safe. So on
    open the order is pull, merge, then catch up. Never the other way round.
 
    ⚑ THE KNOB TO WATCH. These two numbers are estimates, not measurements. The
@@ -2121,7 +2121,7 @@ async function syncClaim(key){
 }
 
 /* Catch-up on open: pull and merge FIRST, then push whatever this device still
-   owes. The order is not stylistic — see "pull before push" above. */
+   owes. The order is not stylistic - see "pull before push" above. */
 async function syncCatchUp(){
   await syncPull();
   syncPush();
@@ -2569,7 +2569,7 @@ function wdPromptName(title, body, domain, prefill){
       const n = cleanName(input.value);
       const reserved = n.toLowerCase() === FULL_LIST_NAME.toLowerCase();
       preview.textContent = n ? domain + "_" + n + ".xlsx" : "";
-      if (reserved) preview.textContent = "\u201C" + FULL_LIST_NAME + "\u201D is reserved — choose another name.";
+      if (reserved) preview.textContent = "\u201C" + FULL_LIST_NAME + "\u201D is reserved - choose another name.";
       const valid = !!n && !reserved;
       ok.disabled = !valid;
       ok.style.opacity = valid ? "" : "0.45";
@@ -2994,7 +2994,7 @@ function listCoverage(list){
    Sync is global (it acts on ALL progress), so it no longer renders under
    every domain's list panel. Its home is the footer anchor; tapping opens
    this panel in wd-dialog clothing. The standing lines are STATEMENTS, not
-   instructions — the how-to lives behind the "?" (same pattern as the
+   instructions - the how-to lives behind the "?" (same pattern as the
    import "?": a dialog, via wdConfirm with HTML).
 
    States (per BROWSER, keyed on the stored sync key):
@@ -3022,15 +3022,20 @@ function hasAnyProgress(){
 
 const SYNC_HELP_HTML =
   "<p>Sync keeps your progress safe on WordDock's server, under a random " +
-  "key. There are no accounts, no email, no password \u2014 WordDock never " +
+  "key. There are no accounts, no email, no password - WordDock never " +
   "learns who you are, only that some key has some scores.</p>" +
   "<p><b>Your key is your safety net.</b> If you lose your phone or clear " +
   "your browser, your progress in WordDock can be restored. If you enter " +
   "your key on any device, your progress returns. Keep your key somewhere " +
   "outside your devices, like an email to yourself.</p>" +
+  "<p>Your progress follows your devices - sometimes a device has to catch " +
+  "up, so two screens may briefly differ. WordDock's server is free and has " +
+  "a daily limit. If it's ever reached, syncing pauses until the next day " +
+  "and your scores stay safe in your browser.</p>" +
   "<p><b>Sharing this computer?</b> Progress belongs to the browser, so " +
-  "everyone studying here shares one set of scores \u2014 and sync would " +
-  "carry all of it. Give each person their own browser profile first.</p>";
+  "everyone studying here shares one set of scores - and sync would " +
+  "carry all of it. Give each person their own browser profile, or use a " +
+  "private/incognito window for a quick session.</p>";
 
 /* ── Sync panel state machine ────────────────────────────────────────────
    One stable frame; content switches between four states:
@@ -3044,7 +3049,7 @@ const SYNC_HELP_HTML =
 let _syncState = "main";
 
 /* The panel's sub-states (help, confirm-off, enter-key) are one layer deeper
-   than main, so Back returns to main — the same move as the panel's own Back
+   than main, so Back returns to main - the same move as the panel's own Back
    button. They never nest, so one entry covers all three. */
 function setSyncState(s){
   _syncState = s;
@@ -3174,7 +3179,7 @@ function _renderSyncConfirmNew(root){
   pane.appendChild(_syncTitle("Create a new key?"));
   pane.appendChild(_syncDesc(
     "This makes a brand-new key, starting from the progress in this " +
-    "browser. Already have a key \u2014 from another device, or from " +
+    "browser. Already have a key - from another device, or from " +
     "before? Use it instead: a new key can\u2019t see an old key\u2019s progress."
   ));
   const err = document.createElement("p");
@@ -3199,8 +3204,8 @@ function _renderSyncConfirmOff(root){
   const pane = _syncPane(root);
   pane.appendChild(_syncTitle("Turn off sync?"));
   pane.appendChild(_syncDesc(
-    "WordDock will stop syncing your progress as it stands now. " +
-    "You will be able to turn on sync again - with your current key or a new one."
+    "This device stops syncing. Nothing is deleted - your scores stay here, " +
+    "and you can turn sync on again later."
   ));
   root.appendChild(_syncActions(
     _syncBtn("Keep sync on", "wd-dialog-ok", () => setSyncState("main")),
@@ -3400,7 +3405,7 @@ async function claimFreshKey(){
 /* One create routine for every door that mints (v26.37). Failure is a
    STATE, not a red whisper: the panel shows what happened and offers
    Try again — no menu echo the user has no business with. */
-let _claimFail = "server";   // "offline" | "server" — why the last mint failed
+let _claimFail = "server";   // "offline" | "server" - why the last mint failed
 
 async function doCreateKey(){
   let fresh = null;
@@ -3467,9 +3472,9 @@ function showConsentDialog(finalAsk){
     bd.className = "wd-dialog-backdrop open";
     const bodyTop = finalAsk
       ? "You\u2019ve built real progress. WordDock can keep it safe in the " +
-        "cloud \u2014 anonymously: just numbers under a random key. No " +
+        "cloud - anonymously: just numbers under a random key. No " +
         "account, no email, no name."
-      : "WordDock can store your scores in the cloud \u2014 anonymously: " +
+      : "WordDock can store your scores in the cloud - anonymously: " +
         "just numbers under a random key. No account, no email, no name. " +
         "Then a lost phone or a cleared browser can\u2019t take your progress.";
     const bodyTail = finalAsk
@@ -3702,7 +3707,7 @@ const aboutTopics = [
   { id:"idea", title:"The idea", html:
     '<h2 class="section-title gz-first">The idea</h2>' +
     '<p class="setting-desc">Learning sticks when you meet the right item at the ' +
-    'right moment — your weakest word, not a random one. WordDock keeps a running ' +
+    'right moment - your weakest word, not a random one. WordDock keeps a running ' +
     'score for every word and always builds your next deck from the ones you know ' +
     'least well. No streaks, no penalties, no pressure: just your weakest words, ' +
     'surfaced first, until they aren\u2019t weak any more.</p><a id="more-idea" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-idea</a>' },
@@ -3717,14 +3722,14 @@ const aboutTopics = [
     '<p class="setting-desc">Behind each word is a running score. At deck ' +
     'completion it rises by one if you never slipped, and falls by one or two if ' +
     'you did. That one score does three jobs at once: it tallies how well you know ' +
-    'the word, it decides which words come up next (lowest first), and \u2014 past ' +
-    'a mark of <b>10</b> \u2014 it counts the word as mastered. Nothing about time ' +
+    'the word, it decides which words come up next (lowest first), and - past ' +
+    'a mark of <b>10</b> - it counts the word as mastered. Nothing about time ' +
     'enters into it: no decay, no \u201Cdays since review.\u201D</p><a id="more-studying" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-studying</a>' },
 
   { id:"progress", title:"Progress &amp; mastery", html:
     '<h2 class="section-title gz-first">Progress &amp; mastery</h2>' +
     '<p class="setting-desc">Each domain and each list shows a <b>mastery ' +
-    'percentage</b> \u2014 how far you are toward knowing every word in it. A ' +
+    'percentage</b> - how far you are toward knowing every word in it. A ' +
     'list\u2019s number climbs quickly (a small set, studied daily); a whole ' +
     'domain\u2019s number is the slower, truer measure of how far through the ' +
     'subject you\u2019ve come. A word counts as mastered once its score reaches ' +
@@ -3733,7 +3738,7 @@ const aboutTopics = [
 
   { id:"domains", title:"Domains &amp; lists", html:
     '<h2 class="section-title gz-first">Domains &amp; lists</h2>' +
-    '<p class="setting-desc">A <b>domain</b> is a subject \u2014 a language pair ' +
+    '<p class="setting-desc">A <b>domain</b> is a subject - a language pair ' +
     'like <code>NL-RU</code>, or a field. Within it, the <b>Full-List</b> is the ' +
     'complete set WordDock provides; your own imported files sit alongside it. ' +
     'Progress is shared across a whole domain, so studying any list in it builds ' +
@@ -3743,7 +3748,7 @@ const aboutTopics = [
     '<h2 class="section-title gz-first">Your own lists</h2>' +
     '<p class="setting-desc">You can import an <code>.xlsx</code> file to add a ' +
     'list, or export any list to hand it to someone else. A file holds a ' +
-    'list\u2019s <b>content</b> \u2014 its words and cards \u2014 never your ' +
+    'list\u2019s <b>content</b> - its words and cards - never your ' +
     'scores. For an import to be accepted it needs all of the following:</p>' +
     '<ol class="about-rules">' +
     '<li>A sheet whose <b>cell A1 is literally <code>ID</code></b>.</li>' +
@@ -3751,10 +3756,10 @@ const aboutTopics = [
     'CTAG \u00B7 L \u00B7 Q1 \u00B7 A1 \u00B7 \u2026 \u00B7 Q10 \u00B7 A10</code>.</li>' +
     '<li>At least <b>10 rows</b> with <code>ID</code>, <code>Q1</code> and ' +
     '<code>A1</code> filled.</li>' +
-    '<li>A filename shaped <b><code>DOMAIN_name.xlsx</code></b> \u2014 the domain, ' +
+    '<li>A filename shaped <b><code>DOMAIN_name.xlsx</code></b> - the domain, ' +
     'an underscore, then your name (e.g. <code>NL-RU_holiday.xlsx</code>). The ' +
     'filename is the list\u2019s identity.</li>' +
-    '<li>Within a domain, <b>every entry needs its own ID</b> \u2014 never restart ' +
+    '<li>Within a domain, <b>every entry needs its own ID</b> - never restart ' +
     'numbering. Progress is tracked per ID, so two files both starting at ' +
     '<code>0001</code> would make different words share scores. WordDock warns you ' +
     'if it spots this.</li>' +
@@ -3766,7 +3771,7 @@ const aboutTopics = [
     'Nothing leaves it unless you choose to connect another device.</p>' +
     '<p class="setting-desc">If you study on more than one device, open <b>Sync</b> ' +
     'and enter the same key on each. Your progress then travels between them. No ' +
-    'account, no email, no password \u2014 WordDock only ever sees the key, never ' +
+    'account, no email, no password - WordDock only ever sees the key, never ' +
     'who you are. Connecting always raises a device to the highest progress across ' +
     'your devices; it never lowers a score another has already earned.</p>' +
     '<p class="setting-desc"><b>Your key is your safety net.</b> If you lose your ' +
@@ -3938,7 +3943,7 @@ function showBrowserPane(pane){
 
    The list being REPLACED is excluded: re-importing an edited version of your
    own file must not collide with itself. And a matching ID with a matching
-   word is not a clash — that's the same word, which is the whole point. */
+   word is not a clash - that's the same word, which is the whole point. */
 async function findIdClashes(incoming, domain){
   const known = new Map();     // ID -> ENTRY, as the domain already understands it
 
@@ -4010,7 +4015,7 @@ $fileInput.addEventListener("change", async (e) => {
     await wdConfirm(
       "This file needs a domain in its name",
       "Start the filename with the domain, then an underscore, then your own " +
-      "name — like NL-RU_holiday.xlsx or BIOLOGY_plants.xlsx. Rename the file " +
+      "name - like NL-RU_holiday.xlsx or BIOLOGY_plants.xlsx. Rename the file " +
       "and import it again.",
       "OK", null
     );
@@ -4060,7 +4065,7 @@ $fileInput.addEventListener("change", async (e) => {
       domain + " isn't a WordDock domain",
       "This list would become its own domain in MY LISTS, with its own separate " +
       "progress. If that isn't what you meant, cancel and rename the file to " +
-      "start with the right domain — like NL-RU_holiday.xlsx.",
+      "start with the right domain - like NL-RU_holiday.xlsx.",
       "Import into MY LISTS", "Cancel"
     );
   }
@@ -4078,7 +4083,7 @@ $fileInput.addEventListener("change", async (e) => {
       "These IDs are already used in " + domain,
       clash.count + " ID" + (clash.count > 1 ? "s" : "") + " in this file belong to " +
       "different words in " + domain + ". WordDock tracks progress per ID, so these " +
-      "lists would share scores wrongly — " + clash.example + ". " +
+      "lists would share scores wrongly - " + clash.example + ". " +
       "Give every word in " + domain + " its own ID, or import this as a new domain.",
       "Import anyway", "Cancel"
     );
@@ -4124,7 +4129,7 @@ $fileInput.addEventListener("change", async (e) => {
   renderBrowser();
 
   let msg = "Imported \u201C" + list.name + "\u201D into " + domain +
-    " \u2014 " + list.rows.length + " rows, saved in this browser. Click it to study.";
+    " - " + list.rows.length + " rows, saved in this browser. Click it to study.";
   if (result.warnings && result.warnings.length){
     msg += " " + result.warnings.length + " warning" +
       (result.warnings.length > 1 ? "s" : "") + " (see console).";
@@ -4148,7 +4153,7 @@ async function exportList(listId){
     (isFull
       ? "This is the " + list.domain + " Full-List. Give your copy a name."
       : "Name your copy of \u201C" + list.name + "\u201D.")
-      + " Type only the name \u2014 WordDock puts " + list.domain +
+      + " Type only the name - WordDock puts " + list.domain +
       "_ in front: the domain links this file to your " + list.domain +
       " progress.",
     list.domain,
@@ -4202,7 +4207,7 @@ async function deleteList(listId){
   } else if (lastOfDomain){
     body = "This deletes the list and its progress. You'd need the file to bring it back.";
   } else {
-    body = "Your progress stays — your other " + list.domain + " lists still use it.";
+    body = "Your progress stays - your other " + list.domain + " lists still use it.";
   }
 
   const ok = await wdConfirm(
@@ -4230,7 +4235,7 @@ async function deleteList(listId){
     if (fallback){
       switchActiveList(fallback.listId);
     } else {
-      await loadDomainMaster("NL-RU");     // nothing loaded — fetch the default
+      await loadDomainMaster("NL-RU");     // nothing loaded - fetch the default
     }
   }
   // The pane may now be showing a domain that no longer exists.
@@ -4286,15 +4291,15 @@ document.querySelector("#aboutbrowser .browser-head-rail").addEventListener("cli
    and leave them where they were. */
 const FILE_RULES_HTML =
   "<ol class='dlg-rules'>" +
-  "<li>A sheet whose <b>header row is exactly these 25 columns</b>, in order — " +
+  "<li>A sheet whose <b>header row is exactly these 25 columns</b>, in order - " +
   "so cell A1 reads <code>ID</code>:<br>" +
   "<code>ID · ENTRY · CAT · CTAG · L · Q1 · A1 · … · Q10 · A10</code></li>" +
   "<li>At least <b>10 rows</b> where <code>ID</code>, <code>Q1</code> and " +
   "<code>A1</code> are all filled.</li>" +
-  "<li>A filename shaped <b><code>DOMAIN_name.xlsx</code></b> — domain first, " +
+  "<li>A filename shaped <b><code>DOMAIN_name.xlsx</code></b> - domain first, " +
   "then an underscore, then your own name. Like <code>NL-RU_holiday.xlsx</code>." +
   "</li>" +
-  "<li>Within one domain, <b>every entry needs its own ID</b> — never restart " +
+  "<li>Within one domain, <b>every entry needs its own ID</b> - never restart " +
   "numbering in a new file.</li>" +
   "</ol>";
 
