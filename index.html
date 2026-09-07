@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.34";
+const WORDDOCK_VERSION = "v26.35";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1917,6 +1917,7 @@ const SYNC_DIRTY_KEY = "wd_sync_dirty";     // "1" while a finished deck is unpu
 const SYNC_LASTPUSH_KEY = "wd_sync_lastpush";
 const SYNC_PUSH_COOLDOWN = 10 * 60 * 1000;  // 10 minutes
 const SYNC_PULL_INTERVAL = 60 * 60 * 1000;  // hourly, foreground only
+const SYNC_DELTA_ASK = 100;                 // cards this browser knows better than the key: above this, adoption asks first
 let syncBusy = false;
 let syncPullTimer = null;
 
@@ -1980,24 +1981,54 @@ function writePools(pools){
   loadRS();   // refresh the in-memory copy for the active domain
 }
 
+/* Split since v26.35: fetchCloud is network-only, applyCloud is local-only.
+   The gap between them is where the adoption gate looks before touching.
+   Ordinary pulls run both back to back — behavior unchanged. */
+async function fetchCloud(key){
+  const res = await fetch(SYNC_API + "/pull?key=" + key);
+  return await res.json();
+}
+
+function applyCloud(data){
+  if (!data || data.empty || !data.progress) return;
+  const merged = mergePools(allPools(), data.progress);
+  writePools(merged);
+  // A running deck is untouched: deck completion re-reads the live pool and
+  // applies only its own deltas, so a mid-session pull can no more clobber a
+  // deck than an external write to the pool can. A deck nobody STARTED is
+  // different — it was dealt from the pre-merge snapshot — so it is dropped
+  // and rebuilt from the pool that now exists. (F3, free rider of the split.)
+  if (deckUnstarted()) initDeck();
+  if (browserPane === "lists") renderBrowser();
+}
+
+function deckUnstarted(){
+  return Array.isArray(pipe) && pipe.length > 0 && !deckDone && !showingA &&
+         deckScore === 0 &&
+         pipe.every(s => s.fi === 0 && !s.passDirty && s.timesDirty === 0);
+}
+
+/* Cards this browser scores higher than the key does — the measure of what
+   merging would pour INTO the key. An entry the cloud lacks counts as 0:
+   pouring brand-new cards into the key is exactly what we are measuring. */
+function deltaAgainstCloud(cloudProgress){
+  const local = allPools();
+  let n = 0;
+  for (const d of Object.keys(local)){
+    const a = local[d], b = (cloudProgress && cloudProgress[d]) || {};
+    for (const id of Object.keys(a)){
+      if (a[id] > (b[id] || 0)) n++;
+    }
+  }
+  return n;
+}
+
 async function syncPull(){
   const key = getSyncKey();
   if (!key || syncBusy) return;
   syncBusy = true;
   try {
-    const res  = await fetch(SYNC_API + "/pull?key=" + key);
-    const data = await res.json();
-    if (data.empty) return;                    // nothing on the server yet
-    if (!data.progress) return;
-
-    const local  = allPools();
-    const merged = mergePools(local, data.progress);
-    writePools(merged);
-
-    // A running deck is untouched: deck completion re-reads the live pool and
-    // applies only its own deltas, so a mid-session pull can no more clobber a
-    // deck than an external write to the pool can.
-    if (browserPane === "lists") renderBrowser();
+    applyCloud(await fetchCloud(key));
   } catch {
     /* offline or server down — local stays authoritative */
   } finally {
@@ -3024,6 +3055,7 @@ function renderSyncPanelBody(){
   if (_syncState === "confirm-off") return _renderSyncConfirmOff(body);
   if (_syncState === "confirm-new") return _renderSyncConfirmNew(body);
   if (_syncState === "enter-key")   return _renderSyncEnterKey(body);
+  if (_syncState === "key-collision") return _renderSyncKeyCollision(body);
   _renderSyncMain(body);
 }
 
@@ -3213,16 +3245,31 @@ function _renderSyncEnterKey(root){
     }
     connect.textContent = "Connecting...";
     connect.disabled = true;
-    setSyncKey(raw);
-    await syncPull();
-    // Merged state goes back up, forced: this browser's own progress must
-    // reach the other device, and no deck was finished to raise the flag.
-    syncPush(true);
-    startSyncPullTimer();
-    renderSyncAnchor();
-    if (browserPane === "lists") renderBrowser();
-    renderBrowserRail();
-    setSyncState("main");
+    /* THE GATE (v26.35). Look before touching: nothing installs the key until
+       the cloud has been seen. Three refusals, in order — offline (adoption is
+       the one act that needs the server), unknown key (a typo must not mint a
+       phantom), big delta (ask first, one state deeper, two doors). */
+    let peek;
+    try {
+      peek = await fetchCloud(raw);
+    } catch {
+      err.textContent = "Can't reach the sync server - try again when you're online.";
+      connect.textContent = "Connect";
+      connect.disabled = false;
+      return;
+    }
+    if (peek && peek.empty){
+      err.textContent = "This key doesn't exist. Check the 8 characters, or create a new key instead.";
+      connect.textContent = "Connect";
+      connect.disabled = false;
+      return;
+    }
+    if (deltaAgainstCloud(peek.progress) > SYNC_DELTA_ASK){
+      _pendingAdopt = { key: raw, data: peek };
+      setSyncState("key-collision");
+      return;
+    }
+    adoptKey(raw, peek);
   });
 
   root.appendChild(_syncActions(
@@ -3231,6 +3278,63 @@ function _renderSyncEnterKey(root){
   ));
 
   setTimeout(() => inp.focus(), 50);
+}
+
+/* The one place a key enters this browser (v26.35). Same tail the old
+   Connect had, order unchanged: install, apply, forced push up, timers,
+   paint. Every door that says yes ends here. */
+let _pendingAdopt = null;
+
+function adoptKey(key, data){
+  setSyncKey(key);
+  applyCloud(data);
+  // Merged state goes back up, forced: this browser's own progress must
+  // reach the other device, and no deck was finished to raise the flag.
+  syncPush(true);
+  startSyncPullTimer();
+  renderSyncAnchor();
+  if (browserPane === "lists") renderBrowser();
+  renderBrowserRail();
+  setSyncState("main");
+}
+
+function _renderSyncKeyCollision(root){
+  const pane = _syncPane(root);
+  const p = _pendingAdopt;
+  if (!p){ setSyncState("enter-key"); return; }
+  const n = deltaAgainstCloud(p.data.progress);
+  pane.appendChild(_syncTitle("The key you entered already holds progress"));
+  pane.appendChild(_syncDesc(
+    "So does this browser: " + n + " cards here are ahead of that key. " +
+    "Merging joins both forever - every card keeps its best score."
+  ));
+  const hint = document.createElement("p");
+  hint.className = "setting-desc";
+  hint.style.cssText = "margin-top:6px";
+  hint.textContent = "Shared computer? Use a private window instead.";
+  pane.appendChild(hint);
+
+  const merge = _syncBtn("Merge both", "wd-dialog-ok", async () => {
+    const q = _pendingAdopt;
+    if (!q) return;
+    merge.textContent = "Merging...";
+    merge.disabled = true;
+    // The door acts on the cloud as it IS, not as it was when the dialog
+    // opened: one fresh look. If that look fails, the snapshot serves —
+    // merge only goes up, so stale can never destroy, only lag.
+    let fresh = q.data;
+    try { fresh = await fetchCloud(q.key); } catch {}
+    _pendingAdopt = null;
+    adoptKey(q.key, fresh);
+  });
+
+  root.appendChild(_syncActions(
+    merge,
+    _syncBtn("Cancel", "wd-dialog-cancel", () => {
+      _pendingAdopt = null;
+      setSyncState("enter-key");
+    })
+  ));
 }
 
 /* ── Consent cascade & shared key flows ──────────────────────────────────
