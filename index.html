@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.35";
+const WORDDOCK_VERSION = "v26.36";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1984,8 +1984,15 @@ function writePools(pools){
 /* Split since v26.35: fetchCloud is network-only, applyCloud is local-only.
    The gap between them is where the adoption gate looks before touching.
    Ordinary pulls run both back to back — behavior unchanged. */
+function _syncTimeout(){
+  // Fail in seconds, not at the OS's leisure (observed: 15 s hang, F6).
+  // Older browsers without AbortSignal.timeout simply get no limit.
+  return (typeof AbortSignal !== "undefined" && AbortSignal.timeout)
+    ? AbortSignal.timeout(8000) : undefined;
+}
+
 async function fetchCloud(key){
-  const res = await fetch(SYNC_API + "/pull?key=" + key);
+  const res = await fetch(SYNC_API + "/pull?key=" + key, { signal: _syncTimeout() });
   return await res.json();
 }
 
@@ -2095,20 +2102,22 @@ function syncPush(force){
 
 /* Claim a key at the server, so two users can never end up sharing one.
    Returns the key actually claimed (possibly a regenerated one), or null. */
+/* STRICT since v26.36 (F7): no server, no key. The old fallback minted
+   unclaimed phantoms offline — keys the cloud had never heard of, that the
+   adoption gate rightly refuses and that no second device could ever join.
+   A key that exists nowhere protects nothing; better no key than a lie.
+   Network failure THROWS — claimFreshKey catches and aborts at once. */
 async function syncClaim(key){
-  try {
-    const res  = await fetch(SYNC_API + "/claim", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ key })
-    });
-    const data = await res.json();
-    if (data.ok)    return key;
-    if (data.taken) return null;      // caller regenerates
-    return key;                       // server unreachable: proceed offline
-  } catch {
-    return key;                       // offline: the key still works locally
-  }
+  const res = await fetch(SYNC_API + "/claim", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ key }),
+    signal: _syncTimeout()
+  });
+  const data = await res.json();
+  if (data.ok)    return key;
+  if (data.taken) return null;        // caller regenerates
+  return null;                        // unexpected reply: do not mint
 }
 
 /* Catch-up on open: pull and merge FIRST, then push whatever this device still
@@ -3220,7 +3229,7 @@ function _renderSyncEnterKey(root){
   const center = document.createElement("div");
   center.className = "sync-center";
   center.appendChild(_syncDesc(
-    "Enter the key (dash is optional) shown on your other device to connect your progress:"
+    "Enter your key - shown on any connected device, or wherever you saved it (dash is optional):"
   ));
 
   const inp = document.createElement("input");
@@ -3259,7 +3268,7 @@ function _renderSyncEnterKey(root){
       return;
     }
     if (peek && peek.empty){
-      err.textContent = "This key doesn't exist. Check the 8 characters, or create a new key instead.";
+      err.textContent = "This key doesn't exist. Check the 8 characters and try again.";
       connect.textContent = "Connect";
       connect.disabled = false;
       return;
@@ -3295,7 +3304,11 @@ function adoptKey(key, data){
   renderSyncAnchor();
   if (browserPane === "lists") renderBrowser();
   renderBrowserRail();
+  // You typed this key seconds ago — echoing it back is noise (F8). The
+  // green footer and the arriving progress ARE the confirmation. "main"
+  // stays queued for the next time the panel opens.
   setSyncState("main");
+  hideSyncPanel();
 }
 
 function _renderSyncKeyCollision(root){
@@ -3303,10 +3316,9 @@ function _renderSyncKeyCollision(root){
   const p = _pendingAdopt;
   if (!p){ setSyncState("enter-key"); return; }
   const n = deltaAgainstCloud(p.data.progress);
-  pane.appendChild(_syncTitle("The key you entered already holds progress"));
+  pane.appendChild(_syncTitle(n + " cards here score higher than the key does"));
   pane.appendChild(_syncDesc(
-    "So does this browser: " + n + " cards here are ahead of that key. " +
-    "Merging joins both forever - every card keeps its best score."
+    "Merging means every card will receive the highest score here and in the key."
   ));
   const hint = document.createElement("p");
   hint.className = "setting-desc";
@@ -3368,8 +3380,12 @@ async function claimFreshKey(){
   // generates offline, so a collision is possible in principle; this makes
   // it impossible in fact.
   let fresh = null;
-  for (let attempt = 0; attempt < 5 && !fresh; attempt++){
-    fresh = await syncClaim(generateSyncKey());
+  try {
+    for (let attempt = 0; attempt < 5 && !fresh; attempt++){
+      fresh = await syncClaim(generateSyncKey());
+    }
+  } catch {
+    return null;    // offline — the caller shows "try again in a moment"
   }
   return fresh;
 }
