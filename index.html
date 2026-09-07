@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.40";
+const WORDDOCK_VERSION = "v26.41";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3020,22 +3020,8 @@ function hasAnyProgress(){
   return false;
 }
 
-const SYNC_HELP_HTML =
-  "<p>Sync keeps your progress safe on WordDock's server, under a random " +
-  "key. There are no accounts, no email, no password - WordDock never " +
-  "learns who you are, only that some key has some scores.</p>" +
-  "<p><b>Your key is your safety net.</b> If you lose your phone or clear " +
-  "your browser, your progress in WordDock can be restored. If you enter " +
-  "your key on any device, your progress returns. Keep your key somewhere " +
-  "outside your devices, like an email to yourself.</p>" +
-  "<p>Your progress follows your devices - sometimes a device has to catch " +
-  "up, so two screens may briefly differ. WordDock's server is free and has " +
-  "a daily limit. If it's ever reached, syncing pauses until the next day " +
-  "and your scores stay safe in your browser.</p>" +
-  "<p><b>Sharing this computer?</b> Progress belongs to the browser, so " +
-  "everyone studying here shares one set of scores - and sync would " +
-  "carry all of it. Give each person their own browser profile, or use a " +
-  "private/incognito window for a quick session.</p>";
+/* (v26.41: a second, never-rendered help text once lived here — removed;
+   the panel's ? renders _renderSyncHelp below, the single source.) */
 
 /* ── Sync panel state machine ────────────────────────────────────────────
    One stable frame; content switches between four states:
@@ -3164,13 +3150,24 @@ function _renderSyncMain(root){
 function _renderSyncHelp(root){
   const pane = _syncPane(root);
   pane.appendChild(_syncTitle("About sync"));
-  const p = document.createElement("p");
-  p.className = "setting-desc sync-scroll";
-  p.textContent = "Sync keeps your progress in WordDock safe under a random key without an account. " +
+  const paras = [
+    "Sync keeps your progress in WordDock safe under a random key without an account. " +
     "Enter your key on other browsers or devices and they all share the same progress. " +
     "If you lose your phone or wipe your browser, your key restores your progress. " +
-    "Keep your key somewhere safe - email or text it to yourself.";
-  pane.appendChild(p);
+    "Keep your key somewhere safe - email or text it to yourself.",
+    "Your progress follows your devices - sometimes a device has to catch up, so two " +
+    "screens may briefly differ. WordDock's server is free and has a daily limit. If " +
+    "it's ever reached, syncing pauses until the next day and your scores stay safe " +
+    "in your browser.",
+    "Sharing this computer? Use a private/incognito window, or give each person " +
+    "their own browser profile."
+  ];
+  for (const t of paras){
+    const p = document.createElement("p");
+    p.className = "setting-desc sync-scroll";
+    p.textContent = t;
+    pane.appendChild(p);
+  }
   root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"), "margin-right:auto")));
 }
 
