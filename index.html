@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.42";
+const WORDDOCK_VERSION = "v26.43";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3149,24 +3149,26 @@ function _renderSyncMain(root){
 
 function _renderSyncHelp(root){
   const pane = _syncPane(root);
-  pane.appendChild(_syncTitle("About sync"));
-  // ONE scroll wrapper, plain paragraphs inside (F9: per-paragraph scroll
-  // boxes gave three scrollbars). Michel's wording, v26.42.
+  pane.appendChild(_syncTitle("Your sync key keeps your progress safe"));
+  // ONE scroll wrapper, plain paragraphs inside (F9). Title carries the
+  // headline so the body stays short enough to never scroll. Michel's
+  // wording, v26.43; the second paragraph is the only instruction, hence bold.
   const wrap = document.createElement("div");
   wrap.className = "sync-scroll";
-  const paras = [
-    "Sync keeps your progress in WordDock safe under a random key without an account. " +
-    "Enter your key on other browsers or devices and they all share the same progress, " +
-    "possibly with a small delay.",
-    "If you lose your phone or wipe your browser, your key restores your progress. " +
-    "Keep your key somewhere safe - email or text it to yourself."
-  ];
-  for (const t of paras){
-    const p = document.createElement("p");
-    p.className = "setting-desc";
-    p.textContent = t;
-    wrap.appendChild(p);
-  }
+  const p1 = document.createElement("p");
+  p1.className = "setting-desc";
+  p1.textContent =
+    "It's a random key, no account needed. Enter it on another browser or " +
+    "device and both share the same progress, possibly with a small delay.";
+  const p2 = document.createElement("p");
+  p2.className = "setting-desc";
+  const b = document.createElement("b");
+  b.textContent =
+    "Lose your phone or wipe your browser? Your key restores everything. " +
+    "Keep it somewhere safe - write it down, or email or text it to yourself.";
+  p2.appendChild(b);
+  wrap.appendChild(p1);
+  wrap.appendChild(p2);
   pane.appendChild(wrap);
   root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"), "margin-right:auto")));
 }
