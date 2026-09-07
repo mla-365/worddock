@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.36";
+const WORDDOCK_VERSION = "v26.37";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3065,6 +3065,7 @@ function renderSyncPanelBody(){
   if (_syncState === "confirm-new") return _renderSyncConfirmNew(body);
   if (_syncState === "enter-key")   return _renderSyncEnterKey(body);
   if (_syncState === "key-collision") return _renderSyncKeyCollision(body);
+  if (_syncState === "claim-failed")  return _renderSyncClaimFailed(body);
   _renderSyncMain(body);
 }
 
@@ -3184,18 +3185,7 @@ function _renderSyncConfirmNew(root){
   const create = _syncBtn("Create new key", "", async () => {
     create.textContent = "Creating...";
     create.disabled = true;
-    const fresh = await claimFreshKey();
-    if (!fresh){
-      create.textContent = "Create new key";
-      create.disabled = false;
-      err.textContent = "Couldn't set up sync - try again in a moment.";
-      return;
-    }
-    setSyncKey(fresh);
-    syncPush(true);       // forced — see turnOnSyncFlow
-    startSyncPullTimer();
-    renderSyncAnchor();
-    setSyncState("main");
+    await doCreateKey();   // success and both failures each paint their own state
   });
 
   root.appendChild(_syncActions(
@@ -3311,6 +3301,25 @@ function adoptKey(key, data){
   hideSyncPanel();
 }
 
+function _renderSyncClaimFailed(root){
+  const pane = _syncPane(root);
+  pane.appendChild(_syncTitle("Couldn't set up sync"));
+  pane.appendChild(_syncDesc(
+    _claimFail === "offline"
+      ? "You appear to be offline. Your progress is untouched - try again when you're online."
+      : "The key server refused just now. Your progress is untouched - try again in a moment."
+  ));
+  const retry = _syncBtn("Try again", "wd-dialog-ok", async () => {
+    retry.textContent = "Creating...";
+    retry.disabled = true;
+    await doCreateKey();
+  });
+  root.appendChild(_syncActions(
+    retry,
+    _syncBtn("Cancel", "wd-dialog-cancel", () => setSyncState("main"))
+  ));
+}
+
 function _renderSyncKeyCollision(root){
   const pane = _syncPane(root);
   const p = _pendingAdopt;
@@ -3323,7 +3332,7 @@ function _renderSyncKeyCollision(root){
   const hint = document.createElement("p");
   hint.className = "setting-desc";
   hint.style.cssText = "margin-top:6px";
-  hint.textContent = "Shared computer? Use a private window instead.";
+  hint.textContent = "Shared computer? Use a private/incognito window instead.";
   pane.appendChild(hint);
 
   const merge = _syncBtn("Merge both", "wd-dialog-ok", async () => {
@@ -3379,15 +3388,42 @@ async function claimFreshKey(){
   // Claim at the server so two users can never share a key. The client
   // generates offline, so a collision is possible in principle; this makes
   // it impossible in fact.
+  // Network failure THROWS through to the caller — since v26.37 the two
+  // honest reasons get two honest sentences (offline vs server refusal).
   let fresh = null;
-  try {
-    for (let attempt = 0; attempt < 5 && !fresh; attempt++){
-      fresh = await syncClaim(generateSyncKey());
-    }
-  } catch {
-    return null;    // offline — the caller shows "try again in a moment"
+  for (let attempt = 0; attempt < 5 && !fresh; attempt++){
+    fresh = await syncClaim(generateSyncKey());
   }
   return fresh;
+}
+
+/* One create routine for every door that mints (v26.37). Failure is a
+   STATE, not a red whisper: the panel shows what happened and offers
+   Try again — no menu echo the user has no business with. */
+let _claimFail = "server";   // "offline" | "server" — why the last mint failed
+
+async function doCreateKey(){
+  let fresh = null;
+  try {
+    fresh = await claimFreshKey();
+  } catch {
+    _claimFail = "offline";
+    setSyncState("claim-failed");
+    return false;
+  }
+  if (!fresh){
+    _claimFail = "server";
+    setSyncState("claim-failed");
+    return false;
+  }
+  setSyncKey(fresh);
+  // Forced: a brand-new key must carry the progress this browser already
+  // holds, or the second device would join an empty row.
+  syncPush(true);
+  startSyncPullTimer();
+  renderSyncAnchor();
+  setSyncState("main");
+  return true;
 }
 
 /* Step 2 of the cascade — and the ONE key-shown dialog everywhere (the
@@ -3395,12 +3431,18 @@ async function claimFreshKey(){
    line. Pairing instructions live in the "?" dialog and the key-entry
    prompt, not here. */
 async function turnOnSyncFlow(){
-  const fresh = await claimFreshKey();
+  let fresh = null, offline = false;
+  try {
+    fresh = await claimFreshKey();
+  } catch {
+    offline = true;
+  }
   if (!fresh){
     await wdConfirm(
       "Couldn't set up sync",
-      "Something went wrong claiming a key. Your progress is untouched - " +
-      "try again in a moment.",
+      (offline
+        ? "You appear to be offline. Your progress is untouched - try again when you're online."
+        : "The key server refused just now. Your progress is untouched - try again in a moment."),
       "OK", null
     );
     return false;
