@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.46";
+const WORDDOCK_VERSION = "v26.47";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3242,14 +3242,13 @@ function _renderSyncHelp(root){
   p1.className = "setting-desc";
   p1.textContent =
     "It's a random key, no account needed. Enter it on another browser or " +
-    "device and both share the same progress, possibly with a small delay. " +
-    "No key yet? WordDock offers one after your first deck - or see About.";
+    "device and both share the same progress, possibly with a small delay.";
   const p2 = document.createElement("p");
   p2.className = "setting-desc";
   const b = document.createElement("b");
   b.textContent =
     "Lose your phone or wipe your browser? Your key restores everything. " +
-    "Keep it somewhere safe - write it down, or email or text it to yourself.";
+    "Keep it somewhere safe, like a PIN.";
   p2.appendChild(b);
   wrap.appendChild(p1);
   wrap.appendChild(p2);
@@ -3323,9 +3322,7 @@ function _renderSyncEnterKey(root){
   pane.appendChild(_syncTitle("Enter your key"));
   const center = document.createElement("div");
   center.className = "sync-center";
-  center.appendChild(_syncDesc(
-    "Enter your key - shown on any connected device, or wherever you saved it (dash is optional):"
-  ));
+  center.appendChild(_syncDesc("Enter your key (dash is optional):"));
 
   const inp = document.createElement("input");
   inp.className = "wd-dialog-input";
@@ -3335,18 +3332,19 @@ function _renderSyncEnterKey(root){
   inp.setAttribute("spellcheck", "false");
   center.appendChild(inp);
 
-  const err = document.createElement("p");
-  err.className = "setting-desc";
-  err.style.cssText = "color:#c44;margin-top:6px;min-height:1.2em";
-  center.appendChild(err);
-  // 4b: THE moment a person knows whose device this is — say it here, once.
+  // 4b: THE moment a person knows whose device this is — say it here, once,
+  // right under the field (the pane clips what falls below its fixed height).
   const pin = document.createElement("p");
   pin.className = "setting-desc";
-  pin.style.cssText = "margin-top:4px";
+  pin.style.cssText = "margin-top:6px";
   const pinB = document.createElement("b");
   pinB.textContent = "Treat your key like a PIN: keep it safe, and never leave it on a device that isn't yours.";
   pin.appendChild(pinB);
   center.appendChild(pin);
+  const err = document.createElement("p");
+  err.className = "setting-desc";
+  err.style.cssText = "color:#c44;margin-top:4px;min-height:1em";
+  center.appendChild(err);
   pane.appendChild(center);
 
   const connect = _syncBtn("Connect", "wd-dialog-ok", async () => {
@@ -3438,15 +3436,17 @@ function _renderSyncKeyCollision(root){
   const p = _pendingAdopt;
   if (!p){ setSyncState("enter-key"); return; }
   const n = deltaAgainstCloud(p.data.progress);
-  pane.appendChild(_syncTitle(n + " cards here score higher than the key does"));
+  pane.appendChild(_syncTitle("Shared computer, or not your device?"));
+  const warn = document.createElement("p");
+  warn.className = "setting-desc";
+  const warnB = document.createElement("b");
+  warnB.textContent = "Use a private/incognito window instead - that way each person's progress stays safe.";
+  warn.appendChild(warnB);
+  pane.appendChild(warn);
   pane.appendChild(_syncDesc(
-    "Merging means every card will receive the highest score here and in the key."
+    n + " cards here score higher than the key does. Merging means every card " +
+    "will receive the highest score here and in the key."
   ));
-  const hint = document.createElement("p");
-  hint.className = "setting-desc";
-  hint.style.cssText = "margin-top:6px";
-  hint.textContent = "Shared computer? Use a private/incognito window instead.";
-  pane.appendChild(hint);
 
   const merge = _syncBtn("Merge both", "wd-dialog-ok", async () => {
     const q = _pendingAdopt;
@@ -3886,7 +3886,8 @@ const aboutTopics = [
     '<p class="setting-desc"><b>Your key is your way back.</b> Lose your phone or ' +
     'wipe your browser? Enter your key on any device and your progress returns. ' +
     'Keep it somewhere outside your devices - written down, or in a message to ' +
-    'yourself.</p>' +
+    'yourself. To start over on this device, clear this site\u2019s data in your ' +
+    'browser\u2019s site settings - only WordDock is affected, nothing else.</p>' +
     '<p class="setting-desc"><b>Shared computer?</b> The clean way: open a ' +
     'private/incognito window, enter your key, study - close the window and nothing ' +
     'stays behind. If that is not possible: enter your key, study, and choose ' +
