@@ -23,7 +23,7 @@
    The result: offline works, and a deploy still reaches everyone the next time
    they open the app with a connection. */
 
-const VERSION    = "wd-2026-09-07";
+const VERSION    = "wd-2026-09-08";
 const SHELL      = "wd-shell-" + VERSION;   // the app + its data
 const IMMUTABLE  = "wd-static-" + VERSION;  // fonts, icons
 
@@ -41,7 +41,8 @@ const PRECACHE = [
   "/icon-192.png",
   "/icon-512.png",
   "/icon-maskable-512.png",
-  "/xlsx.full.min.js"
+  "/xlsx.full.min.js",
+  "/qrcode.js"
 ];
 
 self.addEventListener("install", event => {
