@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.48";
+const WORDDOCK_VERSION = "v26.49";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3295,15 +3295,7 @@ function _renderSyncConfirmOff(root){
   const keyBox = document.createElement("div");
   keyBox.className = "sync-key";
   keyBox.textContent = key ? formatSyncKey(key) : "";
-  center.appendChild(keyBox);
-  const copy = _syncBtn("Copy key", "", async () => {
-    try {
-      await navigator.clipboard.writeText(formatSyncKey(key));
-      copy.textContent = "Copied";
-    } catch { copy.textContent = "Select it above"; }
-    setTimeout(() => { copy.textContent = "Copy key"; }, 1600);
-  }, "margin-top:8px;min-width:100px");
-  center.appendChild(copy);
+  center.appendChild(keyBox);   // shown, selectable; Copy lives on the main panel (a second button clipped here)
   pane.appendChild(center);
   root.appendChild(_syncActions(
     _syncBtn("Keep sync on", "wd-dialog-ok", () => setSyncState("main")),
