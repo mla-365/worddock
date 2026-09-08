@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.47";
+const WORDDOCK_VERSION = "v26.48";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3180,10 +3180,9 @@ function _renderSyncMain(root){
   const pane = _syncPane(root);
 
   if (key){
-    pane.appendChild(_syncTitle("Sync is on"));
+    pane.appendChild(_syncTitle("Sync is on - this is your key:"));   // one line fewer: the PIN line must fit
     const center = document.createElement("div");
     center.className = "sync-center";
-    center.appendChild(_syncDesc("This is your key:"));
     const keyBox = document.createElement("div");
     keyBox.className = "sync-key";
     keyBox.textContent = formatSyncKey(key);
