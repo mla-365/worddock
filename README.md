@@ -19,4 +19,4 @@ Live app: **[worddock.app](https://worddock.app)**
 
 ## License
 
-The WordDock app is released under a permissive license — see [LICENSE](LICENSE) for details.
+The WordDock app is released under a permissive license - see [LICENSE](LICENSE) for details.
