@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.44";
+const WORDDOCK_VERSION = "v26.45";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1920,6 +1920,8 @@ const SYNC_PUSH_COOLDOWN = 10 * 60 * 1000;  // 10 minutes
 const SYNC_PULL_INTERVAL = 60 * 60 * 1000;  // hourly, foreground only
 const SYNC_DELTA_ASK = 100;                 // cards this browser knows better than the key: above this, adoption asks first
 const SYNC_STAMP_KEY = "wd_sync_stamp";     // 2c: the cloud's updated_at as this device last saw it
+const SYNC_LASTPULL_KEY = "wd_sync_lastpull"; // 2d: when this device last TRIED to pull
+const SYNC_PULL_MIN_GAP = 60 * 1000;          // 2d: a guardrail against the alt-tab clicker, not a feature
 let syncBusy = false;
 let syncPullTimer = null;
 
@@ -2077,9 +2079,27 @@ function deltaAgainstCloud(cloudProgress){
   return n;
 }
 
+/* 2d — the pull guardrail. Every routine pull (open, hourly, tab return)
+   passes here; a second attempt within a minute is dropped without touching
+   the line. Stamped at the ATTEMPT so vain offline retries are braked too.
+   The adoption peek (fetchCloud in the gate) does not go through here — a
+   deliberate, rare act may always look. Built before it was needed, on
+   Michel's rule: guardrails go up while the road is still in view. */
+function syncPullRecently(){
+  try {
+    const last = parseInt(localStorage.getItem(SYNC_LASTPULL_KEY) || "0", 10);
+    return last && (Date.now() - last) < SYNC_PULL_MIN_GAP;
+  } catch { return false; }
+}
+function stampSyncPull(){
+  try { localStorage.setItem(SYNC_LASTPULL_KEY, String(Date.now())); } catch {}
+}
+
 async function syncPull(){
   const key = getSyncKey();
   if (!key || syncBusy) return;
+  if (syncPullRecently()) return;        // 2d: braked, nothing sent
+  stampSyncPull();
   syncBusy = true;
   try {
     applyCloud(await fetchCloud(key), "rule");
