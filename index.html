@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.49";
+const WORDDOCK_VERSION = "v26.50";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1234,6 +1234,7 @@ body{
 
 <!-- SheetJS for excel I/O (Layer 2) -->
 <script src="xlsx.full.min.js"></script>
+<script src="qrcode.js"></script>   <!-- 3b: QR encoder, self-hosted (MIT, Kazuhiko Arase) -->
 
 <script>
 /* ════════════════════════════════════════════
@@ -3134,6 +3135,7 @@ function renderSyncPanelBody(){
   if (_syncState === "enter-key")   return _renderSyncEnterKey(body);
   if (_syncState === "key-collision") return _renderSyncKeyCollision(body);
   if (_syncState === "claim-failed")  return _renderSyncClaimFailed(body);
+  if (_syncState === "show-qr")       return _renderSyncShowQr(body);
   _renderSyncMain(body);
 }
 
@@ -3203,8 +3205,17 @@ function _renderSyncMain(root){
       } catch { copy.textContent = "Select it above"; }
       setTimeout(() => { copy.textContent = "Copy key"; }, 1600);
     }, "min-width:100px");
+    if (_linkNotice){
+      const n = document.createElement("p");
+      n.className = "setting-desc";
+      n.style.cssText = "color:#c44;margin-top:6px";
+      n.textContent = _linkNotice;
+      center.appendChild(n);
+      _linkNotice = "";
+    }
     root.appendChild(_syncActions(
       copy,
+      _syncBtn("Show QR", "", () => setSyncState("show-qr")),
       _syncBtn("Turn off sync", "wd-dialog-cancel", () => setSyncState("confirm-off")),   // 4b: dim — the shared-device exit, whispering
       _syncBtn("?", "wd-dialog-cancel", () => setSyncState("help"))
     ));
@@ -3319,6 +3330,7 @@ function _renderSyncEnterKey(root){
   inp.className = "wd-dialog-input";
   inp.type = "text";
   inp.placeholder = "e.g. 7K2M-9XQF";
+  if (_prefillKey){ inp.value = formatSyncKey(_prefillKey); _prefillKey = ""; }   // 3b: from a scanned link; Connect still required
   inp.setAttribute("autocomplete", "off");
   inp.setAttribute("spellcheck", "false");
   center.appendChild(inp);
@@ -3460,6 +3472,70 @@ function _renderSyncKeyCollision(root){
       setSyncState("enter-key");
     })
   ));
+}
+
+/* ── 3b: QR on the panel, link on arrival ────────────────────────────────
+   The laptop SHOWS a QR that is just a link with the key in it; the phone
+   SCANS it with its ordinary camera app (no in-app scanner — that is what
+   Firefox and Safari lack, not display). The link opens WordDock with the key
+   already typed into "Enter your key". Nothing is adopted by a link: Connect
+   still has to be tapped, the PIN line is right there, the gate still runs.
+   Comfort, never a back door. And a device that already has a key takes no
+   other key from a link — scanning a friend's QR must not pour your progress
+   into their key. */
+let _prefillKey  = "";
+let _linkNotice  = "";
+
+function _renderSyncShowQr(root){
+  const pane = _syncPane(root);
+  const key = getSyncKey();
+  pane.appendChild(_syncTitle("Scan with your phone's camera"));
+  const center = document.createElement("div");
+  center.className = "sync-center";
+  center.style.cssText = "align-items:center";
+  const box = document.createElement("div");
+  box.style.cssText = "background:#fff;padding:6px;border-radius:8px;display:inline-block;line-height:0";
+  try {
+    const qr = qrcode(0, "M");
+    qr.addData("https://worddock.app/?key=" + key);
+    qr.make();
+    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0 });
+  } catch {
+    box.textContent = formatSyncKey(key || "");
+  }
+  center.appendChild(box);
+  const d = _syncDesc("It opens WordDock with your key ready - you still tap Connect there.");
+  d.style.cssText = "margin-top:8px;text-align:center";
+  center.appendChild(d);
+  pane.appendChild(center);
+  root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"), "margin-right:auto")));
+}
+
+/* On arrival with ?key=... in the address: take the key out of the URL at
+   once (a key in the address bar is a PIN on a sticky note), then route by
+   one rule. Empty device → Enter your key, prefilled. Keyed device → the
+   panel opens on its own key with a plain sentence; switching keys is a
+   deliberate two-step (Turn off sync, then I have a key), never a link. */
+function handleKeyLink(){
+  let raw = "";
+  try {
+    const u = new URL(location.href);
+    raw = normalizeSyncKey(u.searchParams.get("key") || "");
+    if (u.searchParams.has("key")){
+      u.searchParams.delete("key");
+      history.replaceState(null, "", u.pathname + (u.search || "") + u.hash);
+    }
+  } catch { return; }
+  if (!isValidSyncKey(raw)) return;
+  if (getSyncKey()){
+    _linkNotice = "This device is already connected to a key. To switch keys, turn off sync first.";
+    showSyncPanel();
+    setSyncState("main");
+    return;
+  }
+  _prefillKey = raw;
+  showSyncPanel();
+  setSyncState("enter-key");
 }
 
 /* ── Consent cascade & shared key flows ──────────────────────────────────
@@ -4532,6 +4608,7 @@ function readLastList(){
   // Resume the last list if it still exists; otherwise the domain's Full-List.
   const resume = (wanted && LISTS[wanted]) ? wanted : ("embedded_" + bootDomain);
   switchActiveList(resume);
+  handleKeyLink();   // 3b: arrived via a scanned QR?
 
   // If this boot is a REFRESH that happened while the user was in the browser,
   // put them back where they were. sessionStorage is empty on a fresh visit, so
