@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.43";
+const WORDDOCK_VERSION = "v26.44";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -815,6 +815,7 @@ body{
   vertical-align:middle;position:relative;top:-1px;
 }
 .sync-dot.on{background:#0a8f0a;border-color:#0a8f0a;}
+.sync-dot.on.pending{background:#d9a300;border-color:#d9a300;}  /* 2c: a push is owed */
 
 /* About topics — a static table of contents, styled like the domain rows but
    without their dynamic zones. Always all shown, in order. */
@@ -1918,18 +1919,34 @@ const SYNC_LASTPUSH_KEY = "wd_sync_lastpush";
 const SYNC_PUSH_COOLDOWN = 10 * 60 * 1000;  // 10 minutes
 const SYNC_PULL_INTERVAL = 60 * 60 * 1000;  // hourly, foreground only
 const SYNC_DELTA_ASK = 100;                 // cards this browser knows better than the key: above this, adoption asks first
+const SYNC_STAMP_KEY = "wd_sync_stamp";     // 2c: the cloud's updated_at as this device last saw it
 let syncBusy = false;
 let syncPullTimer = null;
 
 /* Called at deck completion — the ONLY moment a score can change. */
 function markSyncDirty(){
   try { localStorage.setItem(SYNC_DIRTY_KEY, "1"); } catch {}
+  if (typeof renderSyncAnchor === "function") renderSyncAnchor();   // the dot turns amber
 }
 function syncIsDirty(){
   try { return localStorage.getItem(SYNC_DIRTY_KEY) === "1"; } catch { return false; }
 }
 function clearSyncDirty(){
   try { localStorage.removeItem(SYNC_DIRTY_KEY); } catch {}
+  if (typeof renderSyncAnchor === "function") renderSyncAnchor();   // back to green
+}
+
+/* 2c — the one number that turns max-merge from a habit into an exception.
+   The server stamps every write (updated_at). This device remembers the stamp
+   it last saw, in both directions: after a pull (what it read) and after a
+   push with a reply (what it wrote). Together with the dirty flag that is a
+   one-slot version vector — exactly enough for one blob under one key. */
+function getSyncStamp(){
+  try { return parseInt(localStorage.getItem(SYNC_STAMP_KEY) || "0", 10) || 0; } catch { return 0; }
+}
+function setSyncStamp(n){
+  if (!n) return;
+  try { localStorage.setItem(SYNC_STAMP_KEY, String(n)); } catch {}
 }
 function syncCooldownPassed(){
   try {
@@ -1996,10 +2013,40 @@ async function fetchCloud(key){
   return await res.json();
 }
 
-function applyCloud(data){
+/* Replace, not merge: every local pot becomes what the cloud holds, and a
+   pot the cloud no longer knows is removed here too — so deletions and
+   decrements travel. Only reached when this device is clean, i.e. everything
+   it ever changed already went up; nothing local can be lost. */
+function replacePools(cloud){
+  const keep = new Set(Object.keys(cloud));
+  const gone = [];
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (k && k.startsWith("wd_rs_") && !keep.has(k.slice("wd_rs_".length))) gone.push(k);
+  }
+  for (const k of gone){ try { localStorage.removeItem(k); } catch {} }
+  writePools(cloud);
+}
+
+/* mode "merge": max per card, used by adoption (the gate already decided).
+   mode "rule" (routine pulls): the three-way rule of 2c —
+     stamp unchanged since I last looked  → nobody else wrote → local stays
+     stamp moved and I am clean           → take the cloud as it is
+     stamp moved and I am dirty           → both sides worked → max
+   First contact on a device that has never seen a stamp merges once, the
+   old way, so nothing about the upgrade can surprise anyone. */
+function applyCloud(data, mode){
   if (!data || data.empty || !data.progress) return;
-  const merged = mergePools(allPools(), data.progress);
-  writePools(merged);
+  const stamp = parseInt(data.updated_at, 10) || 0;
+  let how = "merge";
+  if (mode === "rule"){
+    const seen = getSyncStamp();
+    if (seen && stamp && stamp === seen) return;        // local stays
+    if (seen && !syncIsDirty()) how = "replace";
+  }
+  if (how === "replace") replacePools(data.progress);
+  else                   writePools(mergePools(allPools(), data.progress));
+  setSyncStamp(stamp);
   // A running deck is untouched: deck completion re-reads the live pool and
   // applies only its own deltas, so a mid-session pull can no more clobber a
   // deck than an external write to the pool can. A deck nobody STARTED is
@@ -2035,7 +2082,7 @@ async function syncPull(){
   if (!key || syncBusy) return;
   syncBusy = true;
   try {
-    applyCloud(await fetchCloud(key));
+    applyCloud(await fetchCloud(key), "rule");
   } catch {
     /* offline or server down — local stays authoritative */
   } finally {
@@ -2048,7 +2095,7 @@ async function syncPull(){
    for the administrative handshakes (key creation, key adoption): one-shot
    pushes behind explicit dialogs, never timers — which is why it cannot
    chain or loop. */
-function syncPush(force){
+function syncPush(force, leaving){
   const key = getSyncKey();
   if (!key) return;
   if (!force && !syncIsDirty()) return;          // rule 1: nothing new to say
@@ -2078,21 +2125,30 @@ function syncPush(force){
      push is harmless: the merge takes the maximum, so re-sending changes
      nothing. Optimism is the cheap direction to be wrong in. */
   try {
-    if (navigator.sendBeacon){
+    /* 2c: beacon ONLY when the page is leaving for good (pagehide) — it is
+       the one transport that survives that moment, at the price of never
+       answering. Everywhere else the page is still alive, so a keepalive
+       fetch does the same job AND brings the stamp back, which is what lets
+       the next pull know the cloud matches what we hold. */
+    if (leaving && navigator.sendBeacon){
       const blob = new Blob([body], { type: CT });
       if (navigator.sendBeacon(SYNC_API + "/push", blob)){
         clearSyncDirty();
         return;
       }
     }
-    // sendBeacon missing, or it refused the payload (queue full, too large).
     fetch(SYNC_API + "/push", {
       method: "POST",
       headers: { "content-type": CT },
       body,
       keepalive: true
     })
-      .then(r => { if (r && r.ok) clearSyncDirty(); })
+      .then(r => (r && r.ok) ? r.json().catch(() => ({ ok: true })) : null)
+      .then(j => {
+        if (!j) return;
+        clearSyncDirty();
+        setSyncStamp(parseInt(j.updated_at, 10) || 0);
+      })
       .catch(() => {});
   } catch {
     /* swallowed: local stays authoritative, the flag stands, the next natural
@@ -2150,7 +2206,7 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 // Leaving for good. sendBeacon is what makes this one actually arrive.
-window.addEventListener("pagehide", () => syncPush());
+window.addEventListener("pagehide", () => syncPush(false, true));
 
 function switchActiveList(listId){
   const list = LISTS[listId];
@@ -3290,7 +3346,7 @@ let _pendingAdopt = null;
 
 function adoptKey(key, data){
   setSyncKey(key);
-  applyCloud(data);
+  applyCloud(data, "merge");
   // Merged state goes back up, forced: this browser's own progress must
   // reach the other device, and no deck was finished to raise the flag.
   syncPush(true);
@@ -3557,7 +3613,8 @@ function renderSyncAnchor(){
   const a = document.getElementById("syncAnchor");
   if (!a) return;
   const on = !!getSyncKey();
-  a.innerHTML = '<span class="sync-dot' + (on ? ' on' : '') + '"></span>' +
+  const pending = on && syncIsDirty();   // 2c: amber while a push is owed
+  a.innerHTML = '<span class="sync-dot' + (on ? ' on' : '') + (pending ? ' pending' : '') + '"></span>' +
     (on ? "Sync is on" : "Sync is off");
 }
 
