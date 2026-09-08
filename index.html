@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.45";
+const WORDDOCK_VERSION = "v26.46";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3078,8 +3078,9 @@ function listCoverage(list){
                (a returning user on a fresh device needs the key door
                BEFORE any deck; Turn-on would protect an empty pool —
                "the server stores learners, not passers-by")
-     A-full  : no key, some progress    → line + [Turn on sync]
-                                          [I have a key] + ?
+     A-full  : no key, some progress    → line + [I have a key] + ?
+                                          (4b: no Turn-on here; minting lives
+                                          in the cascade and behind About)
      B       : key present              → "Sync is on." + key + [Copy]
                                           [Turn off sync] + ?           */
 
@@ -3187,6 +3188,13 @@ function _renderSyncMain(root){
     keyBox.className = "sync-key";
     keyBox.textContent = formatSyncKey(key);
     center.appendChild(keyBox);
+    const pin = document.createElement("p");
+    pin.className = "setting-desc";
+    pin.style.cssText = "margin-top:8px";
+    const pinB = document.createElement("b");
+    pinB.textContent = "Treat your key like a PIN: keep it safe, and never leave it on a device that isn't yours.";
+    pin.appendChild(pinB);
+    center.appendChild(pin);
     pane.appendChild(center);
 
     const copy = _syncBtn("Copy key", "wd-dialog-ok", async () => {
@@ -3198,7 +3206,7 @@ function _renderSyncMain(root){
     }, "min-width:100px");
     root.appendChild(_syncActions(
       copy,
-      _syncBtn("Turn off sync", "", () => setSyncState("confirm-off")),
+      _syncBtn("Turn off sync", "wd-dialog-cancel", () => setSyncState("confirm-off")),   // 4b: dim — the shared-device exit, whispering
       _syncBtn("?", "wd-dialog-cancel", () => setSyncState("help"))
     ));
   } else {
@@ -3210,14 +3218,13 @@ function _renderSyncMain(root){
     err.style.cssText = "color:#c44;margin-top:6px;min-height:1.2em";
     pane.appendChild(err);
 
-    // R1: never mint a key silently. This device may have HAD a key
-    // (turn-off wipes it locally); a fresh key cannot see that progress.
-    // The question lives one state deeper — same frame, no stacked dialog.
-    const on = _syncBtn("Turn on sync", "", () => setSyncState("confirm-new"));
-
+    // 4b: one loud door. Minting is NOT offered here any more — the cascade
+    // offers it after the first deck (and once more at 1000 points), and About
+    // keeps a door for the rare seeker. Nobody gets nudged toward a second key
+    // from a panel they opened out of curiosity. (R1's guard dialog survives
+    // behind the About door.)
     root.appendChild(_syncActions(
       _syncBtn("I have a key", "wd-dialog-ok", () => setSyncState("enter-key")),
-      on,
       _syncBtn("?", "wd-dialog-cancel", () => setSyncState("help"))
     ));
   }
@@ -3235,7 +3242,8 @@ function _renderSyncHelp(root){
   p1.className = "setting-desc";
   p1.textContent =
     "It's a random key, no account needed. Enter it on another browser or " +
-    "device and both share the same progress, possibly with a small delay.";
+    "device and both share the same progress, possibly with a small delay. " +
+    "No key yet? WordDock offers one after your first deck - or see About.";
   const p2 = document.createElement("p");
   p2.className = "setting-desc";
   const b = document.createElement("b");
@@ -3262,7 +3270,7 @@ function _renderSyncConfirmNew(root){
   err.style.cssText = "color:#c44;margin-top:6px;min-height:1.2em";
   pane.appendChild(err);
 
-  const create = _syncBtn("Create new key", "", async () => {
+  const create = _syncBtn("Create new key", "wd-dialog-cancel", async () => {   // 4b: dim — the costly mistake
     create.textContent = "Creating...";
     create.disabled = true;
     await doCreateKey();   // success and both failures each paint their own state
@@ -3277,14 +3285,31 @@ function _renderSyncConfirmNew(root){
 
 function _renderSyncConfirmOff(root){
   const pane = _syncPane(root);
+  const key = getSyncKey() || "";
   pane.appendChild(_syncTitle("Turn off sync?"));
-  pane.appendChild(_syncDesc(
-    "This device stops syncing. Nothing is deleted - your scores stay here, " +
-    "and you can turn sync on again later."
+  const center = document.createElement("div");
+  center.className = "sync-center";
+  center.appendChild(_syncDesc(
+    "This device stops syncing. Nothing is deleted - your scores stay here. " +
+    "To reconnect later you will need your key:"
   ));
+  // 4b: the shared-device exit nudges you to take your key with you.
+  const keyBox = document.createElement("div");
+  keyBox.className = "sync-key";
+  keyBox.textContent = key ? formatSyncKey(key) : "";
+  center.appendChild(keyBox);
+  const copy = _syncBtn("Copy key", "", async () => {
+    try {
+      await navigator.clipboard.writeText(formatSyncKey(key));
+      copy.textContent = "Copied";
+    } catch { copy.textContent = "Select it above"; }
+    setTimeout(() => { copy.textContent = "Copy key"; }, 1600);
+  }, "margin-top:8px;min-width:100px");
+  center.appendChild(copy);
+  pane.appendChild(center);
   root.appendChild(_syncActions(
     _syncBtn("Keep sync on", "wd-dialog-ok", () => setSyncState("main")),
-    _syncBtn("Turn off", "", () => {
+    _syncBtn("Turn off", "wd-dialog-cancel", () => {
       clearSyncKey();
       stopSyncPullTimer();
       renderSyncAnchor();
@@ -3314,6 +3339,14 @@ function _renderSyncEnterKey(root){
   err.className = "setting-desc";
   err.style.cssText = "color:#c44;margin-top:6px;min-height:1.2em";
   center.appendChild(err);
+  // 4b: THE moment a person knows whose device this is — say it here, once.
+  const pin = document.createElement("p");
+  pin.className = "setting-desc";
+  pin.style.cssText = "margin-top:4px";
+  const pinB = document.createElement("b");
+  pinB.textContent = "Treat your key like a PIN: keep it safe, and never leave it on a device that isn't yours.";
+  pin.appendChild(pinB);
+  center.appendChild(pin);
   pane.appendChild(center);
 
   const connect = _syncBtn("Connect", "wd-dialog-ok", async () => {
@@ -3843,20 +3876,34 @@ const aboutTopics = [
 
   { id:"devices", title:"Devices &amp; your key", html:
     '<h2 class="section-title gz-first">Devices &amp; your key</h2>' +
-    '<p class="setting-desc">Your scores stay on your device, in your browser. ' +
-    'Nothing leaves it unless you choose to connect another device.</p>' +
-    '<p class="setting-desc">If you study on more than one device, open <b>Sync</b> ' +
-    'and enter the same key on each. Your progress then travels between them. No ' +
-    'account, no email, no password - WordDock only ever sees the key, never ' +
-    'who you are. Connecting always raises a device to the highest progress across ' +
-    'your devices; it never lowers a score another has already earned.</p>' +
-    '<p class="setting-desc"><b>Your key is your safety net.</b> If you lose your ' +
-    'phone or clear your browser, your progress in WordDock can be restored. If you ' +
-    'enter your key on any device, your progress returns. Keep your key somewhere ' +
-    'outside your devices, like an email to yourself.</p>' +
-    '<p class="setting-desc">Sharing a computer? Progress belongs to the browser, ' +
-    'so everyone studying in the same one shares one set of scores. A separate ' +
-    'browser profile keeps progress apart.</p><a id="more-devices" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-devices</a>' },
+    '<p class="setting-desc"><b>Treat your key like a PIN: keep it safe, and never leave it on a device that isn\u2019t yours.</b></p>' +
+    '<p class="setting-desc">Your scores live in your browser, on your device. ' +
+    'Sync makes a copy in the cloud under a random key - no account, no email, no ' +
+    'password; WordDock only ever sees the key, never who you are. Enter the same ' +
+    'key on another device and both show the same progress, possibly with a small ' +
+    'delay. Scores travel in both directions: a word you struggled with on your ' +
+    'phone stays a word to repeat on your laptop.</p>' +
+    '<p class="setting-desc"><b>Your key is your way back.</b> Lose your phone or ' +
+    'wipe your browser? Enter your key on any device and your progress returns. ' +
+    'Keep it somewhere outside your devices - written down, or in a message to ' +
+    'yourself.</p>' +
+    '<p class="setting-desc"><b>Shared computer?</b> The clean way: open a ' +
+    'private/incognito window, enter your key, study - close the window and nothing ' +
+    'stays behind. If that is not possible: enter your key, study, and choose ' +
+    '<b>Turn off sync</b> before you leave. That removes your key from that computer; ' +
+    'your progress is safe under your key, but a copy of the scores stays in that ' +
+    'browser. A device left connected lets the next person change your scores, and ' +
+    'WordDock cannot see that - hence the PIN rule above. Two people who share one ' +
+    'browser can also simply study in different domains: scores are kept per ' +
+    'domain, so they never touch.</p>' +
+    '<p class="setting-desc">WordDock\u2019s server is free and has a daily limit. If ' +
+    'it is ever reached, syncing pauses until the next day and your scores stay ' +
+    'safe in your browser.</p>' +
+    '<p class="setting-desc"><b>No key yet?</b> WordDock offers one after your first ' +
+    'deck. You can also create one here - but only if you are sure you do not ' +
+    'already have one: a new key cannot see an old key\u2019s progress.</p>' +
+    '<p><button type="button" class="wd-dialog-btn wd-dialog-cancel" id="aboutCreateKey">Create a key</button></p>' +
+    '<a id="more-devices" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-devices</a>' },
 
   { id:"more", title:"More", html:
     '<h2 class="section-title gz-first">More</h2>' +
@@ -3902,6 +3949,13 @@ function renderAbout(){
   }
   const topic = aboutTopics.find(t => t.id === aboutTopicId) || aboutTopics[0];
   content.innerHTML = topic.html;
+  // 4b: the seeker's door to minting lives here, behind R1's guard dialog.
+  const mint = document.getElementById("aboutCreateKey");
+  if (mint) mint.addEventListener("click", () => {
+    if (getSyncKey()){ showSyncPanel(); setSyncState("main"); return; }   // already have one: show it
+    showSyncPanel();
+    setSyncState("confirm-new");
+  });
 }
 
 function renderBrowser(){
