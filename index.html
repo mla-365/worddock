@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.59";
+const WORDDOCK_VERSION = "v26.60";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -793,9 +793,9 @@ body{
 }
 #browserRail{
   flex:1;
-  overflow-y:auto;
   min-height:0;
-  display:flex;flex-direction:column;   /* 6b: lets "My domains" + Catalog sink below the engaged domains */
+  display:grid;grid-template-rows:1fr 1fr 1fr;   /* 6b: three fixed bands — nothing ever shifts */
+  overflow:hidden;
 }
 /* Bottom meta zone: pinned to the rail bottom, never scrolls with domains */
 /* Site footer — echoes the study counter (same 13px, white) for spatial
@@ -854,18 +854,22 @@ body{
   border-top:1px solid var(--menu-border);
   user-select:none;
 }
-.rail-zone-label{margin-top:auto;padding-top:18px}         /* sink: the free space goes above the header */
 .rail-zone-label:first-child{margin-top:4px;border-top:none;padding-top:0}
 /* Collapsible MORE header — same centered shape, plus caret and count. */
+.rail-band{
+  min-height:0;overflow-y:auto;               /* what a band cannot show, it scrolls — within itself */
+  display:flex;flex-direction:column;
+  padding-bottom:6px;
+}
+.rail-band + .rail-band{border-top:1px solid var(--menu-border)}
 .rail-more-toggle{
+  position:sticky;top:0;z-index:1;background:var(--bg);   /* the header stays put while its band scrolls */
   display:flex;align-items:center;gap:8px;
-  margin:10px 4px 8px;padding:10px 7px 0;cursor:pointer;
-  font-family:'Poppins',sans-serif;font-size:18px;font-weight:600;   /* 6b: the voice of "Domains" / "Lists" */
-  color:var(--tag);transition:color .12s;
-  border-top:1px solid var(--menu-border);
+  margin:0 4px 6px;padding:12px 7px 6px;cursor:pointer;
+  font-family:'Poppins',sans-serif;font-size:16px;font-weight:600;
+  color:#fff;                                  /* pure white, always — nothing here is ever "selected" */
   user-select:none;
 }
-.rail-spacer{flex:1}                                     /* two of them centre the zones vertically */
 .rail-more-toggle:hover{color:var(--ink)}
 .rail-more-toggle .more-caret{font-size:11px}
 .rail-more-toggle .more-count{font-size:11px;letter-spacing:0}
@@ -3020,13 +3024,16 @@ function renderBrowserRail(){
   // 6b — the rail answers three questions with as few words as possible.
   // "What am I studying?" needs no header: the studying-now domain is marked
   // and the other engaged domains are bold; the ORDER says it.
-  active.forEach(d => $browserRail.appendChild(makeFolderEl(d)));
+  const band = () => { const b = document.createElement("div"); b.className = "rail-band"; $browserRail.appendChild(b); return b; };
 
-  // "What is mine?" keeps its header — Michel's quiet signal ("this could be
-  // something for you"). Empty, the sentence itself is the door: "import a
-  // list" opens the same picker as the Lists pane. No button chrome here.
-  const sp1 = document.createElement("div"); sp1.className = "rail-spacer";
-  $browserRail.appendChild(sp1);
+  // Band 1 — "What am I studying?" No header: the studying-now domain is
+  // marked and the other engaged domains are bold; the ORDER says it.
+  const b1 = band();
+  active.forEach(d => b1.appendChild(makeFolderEl(d)));
+
+  // Band 2 — "What is mine?" keeps its header: Michel's quiet signal ("this
+  // could be something for you"). Empty, the sentence itself is the door.
+  const b2 = band();
 
   // Collapsible like Catalog. Open by default when you own domains (never hide
   // what is yours); collapsed when empty, so the header alone is the quiet
@@ -3039,9 +3046,9 @@ function renderBrowserRail(){
       "<span>" + MY_ZONE_LABEL + "</span>" +
       '<span class="more-caret">' + (expandedMy ? "\u25be" : "\u25b8") + "</span>";
     header.addEventListener("click", () => { myExpanded = !expandedMy; renderBrowserRail(); });
-    $browserRail.appendChild(header);
+    b2.appendChild(header);
     if (expandedMy){
-      my.forEach(d => $browserRail.appendChild(makeFolderEl(d)));
+      my.forEach(d => b2.appendChild(makeFolderEl(d)));
       if (!my.length){
         const hint = document.createElement("div");
         hint.className = "rail-zone-empty";
@@ -3050,10 +3057,13 @@ function renderBrowserRail(){
           '<span class="rail-door rail-why" title="How to name a domain of your own">?</span>';
         hint.querySelector(".rail-door:not(.rail-why)").addEventListener("click", () => $fileInput.click());
         hint.querySelector(".rail-why").addEventListener("click", showFileRules);
-        $browserRail.appendChild(hint);
+        b2.appendChild(hint);
       }
     }
   }
+
+  // Band 3 — "What else exists?" One door: Catalog. No count.
+  const b3 = band();
 
   // "What else exists?" is one door, not a zone: Catalog. Collapsible, no
   // count (WordDock doesn't brag). Defaults open when nothing is engaged yet.
@@ -3065,11 +3075,9 @@ function renderBrowserRail(){
       "<span>Catalog</span>" +
       '<span class="more-caret">' + (expanded ? "▾" : "▸") + "</span>";
     header.addEventListener("click", () => { moreExpanded = !expanded; renderBrowserRail(); });
-    $browserRail.appendChild(header);
-    if (expanded) more.forEach(d => $browserRail.appendChild(makeFolderEl(d)));
+    b3.appendChild(header);
+    if (expanded) more.forEach(d => b3.appendChild(makeFolderEl(d)));
   }
-  const sp2 = document.createElement("div"); sp2.className = "rail-spacer";
-  $browserRail.appendChild(sp2);
 }
 
 /* Coverage for a single LIST (a lens over the pool), as opposed to a whole
