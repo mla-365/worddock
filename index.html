@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.60";
+const WORDDOCK_VERSION = "v26.61";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -794,7 +794,7 @@ body{
 #browserRail{
   flex:1;
   min-height:0;
-  display:grid;grid-template-rows:1fr 1fr 1fr;   /* 6b: three fixed bands — nothing ever shifts */
+  display:grid;grid-template-rows:1fr auto 1fr;  /* 6b: flexible / the fixed pair at 50% / flexible — the pair never moves */
   overflow:hidden;
 }
 /* Bottom meta zone: pinned to the rail bottom, never scrolls with domains */
@@ -857,15 +857,18 @@ body{
 .rail-zone-label:first-child{margin-top:4px;border-top:none;padding-top:0}
 /* Collapsible MORE header — same centered shape, plus caret and count. */
 .rail-band{
-  min-height:0;overflow-y:auto;               /* what a band cannot show, it scrolls — within itself */
+  min-height:0;overflow-y:auto;               /* what a half cannot show, it scrolls — within itself */
   display:flex;flex-direction:column;
-  padding-bottom:6px;
 }
-.rail-band + .rail-band{border-top:1px solid var(--menu-border)}
+.rail-band.rail-top .rail-drawer{margin-top:auto;padding-top:8px}   /* Catalog's drawer sits against the pair */
+.rail-band.rail-bottom{padding-top:4px}
+.rail-pair{
+  border-top:1px solid var(--menu-border);border-bottom:1px solid var(--menu-border);
+  padding:4px 0;
+}
 .rail-more-toggle{
-  position:sticky;top:0;z-index:1;background:var(--bg);   /* the header stays put while its band scrolls */
   display:flex;align-items:center;gap:8px;
-  margin:0 4px 6px;padding:12px 7px 6px;cursor:pointer;
+  margin:0 4px;padding:8px 7px;cursor:pointer;
   font-family:'Poppins',sans-serif;font-size:16px;font-weight:600;
   color:#fff;                                  /* pure white, always — nothing here is ever "selected" */
   user-select:none;
@@ -3024,16 +3027,40 @@ function renderBrowserRail(){
   // 6b — the rail answers three questions with as few words as possible.
   // "What am I studying?" needs no header: the studying-now domain is marked
   // and the other engaged domains are bold; the ORDER says it.
-  const band = () => { const b = document.createElement("div"); b.className = "rail-band"; $browserRail.appendChild(b); return b; };
+  // 6b, best of both worlds: the two headers sit together as a fixed pair at
+  // the rail's middle and never move. Catalog opens UPWARD (its domains are WD
+  // domains, the same family as the engaged ones above), My domains opens
+  // DOWNWARD, under its header. Whatever opens grows away from the pair.
+  const top = document.createElement("div");  top.className = "rail-band rail-top";
+  const pair = document.createElement("div"); pair.className = "rail-pair";
+  const bot = document.createElement("div");  bot.className = "rail-band rail-bottom";
+  $browserRail.appendChild(top); $browserRail.appendChild(pair); $browserRail.appendChild(bot);
 
-  // Band 1 — "What am I studying?" No header: the studying-now domain is
-  // marked and the other engaged domains are bold; the ORDER says it.
-  const b1 = band();
-  active.forEach(d => b1.appendChild(makeFolderEl(d)));
+  // "What am I studying?" No header: the studying-now domain is marked and
+  // the other engaged domains are bold; the ORDER says it.
+  active.forEach(d => top.appendChild(makeFolderEl(d)));
 
-  // Band 2 — "What is mine?" keeps its header: Michel's quiet signal ("this
-  // could be something for you"). Empty, the sentence itself is the door.
-  const b2 = band();
+  // Catalog — "What else exists?" One door, no count. Its drawer unfolds
+  // upward from the pair. Defaults open when nothing is engaged yet.
+  if (more.length){
+    const expanded = (moreExpanded === null) ? (active.length === 0) : moreExpanded;
+    if (expanded){
+      const drawer = document.createElement("div"); drawer.className = "rail-drawer";
+      more.forEach(d => drawer.appendChild(makeFolderEl(d)));
+      top.appendChild(drawer);
+    }
+    const header = document.createElement("div");
+    header.className = "rail-more-toggle";
+    header.innerHTML =
+      "<span>Catalog</span>" +
+      '<span class="more-caret">' + (expanded ? "▴" : "▸") + "</span>";
+    header.addEventListener("click", () => { moreExpanded = !expanded; renderBrowserRail(); });
+    pair.appendChild(header);
+  }
+
+  // My domains — "What is mine?" keeps its header: Michel's quiet signal
+  // ("this could be something for you"). Empty, the sentence is the door.
+  const b2 = bot;
 
   // Collapsible like Catalog. Open by default when you own domains (never hide
   // what is yours); collapsed when empty, so the header alone is the quiet
@@ -3046,7 +3073,7 @@ function renderBrowserRail(){
       "<span>" + MY_ZONE_LABEL + "</span>" +
       '<span class="more-caret">' + (expandedMy ? "\u25be" : "\u25b8") + "</span>";
     header.addEventListener("click", () => { myExpanded = !expandedMy; renderBrowserRail(); });
-    b2.appendChild(header);
+    pair.appendChild(header);
     if (expandedMy){
       my.forEach(d => b2.appendChild(makeFolderEl(d)));
       if (!my.length){
@@ -3062,22 +3089,6 @@ function renderBrowserRail(){
     }
   }
 
-  // Band 3 — "What else exists?" One door: Catalog. No count.
-  const b3 = band();
-
-  // "What else exists?" is one door, not a zone: Catalog. Collapsible, no
-  // count (WordDock doesn't brag). Defaults open when nothing is engaged yet.
-  if (more.length){
-    const expanded = (moreExpanded === null) ? (active.length === 0) : moreExpanded;
-    const header = document.createElement("div");
-    header.className = "rail-more-toggle";
-    header.innerHTML =
-      "<span>Catalog</span>" +
-      '<span class="more-caret">' + (expanded ? "▾" : "▸") + "</span>";
-    header.addEventListener("click", () => { moreExpanded = !expanded; renderBrowserRail(); });
-    b3.appendChild(header);
-    if (expanded) more.forEach(d => b3.appendChild(makeFolderEl(d)));
-  }
 }
 
 /* Coverage for a single LIST (a lens over the pool), as opposed to a whole
