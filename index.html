@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.52";
+const WORDDOCK_VERSION = "v26.53";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3122,6 +3122,7 @@ let _syncState = "main";
    than main, so Back returns to main - the same move as the panel's own Back
    button. They never nest, so one entry covers all three. */
 function setSyncState(s){
+  if (s !== "main") _linkNotice = "";   // 3b: any step away from main ends the notice
   _syncState = s;
   renderSyncPanelBody();
   if (s === "main") navClosed("syncstate");
@@ -3215,9 +3216,8 @@ function _renderSyncMain(root){
       const n = document.createElement("p");
       n.className = "setting-desc";
       n.style.cssText = "color:#c44;margin-top:6px";
-      n.textContent = _linkNotice;
+      n.textContent = _linkNotice;    // consumed when the panel closes or leaves "main"
       center.appendChild(n);
-      _linkNotice = "";
     }
     root.appendChild(_syncActions(
       copy,
@@ -3535,8 +3535,7 @@ function handleKeyLink(){
   if (!isValidSyncKey(raw)) return;
   if (getSyncKey()){
     _linkNotice = "This device is already connected to a key. To switch keys, turn off sync first.";
-    showSyncPanel();
-    setSyncState("main");
+    showSyncPanel();                    // paints "main" itself, notice included
     return;
   }
   _prefillKey = raw;
@@ -3727,6 +3726,7 @@ function showSyncPanel(){
   navOpen("sync", hideSyncPanel);       // nav: Back closes the panel
 }
 function hideSyncPanel(){
+  _linkNotice = "";                     // 3b: a link notice lives for one panel visit
   const bd = document.getElementById("syncPanelBackdrop");
   if (!bd) return;
   bd.classList.remove("open");
