@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.54";
+const WORDDOCK_VERSION = "v26.55";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -848,7 +848,7 @@ body{
    among its own contents. The line belongs to the ZONE, never to the rows. */
 .rail-zone-label{
   display:flex;align-items:center;gap:8px;
-  font-size:10px;text-transform:uppercase;letter-spacing:.09em;
+  font-size:11px;letter-spacing:.03em;        /* 6b: normal case — capitals are reserved for domain names */
   color:var(--tag);margin:18px 4px 10px;
   user-select:none;
 }
@@ -861,7 +861,7 @@ body{
 .rail-more-toggle{
   display:flex;align-items:center;gap:8px;
   margin:18px 4px 10px;border-radius:9px;cursor:pointer;
-  font-size:10px;text-transform:uppercase;letter-spacing:.09em;
+  font-size:11px;letter-spacing:.03em;        /* 6b: "Catalog", normal case, no count */
   color:var(--tag);transition:color .12s;
   user-select:none;
 }
@@ -890,6 +890,10 @@ body{
   font-size:12px;color:var(--tag);opacity:.75;
   padding:2px 11px 6px;line-height:1.5;
 }
+.rail-zone-empty .rail-door{                  /* 6b: the sentence IS the door */
+  text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer;
+}
+.rail-zone-empty .rail-door:hover{color:var(--ink)}
 .folder{
   display:flex;align-items:center;justify-content:space-between;
   padding:9px 11px;border-radius:9px;font-size:14px;color:#c0c8d2;
@@ -910,7 +914,7 @@ body{
   flex:1;padding:16px 20px;overflow-y:auto;min-width:0;
 }
 .detail-head{
-  font-size:11px;text-transform:uppercase;letter-spacing:.08em;
+  font-size:14px;letter-spacing:.02em;        /* 6b: "Lists in NL-RU" — larger, normal case; the domain stays capital by itself */
   color:var(--tag);margin-bottom:12px;
 }
 .browser-lists{display:flex;flex-direction:column;gap:6px}
@@ -1233,7 +1237,7 @@ body{
 
     <div class="domain-universe-label">All domains</div>
     <div class="domain-universe" id="domainUniverse"></div>
-    <p class="domain-note">WordDock maintains the WD domains. <strong>MY LISTS</strong> holds your user-defined domains - anything you import under a name of your own. Each domain keeps its own progress; bold means you've made progress there.</p>
+    <p class="domain-note">WordDock maintains the WD domains. <strong>My domains</strong> holds your own - anything you import under a name of your own. Each domain keeps its own progress; bold means you've made progress there. Lists are yours to slice and annotate, WD lists included; only a domain is fixed.</p>
     <p class="domain-note"><strong>One rule for your own lists:</strong> within a domain, every entry needs its own ID - never restart numbering in a new file. Progress is tracked per ID, so two files that both start at 0001 would share scores between different words. WordDock checks this when you import and warns you.</p>
   </div>
 </div>
@@ -2278,7 +2282,7 @@ function paintCounter(score, done){
    domain keeps its own identity and its own RS pool (wd_rs_<DOMAIN>), so an
    uncurated domain later added to the catalog simply graduates to ACTIVE with
    zero data migration. */
-const MY_ZONE_LABEL = "MY LISTS";
+const MY_ZONE_LABEL = "My domains";   // 6b: it gathers DOMAINS, not lists
 
 // Is this domain part of the curated catalog?
 function isCurated(domain){
@@ -3014,39 +3018,32 @@ function renderBrowserRail(){
   $browserRail.innerHTML = "";
   const { active, my, more } = classifyDomains();
 
-  // ACTIVE — in practice never empty (the studying-now domain always sits here)
-  if (active.length){
-    addRailLabel("Active");
-    active.forEach(d => $browserRail.appendChild(makeFolderEl(d)));
-  }
+  // 6b — the rail answers three questions with as few words as possible.
+  // "What am I studying?" needs no header: the studying-now domain is marked
+  // and the other engaged domains are bold; the ORDER says it.
+  active.forEach(d => $browserRail.appendChild(makeFolderEl(d)));
 
-  // MY LISTS — ALWAYS shown, even when empty. A zone earns its place when it
-  // has content OR an affordance: this one carries the import action, so it
-  // teaches the feature instead of hiding it in an info page nobody reads.
+  // "What is mine?" keeps its header — Michel's quiet signal ("this could be
+  // something for you"). Empty, the sentence itself is the door: "import a
+  // list" opens the same picker as the Lists pane. No button chrome here.
   addRailLabel(MY_ZONE_LABEL);
   my.forEach(d => $browserRail.appendChild(makeFolderEl(d)));
   if (!my.length){
     const hint = document.createElement("div");
     hint.className = "rail-zone-empty";
-    hint.textContent = "Your own lists land here.";
+    hint.innerHTML = 'Your own domains land here - <span class="rail-door">import a list</span> under a name of your own.';
+    hint.querySelector(".rail-door").addEventListener("click", () => $fileInput.click());
     $browserRail.appendChild(hint);
   }
-  const imp = document.createElement("div");
-  imp.className = "rail-import";
-  imp.innerHTML = "<span>+</span><span>Import a list</span>";
-  // Importing from HERE means "this is my own" — so when the filename can't
-  // name a domain, the picker defaults to MY LISTS rather than a curated one.
-  imp.addEventListener("click", () => $fileInput.click());
-  $browserRail.appendChild(imp);
 
-  // MORE — collapsible. Defaults open when there's nothing in ACTIVE yet.
+  // "What else exists?" is one door, not a zone: Catalog. Collapsible, no
+  // count (WordDock doesn't brag). Defaults open when nothing is engaged yet.
   if (more.length){
     const expanded = (moreExpanded === null) ? (active.length === 0) : moreExpanded;
     const header = document.createElement("div");
     header.className = "rail-more-toggle";
     header.innerHTML =
-      '<span class="more-count">' + more.length + "</span>" +
-      "<span>More</span>" +
+      "<span>Catalog</span>" +
       '<span class="more-caret">' + (expanded ? "▾" : "▸") + "</span>";
     header.addEventListener("click", () => { moreExpanded = !expanded; renderBrowserRail(); });
     $browserRail.appendChild(header);
@@ -4267,10 +4264,10 @@ $fileInput.addEventListener("change", async (e) => {
     // human knows. So state the consequence plainly and let them judge.
     ok = await wdConfirm(
       domain + " isn't a WordDock domain",
-      "This list would become its own domain in MY LISTS, with its own separate " +
-      "progress. If that isn't what you meant, cancel and rename the file to " +
-      "start with the right domain - like NL-RU_holiday.xlsx.",
-      "Import into MY LISTS", "Cancel"
+      "This list would become a domain of your own, under My domains, with its " +
+      "own separate progress. If that isn't what you meant, cancel and rename " +
+      "the file to start with the right domain - like NL-RU_holiday.xlsx.",
+      "Import as my domain", "Cancel"
     );
   }
   if (!ok){ setListMessage("Import cancelled."); return; }
