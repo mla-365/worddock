@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.62";
+const WORDDOCK_VERSION = "v26.63";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -865,13 +865,13 @@ body{
 .rail-pair{padding:4px 0}
 .rail-pair .rail-more-toggle + .rail-more-toggle{border-top:1px solid var(--menu-border)}   /* the ONE line: between the pair */
 .rail-more-toggle{
-  display:flex;align-items:center;gap:8px;
+  display:flex;align-items:center;justify-content:space-between;   /* carets share the right edge */
   margin:0 4px;padding:9px 7px;cursor:pointer;
   font-size:14px;font-weight:400;letter-spacing:.02em;   /* closed: the voice of "Lists in NL-RU" */
   color:var(--tag);transition:color .12s;
   user-select:none;
 }
-.rail-more-toggle.open{color:#fff;font-weight:600}       /* open: an open door looks different */
+.rail-more-toggle.open{color:#fff}                       /* open: white, never bold (bold shifts the text) */
 .rail-more-toggle:hover{color:var(--ink)}
 .rail-more-toggle .more-caret{font-size:11px}
 .rail-more-toggle .more-count{font-size:11px;letter-spacing:0}
@@ -3041,11 +3041,17 @@ function renderBrowserRail(){
 
   // Catalog — "What else exists?" One door, no count. Its drawer unfolds
   // upward from the pair. Defaults open when nothing is engaged yet.
-  if (more.length){
+  {
     const expanded = (moreExpanded === null) ? (active.length === 0) : moreExpanded;
     if (expanded){
       const drawer = document.createElement("div"); drawer.className = "rail-drawer";
       more.forEach(d => drawer.appendChild(makeFolderEl(d)));
+      if (!more.length){
+        const note = document.createElement("div");
+        note.className = "rail-zone-empty";
+        note.textContent = "Everything in the catalog is already in use.";
+        drawer.appendChild(note);
+      }
       top.appendChild(drawer);
     }
     const header = document.createElement("div");
