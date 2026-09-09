@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.56";
+const WORDDOCK_VERSION = "v26.57";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -848,7 +848,7 @@ body{
    among its own contents. The line belongs to the ZONE, never to the rows. */
 .rail-zone-label{
   display:flex;align-items:center;gap:8px;
-  font-size:12px;font-weight:600;letter-spacing:.02em;   /* 6b: left-aligned group header, a rule above it */
+  font-size:14px;font-weight:400;letter-spacing:.02em;   /* 6b: left-aligned group header, a rule above it; same size as "Lists in", unbold */
   color:var(--tag);margin:26px 4px 8px;padding:12px 7px 0;
   border-top:1px solid var(--menu-border);
   user-select:none;
@@ -858,7 +858,7 @@ body{
 .rail-more-toggle{
   display:flex;align-items:center;gap:6px;
   margin:26px 4px 8px;padding:12px 7px 0;cursor:pointer;
-  font-size:12px;font-weight:600;letter-spacing:.02em;   /* 6b: same shape as the group header */
+  font-size:14px;font-weight:400;letter-spacing:.02em;   /* 6b: same shape as the group header */
   color:var(--tag);transition:color .12s;
   border-top:1px solid var(--menu-border);
   user-select:none;
@@ -881,7 +881,7 @@ body{
   border-color:rgba(255,255,255,0.28);
 }
 .rail-zone-empty{
-  font-size:13px;color:var(--tag);opacity:.8;
+  font-size:14px;color:var(--tag);opacity:.85;   /* 6b: same size as "Lists in NL-RU" */
   padding:2px 11px 6px;line-height:1.5;
 }
 .rail-zone-empty .rail-door{                  /* 6b: the sentence IS the door */
