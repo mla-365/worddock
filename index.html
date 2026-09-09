@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.51";
+const WORDDOCK_VERSION = "v26.52";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -196,6 +196,12 @@ body{
 }
 #syncPanelBackdrop .wd-dialog-actions{
   margin-top:16px;
+  flex-wrap:wrap;              /* v26.52: four buttons wrap onto two rows on a phone, never spill */
+  justify-content:flex-end;
+}
+#syncPanelBackdrop .wd-dialog-actions .wd-dialog-btn{
+  white-space:nowrap;          /* a label stays on one line; the ROW wraps instead */
+  padding:10px 14px;
 }
 #syncPanelBackdrop #syncPanelBody{
   min-height:210px; display:flex; flex-direction:column;   /* v26.51: grow, never clip */
