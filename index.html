@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.63";
+const WORDDOCK_VERSION = "v26.65";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -872,6 +872,7 @@ body{
   user-select:none;
 }
 .rail-more-toggle.open{color:#fff}                       /* open: white, never bold (bold shifts the text) */
+.rail-more-toggle .more-caret{font-size:17px;font-weight:700;line-height:1}   /* up or down must be readable at a glance */
 .rail-more-toggle:hover{color:var(--ink)}
 .rail-more-toggle .more-caret{font-size:11px}
 .rail-more-toggle .more-count{font-size:11px;letter-spacing:0}
@@ -897,7 +898,7 @@ body{
   text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer;
 }
 .rail-zone-empty .rail-door:hover{color:var(--ink)}
-.rail-zone-empty .rail-why{text-decoration:none;display:inline-block;padding:0 6px;border:1px solid var(--menu-border);border-radius:8px;font-size:12px;margin-left:2px}
+.rail-zone-empty .rail-why{text-decoration:none;display:inline-block;padding:0 6px;border:1px solid var(--menu-border);border-radius:8px;font-size:12px;margin-left:5px;white-space:nowrap}
 .folder{
   display:flex;align-items:center;justify-content:space-between;
   padding:9px 11px;border-radius:9px;font-size:14px;color:#c0c8d2;
@@ -3042,7 +3043,9 @@ function renderBrowserRail(){
   // Catalog — "What else exists?" One door, no count. Its drawer unfolds
   // upward from the pair. Defaults open when nothing is engaged yet.
   {
-    const expanded = (moreExpanded === null) ? (active.length === 0) : moreExpanded;
+    let expanded = (moreExpanded === null) ? (active.length === 0) : moreExpanded;
+    const myDefault = (myExpanded === null) ? (my.length > 0) : myExpanded;
+    if (expanded && myDefault) expanded = false;   // accordion: one drawer at a time, yours first
     if (expanded){
       const drawer = document.createElement("div"); drawer.className = "rail-drawer";
       more.forEach(d => drawer.appendChild(makeFolderEl(d)));
@@ -3059,7 +3062,11 @@ function renderBrowserRail(){
     header.innerHTML =
       "<span>Catalog</span>" +
       '<span class="more-caret">' + (expanded ? "▴" : "▸") + "</span>";
-    header.addEventListener("click", () => { moreExpanded = !expanded; renderBrowserRail(); });
+    header.addEventListener("click", () => {
+      moreExpanded = !expanded;
+      if (moreExpanded) myExpanded = false;        // accordion
+      renderBrowserRail();
+    });
     pair.appendChild(header);
   }
 
@@ -3077,7 +3084,11 @@ function renderBrowserRail(){
     header.innerHTML =
       "<span>" + MY_ZONE_LABEL + "</span>" +
       '<span class="more-caret">' + (expandedMy ? "\u25be" : "\u25b8") + "</span>";
-    header.addEventListener("click", () => { myExpanded = !expandedMy; renderBrowserRail(); });
+    header.addEventListener("click", () => {
+      myExpanded = !expandedMy;
+      if (myExpanded) moreExpanded = false;        // accordion
+      renderBrowserRail();
+    });
     pair.appendChild(header);
     if (expandedMy){
       my.forEach(d => b2.appendChild(makeFolderEl(d)));
@@ -3085,7 +3096,7 @@ function renderBrowserRail(){
         const hint = document.createElement("div");
         hint.className = "rail-zone-empty";
         hint.innerHTML =
-          '<span class="rail-door">Import a list</span> under a domain that you create. ' +
+          '<span class="rail-door">Import a list</span> under a domain that you create' +
           '<span class="rail-door rail-why" title="How to name a domain of your own">?</span>';
         hint.querySelector(".rail-door:not(.rail-why)").addEventListener("click", () => $fileInput.click());
         hint.querySelector(".rail-why").addEventListener("click", showFileRules);
