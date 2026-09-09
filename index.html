@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.55";
+const WORDDOCK_VERSION = "v26.56";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -848,26 +848,20 @@ body{
    among its own contents. The line belongs to the ZONE, never to the rows. */
 .rail-zone-label{
   display:flex;align-items:center;gap:8px;
-  font-size:11px;letter-spacing:.03em;        /* 6b: normal case — capitals are reserved for domain names */
-  color:var(--tag);margin:18px 4px 10px;
+  font-size:12px;font-weight:600;letter-spacing:.02em;   /* 6b: left-aligned group header, a rule above it */
+  color:var(--tag);margin:26px 4px 8px;padding:12px 7px 0;
+  border-top:1px solid var(--menu-border);
   user-select:none;
 }
-.rail-zone-label::before,
-.rail-zone-label::after{
-  content:"";flex:1;height:1px;background:var(--menu-border);
-}
-.rail-zone-label:first-child{margin-top:4px}
+.rail-zone-label:first-child{margin-top:4px;border-top:none;padding-top:0}
 /* Collapsible MORE header — same centered shape, plus caret and count. */
 .rail-more-toggle{
-  display:flex;align-items:center;gap:8px;
-  margin:18px 4px 10px;border-radius:9px;cursor:pointer;
-  font-size:11px;letter-spacing:.03em;        /* 6b: "Catalog", normal case, no count */
+  display:flex;align-items:center;gap:6px;
+  margin:26px 4px 8px;padding:12px 7px 0;cursor:pointer;
+  font-size:12px;font-weight:600;letter-spacing:.02em;   /* 6b: same shape as the group header */
   color:var(--tag);transition:color .12s;
+  border-top:1px solid var(--menu-border);
   user-select:none;
-}
-.rail-more-toggle::before,
-.rail-more-toggle::after{
-  content:"";flex:1;height:1px;background:var(--menu-border);
 }
 .rail-more-toggle:hover{color:var(--ink)}
 .rail-more-toggle .more-caret{font-size:11px}
@@ -887,7 +881,7 @@ body{
   border-color:rgba(255,255,255,0.28);
 }
 .rail-zone-empty{
-  font-size:12px;color:var(--tag);opacity:.75;
+  font-size:13px;color:var(--tag);opacity:.8;
   padding:2px 11px 6px;line-height:1.5;
 }
 .rail-zone-empty .rail-door{                  /* 6b: the sentence IS the door */
