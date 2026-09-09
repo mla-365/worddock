@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.57";
+const WORDDOCK_VERSION = "v26.58";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -795,6 +795,7 @@ body{
   flex:1;
   overflow-y:auto;
   min-height:0;
+  display:flex;flex-direction:column;   /* 6b: lets "My domains" + Catalog sink below the engaged domains */
 }
 /* Bottom meta zone: pinned to the rail bottom, never scrolls with domains */
 /* Site footer — echoes the study counter (same 13px, white) for spatial
@@ -848,17 +849,18 @@ body{
    among its own contents. The line belongs to the ZONE, never to the rows. */
 .rail-zone-label{
   display:flex;align-items:center;gap:8px;
-  font-size:14px;font-weight:400;letter-spacing:.02em;   /* 6b: left-aligned group header, a rule above it; same size as "Lists in", unbold */
+  font-size:14px;font-weight:600;letter-spacing:.02em;   /* 6b: left-aligned group header, a rule above it */
   color:var(--tag);margin:26px 4px 8px;padding:12px 7px 0;
   border-top:1px solid var(--menu-border);
   user-select:none;
 }
+.rail-zone-label{margin-top:auto;padding-top:18px}         /* sink: the free space goes above the header */
 .rail-zone-label:first-child{margin-top:4px;border-top:none;padding-top:0}
 /* Collapsible MORE header — same centered shape, plus caret and count. */
 .rail-more-toggle{
   display:flex;align-items:center;gap:6px;
   margin:26px 4px 8px;padding:12px 7px 0;cursor:pointer;
-  font-size:14px;font-weight:400;letter-spacing:.02em;   /* 6b: same shape as the group header */
+  font-size:14px;font-weight:600;letter-spacing:.02em;   /* 6b: same shape as the group header */
   color:var(--tag);transition:color .12s;
   border-top:1px solid var(--menu-border);
   user-select:none;
@@ -888,6 +890,7 @@ body{
   text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer;
 }
 .rail-zone-empty .rail-door:hover{color:var(--ink)}
+.rail-zone-empty .rail-why{text-decoration:none;display:inline-block;padding:0 6px;border:1px solid var(--menu-border);border-radius:8px;font-size:12px;margin-left:2px}
 .folder{
   display:flex;align-items:center;justify-content:space-between;
   padding:9px 11px;border-radius:9px;font-size:14px;color:#c0c8d2;
@@ -3025,8 +3028,11 @@ function renderBrowserRail(){
   if (!my.length){
     const hint = document.createElement("div");
     hint.className = "rail-zone-empty";
-    hint.innerHTML = 'Your own domains land here - <span class="rail-door">import a list</span> under a name of your own.';
-    hint.querySelector(".rail-door").addEventListener("click", () => $fileInput.click());
+    hint.innerHTML =
+      'Your domains land here. <span class="rail-door">Import a list</span> under a domain that you create. ' +
+      '<span class="rail-door rail-why" title="How to name a domain of your own">?</span>';
+    hint.querySelector(".rail-door:not(.rail-why)").addEventListener("click", () => $fileInput.click());
+    hint.querySelector(".rail-why").addEventListener("click", showFileRules);
     $browserRail.appendChild(hint);
   }
 
