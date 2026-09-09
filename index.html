@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.58";
+const WORDDOCK_VERSION = "v26.59";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -858,13 +858,14 @@ body{
 .rail-zone-label:first-child{margin-top:4px;border-top:none;padding-top:0}
 /* Collapsible MORE header — same centered shape, plus caret and count. */
 .rail-more-toggle{
-  display:flex;align-items:center;gap:6px;
-  margin:26px 4px 8px;padding:12px 7px 0;cursor:pointer;
-  font-size:14px;font-weight:600;letter-spacing:.02em;   /* 6b: same shape as the group header */
+  display:flex;align-items:center;gap:8px;
+  margin:10px 4px 8px;padding:10px 7px 0;cursor:pointer;
+  font-family:'Poppins',sans-serif;font-size:18px;font-weight:600;   /* 6b: the voice of "Domains" / "Lists" */
   color:var(--tag);transition:color .12s;
   border-top:1px solid var(--menu-border);
   user-select:none;
 }
+.rail-spacer{flex:1}                                     /* two of them centre the zones vertically */
 .rail-more-toggle:hover{color:var(--ink)}
 .rail-more-toggle .more-caret{font-size:11px}
 .rail-more-toggle .more-count{font-size:11px;letter-spacing:0}
@@ -3010,6 +3011,7 @@ function addRailLabel(text){
 
 // MORE collapse state: null = decide from context (open when ACTIVE is empty).
 let moreExpanded = null;
+let myExpanded   = null;   // 6b: My domains folds like Catalog
 
 function renderBrowserRail(){
   $browserRail.innerHTML = "";
@@ -3023,17 +3025,34 @@ function renderBrowserRail(){
   // "What is mine?" keeps its header — Michel's quiet signal ("this could be
   // something for you"). Empty, the sentence itself is the door: "import a
   // list" opens the same picker as the Lists pane. No button chrome here.
-  addRailLabel(MY_ZONE_LABEL);
-  my.forEach(d => $browserRail.appendChild(makeFolderEl(d)));
-  if (!my.length){
-    const hint = document.createElement("div");
-    hint.className = "rail-zone-empty";
-    hint.innerHTML =
-      'Your domains land here. <span class="rail-door">Import a list</span> under a domain that you create. ' +
-      '<span class="rail-door rail-why" title="How to name a domain of your own">?</span>';
-    hint.querySelector(".rail-door:not(.rail-why)").addEventListener("click", () => $fileInput.click());
-    hint.querySelector(".rail-why").addEventListener("click", showFileRules);
-    $browserRail.appendChild(hint);
+  const sp1 = document.createElement("div"); sp1.className = "rail-spacer";
+  $browserRail.appendChild(sp1);
+
+  // Collapsible like Catalog. Open by default when you own domains (never hide
+  // what is yours); collapsed when empty, so the header alone is the quiet
+  // signal and opening it reveals the invitation.
+  {
+    const expandedMy = (myExpanded === null) ? (my.length > 0) : myExpanded;
+    const header = document.createElement("div");
+    header.className = "rail-more-toggle";
+    header.innerHTML =
+      "<span>" + MY_ZONE_LABEL + "</span>" +
+      '<span class="more-caret">' + (expandedMy ? "\u25be" : "\u25b8") + "</span>";
+    header.addEventListener("click", () => { myExpanded = !expandedMy; renderBrowserRail(); });
+    $browserRail.appendChild(header);
+    if (expandedMy){
+      my.forEach(d => $browserRail.appendChild(makeFolderEl(d)));
+      if (!my.length){
+        const hint = document.createElement("div");
+        hint.className = "rail-zone-empty";
+        hint.innerHTML =
+          '<span class="rail-door">Import a list</span> under a domain that you create. ' +
+          '<span class="rail-door rail-why" title="How to name a domain of your own">?</span>';
+        hint.querySelector(".rail-door:not(.rail-why)").addEventListener("click", () => $fileInput.click());
+        hint.querySelector(".rail-why").addEventListener("click", showFileRules);
+        $browserRail.appendChild(hint);
+      }
+    }
   }
 
   // "What else exists?" is one door, not a zone: Catalog. Collapsible, no
@@ -3049,6 +3068,8 @@ function renderBrowserRail(){
     $browserRail.appendChild(header);
     if (expanded) more.forEach(d => $browserRail.appendChild(makeFolderEl(d)));
   }
+  const sp2 = document.createElement("div"); sp2.className = "rail-spacer";
+  $browserRail.appendChild(sp2);
 }
 
 /* Coverage for a single LIST (a lens over the pool), as opposed to a whole
