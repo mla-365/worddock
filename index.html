@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.66";
+const WORDDOCK_VERSION = "v26.67";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -811,8 +811,15 @@ body{
 .footer-detail-zone{
   flex:1;text-align:center;
 }
-#aboutFooterLink{font-weight:400;}
-#aboutFooterLink:hover{font-weight:600;}
+#aboutFooterLink{
+  font-weight:400;color:var(--tag);        /* grey at rest */
+  display:inline-flex;flex-direction:column;align-items:center;
+}
+#aboutFooterLink::after{
+  content:attr(data-text);                 /* invisible bold copy reserves the width */
+  font-weight:600;height:0;overflow:hidden;visibility:hidden;
+}
+#aboutFooterLink:hover{font-weight:600;color:var(--ink)}   /* white on hover, no shift */
 .browser-footer a{
   color:var(--counter);text-decoration:none;font-size:13px;
 }
@@ -1197,7 +1204,7 @@ body{
       <a href="#" id="syncAnchor" class="sync-anchor"></a>
     </div>
     <div class="footer-detail-zone">
-      <a href="#" id="aboutFooterLink">About WordDock</a>
+      <a href="#" id="aboutFooterLink" data-text="About WordDock v26.67">About WordDock</a>
     </div>
   </div>
   <input type="file" id="fileInput" accept=".xlsx" hidden>
@@ -4531,6 +4538,7 @@ renderSyncAnchor();
 // moment the browser opens (one click on the logo) — no need to enter About.
 // Sourced from the one constant, so it never drifts from the top-of-file marker.
 $aboutFooterLink.textContent = "About WordDock " + WORDDOCK_VERSION;
+  $aboutFooterLink.dataset.text  = "About WordDock " + WORDDOCK_VERSION;   // keeps the no-shift pseudo-element in sync
 $aboutFooterLink.addEventListener("click", (e) => {
   e.preventDefault();
   openSurface("about");
