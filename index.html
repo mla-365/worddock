@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.68";
+const WORDDOCK_VERSION = "v26.69";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -786,7 +786,7 @@ body{
 }
 /* LEFT rail — the domain "folders" (the map) */
 .browser-rail{
-  width:200px;flex-shrink:0;
+  width:240px;flex-shrink:0;   /* 6b: wider — the My-domains hint fits on one line */
   border-right:1px solid var(--menu-border);
   padding:14px 10px;
   display:flex;flex-direction:column;
