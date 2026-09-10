@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.71";
+const WORDDOCK_VERSION = "v26.72";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -2074,7 +2074,9 @@ function applyCloud(data, mode){
     // 2e: detect whether another device is pushing to this key
     try {
       const myPush = parseInt(localStorage.getItem(SYNC_MYPUSH_KEY) || "0", 10);
-      if (stamp && myPush && stamp !== myPush){
+      // sync if: cloud has a stamp AND (we never pushed OR it differs from our push)
+      const someoneElsePushed = stamp && (myPush === 0 || stamp !== myPush);
+      if (someoneElsePushed){
         localStorage.setItem(SYNC_MODE_KEY, "sync");
         localStorage.setItem(SYNC_SOLO_PULLS_KEY, "0");
       } else {
