@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.69";
+const WORDDOCK_VERSION = "v26.70";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3100,7 +3100,7 @@ function renderBrowserRail(){
           '<span class="rail-door">Import a list</span> under a domain that you create' +
           '<span class="rail-door rail-why" title="How to name a domain of your own">?</span>';
         hint.querySelector(".rail-door:not(.rail-why)").addEventListener("click", () => $fileInput.click());
-        hint.querySelector(".rail-why").addEventListener("click", showFileRules);
+        hint.querySelector(".rail-why").addEventListener("click", showMyDomainRules);
         b2.appendChild(hint);
       }
     }
@@ -4564,6 +4564,20 @@ const FILE_RULES_HTML =
 
 function showFileRules(){
   wdConfirm("What a WordDock file needs", FILE_RULES_HTML, "OK", null, true);
+}
+
+/* 6b: a focused dialog for the My-domains ? — explains naming, not Excel structure */
+const MY_DOMAIN_RULES_HTML =
+  "<p style='margin:0 0 10px'>The filename part <b>before the underscore</b> is the name of the domain.</p>" +
+  "<p style='margin:0 0 6px;font-family:monospace;font-size:13px'>" +
+  "BIOLOGY_chapter1.xlsx &rarr; domain <b>BIOLOGY</b><br>" +
+  "NL-IT_holiday.xlsx &rarr; domain <b>NL-IT</b> <span style='opacity:.7'>(joins existing NL-IT progress)</span>" +
+  "</p>" +
+  "<p style='margin:10px 0 0'>Keep domain names short and consistent - every list with the same domain shares the same progress. " +
+  "Once you've created a domain, it stays in your browser until you remove it or wipe your browser data.</p>";
+
+function showMyDomainRules(){
+  wdConfirm("Creating your own domain", MY_DOMAIN_RULES_HTML, "OK", null, true);
 }
 
 // The same rules, reachable BEFORE you fail — a curator wants them while making
