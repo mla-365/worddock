@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.72";
+const WORDDOCK_VERSION = "v26.73";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -2155,7 +2155,7 @@ async function syncPull(){
    for the administrative handshakes (key creation, key adoption): one-shot
    pushes behind explicit dialogs, never timers — which is why it cannot
    chain or loop. */
-function syncPush(force, leaving){
+function syncPush(force, leaving){   // force=true → administrative push, must not claim the mypush stamp
   const key = getSyncKey();
   if (!key) return;
   if (!force && !syncIsDirty()) return;          // rule 1: nothing new to say
@@ -2209,7 +2209,14 @@ function syncPush(force, leaving){
         clearSyncDirty();
         const t = parseInt(j.updated_at, 10) || 0;
         setSyncStamp(t);
-        try { localStorage.setItem(SYNC_MYPUSH_KEY, String(t)); } catch {}  // 2e: remember our own push stamp
+        // 2e: only NATURAL pushes claim the mypush stamp. A forced (administrative)
+        // push — key adoption, key creation — overwrites the wolk's stamp with merged
+        // data, but the fact it happened is not evidence that WE were the rightful
+        // writer the next pull should compare against. Leaving it unset lets the next
+        // pull see a "vreemde stempel" and correctly detect a sync-user.
+        if (!force){
+          try { localStorage.setItem(SYNC_MYPUSH_KEY, String(t)); } catch {}
+        }
       })
       .catch(() => {});
   } catch {
