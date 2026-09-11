@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.77";
+const WORDDOCK_VERSION = "v26.78";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1585,8 +1585,7 @@ function serializeToXlsx(list, exportName){
     // human-readable backup and for classroom/curator analysis. It is NEVER
     // read back on import (ignored like any extra column). The sync key
     // remains the only authoritative channel for RS between devices.
-    const rsVal = getRS(row.ID);
-    arr.push(rsVal || null);
+    arr[headers.length - 1] = getRS(row.ID) || null;   // v26.78: correct index, not push
     aoa.push(arr);
   }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -2702,7 +2701,8 @@ function wdPromptName(title, body, domain, prefill){
       const n = cleanName(input.value);
       const reserved = n.toLowerCase() === FULL_LIST_NAME.toLowerCase();
       preview.textContent = n ? domain + "_" + n + ".xlsx" : "";
-      if (reserved) preview.textContent = "\u201C" + FULL_LIST_NAME + "\u201D is reserved - choose another name.";
+      if (reserved){ preview.textContent = ""; ok.disabled = true; ok.style.opacity = "0.45"; ok.style.cursor = "not-allowed";
+        preview.textContent = "\u201C" + FULL_LIST_NAME + "\u201D is reserved — choose a different name."; }
       const valid = !!n && !reserved;
       ok.disabled = !valid;
       ok.style.opacity = valid ? "" : "0.45";
