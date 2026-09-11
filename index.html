@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.76";
+const WORDDOCK_VERSION = "v26.77";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1556,7 +1556,9 @@ function serializeToXlsx(list, exportName){
   // the column costs nothing.
   const extras = [...(list.extraColumns || [])];
   if (!extras.some(h => String(h).toLowerCase() === "utag")) extras.push("UTAG");
-  const headers = [...COLUMNS, ...extras];
+  // v26.77: RS follows UTAG — read-only export for backup/analysis; never imported
+  const rsHeader = "RS";
+  const headers = [...COLUMNS, ...extras, rsHeader];
   const aoa = [headers];
   for (const row of list.rows){
     const arr = new Array(headers.length).fill(null);
@@ -1579,7 +1581,12 @@ function serializeToXlsx(list, exportName){
         arr[COLUMNS.length + i] = row._extras[i] ?? null;
       }
     }
-    // SF25: RS is NOT written to the file — it lives only in localStorage.
+    // v26.77: RS is written as a read-only column after UTAG — useful as a
+    // human-readable backup and for classroom/curator analysis. It is NEVER
+    // read back on import (ignored like any extra column). The sync key
+    // remains the only authoritative channel for RS between devices.
+    const rsVal = getRS(row.ID);
+    arr.push(rsVal || null);
     aoa.push(arr);
   }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -1626,7 +1633,7 @@ const LISTS = {};
 /* The one reserved list name: the curated master shipped with a domain.
    An export can never produce it (the Save-as dialog forbids it), so a
    user file can never collide with the curated Full-List. */
-const FULL_LIST_NAME = "Full-List";
+const FULL_LIST_NAME = "Full";   // v26.77: shorter, less redundant
 
 const LISTS_KEY = "wd_lists";
 
