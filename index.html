@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.74";
+const WORDDOCK_VERSION = "v26.75";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3283,13 +3283,22 @@ function _renderSyncMain(root){
     keyBox.className = "sync-key";
     keyBox.textContent = formatSyncKey(key);
     center.appendChild(keyBox);
-    const pin = document.createElement("p");
-    pin.className = "setting-desc";
-    pin.style.cssText = "margin-top:8px";
-    const pinB = document.createElement("b");
-    pinB.textContent = "Treat your key like a PIN: keep it safe, and never leave it on a device that isn't yours.";
-    pin.appendChild(pinB);
-    center.appendChild(pin);
+    // PIN line only when there is no link notice — the notice IS the news then
+    if (_linkNotice){
+      const n = document.createElement("p");
+      n.className = "setting-desc";
+      n.style.cssText = "color:#c44;margin-top:8px;font-weight:700";
+      n.textContent = _linkNotice;
+      center.appendChild(n);
+    } else {
+      const pin = document.createElement("p");
+      pin.className = "setting-desc";
+      pin.style.cssText = "margin-top:8px";
+      const pinB = document.createElement("b");
+      pinB.textContent = "Treat your key like a PIN: keep it safe, and never leave it on a device that isn't yours.";
+      pin.appendChild(pinB);
+      center.appendChild(pin);
+    }
     pane.appendChild(center);
 
     const copy = _syncBtn("Copy key", "wd-dialog-ok", async () => {
@@ -3299,13 +3308,6 @@ function _renderSyncMain(root){
       } catch { copy.textContent = "Select it above"; }
       setTimeout(() => { copy.textContent = "Copy key"; }, 1600);
     }, "min-width:100px");
-    if (_linkNotice){
-      const n = document.createElement("p");
-      n.className = "setting-desc";
-      n.style.cssText = "color:#c44;margin-top:6px;font-weight:700";   // the news of this visit: bold, ahead of the PIN line
-      n.textContent = _linkNotice;    // consumed when the panel closes or leaves "main"
-      center.appendChild(n);
-    }
     root.appendChild(_syncActions(
       copy,
       _syncBtn("Show QR", "", () => setSyncState("show-qr")),
