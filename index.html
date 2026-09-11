@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.78";
+const WORDDOCK_VERSION = "v26.79";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -4313,10 +4313,10 @@ $fileInput.addEventListener("change", async (e) => {
   if (!domain){
     // No parseable domain token at all (e.g. "Copy of biology.xlsx").
     await wdConfirm(
-      "This file needs a domain in its name",
-      "Start the filename with the domain, then an underscore, then your own " +
-      "name - like NL-RU_holiday.xlsx or BIOLOGY_plants.xlsx. Rename the file " +
-      "and import it again.",
+      "This file needs a name like DOMAIN_Listname.xlsx",
+      "A filename has three parts: a DOMAIN name, an underscore, and a List name. " +
+      "Example: NL-RU_Holiday.xlsx or BIOLOGY_Chapter1.xlsx. " +
+      "Rename the file and try again.",
       "OK", null
     );
     setListMessage("");
@@ -4363,10 +4363,10 @@ $fileInput.addEventListener("change", async (e) => {
     // human knows. So state the consequence plainly and let them judge.
     ok = await wdConfirm(
       domain + " isn't a WordDock domain",
-      "This list would become a domain of your own, under My domains, with its " +
-      "own separate progress. If that isn't what you meant, cancel and rename " +
-      "the file to start with the right domain - like NL-RU_holiday.xlsx.",
-      "Import as my domain", "Cancel"
+      "Your file will be imported under a new DOMAIN called \"" + domain + "\" with list name \"" + name + "\". " +
+      "Every file starting with " + domain + "_ will share the same progress. " +
+      "If that isn't what you meant, cancel and rename the file.",
+      "Create DOMAIN and import", "Cancel"
     );
   }
   if (!ok){ setListMessage("Import cancelled."); return; }
