@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.75";
+const WORDDOCK_VERSION = "v26.76";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3358,7 +3358,7 @@ function _renderSyncHelp(root){
   wrap.appendChild(p1);
   wrap.appendChild(p2);
   pane.appendChild(wrap);
-  root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"), "margin-right:auto")));
+  root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"))));
 }
 
 function _renderSyncConfirmNew(root){
@@ -3603,7 +3603,7 @@ function _renderSyncShowQr(root){
   d.style.cssText = "margin-top:8px;text-align:center";
   center.appendChild(d);
   pane.appendChild(center);
-  root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"), "margin-right:auto")));
+  root.appendChild(_syncActions(_syncBtn("Back", "", () => setSyncState("main"))));
 }
 
 /* On arrival with ?key=... in the address: take the key out of the URL at
