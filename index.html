@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.82";
+const WORDDOCK_VERSION = "v26.83";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3322,8 +3322,7 @@ function _renderSyncMain(root){
     root.appendChild(_syncActions(
       copy,
       _syncBtn("Show QR", "", () => setSyncState("show-qr")),
-      _syncBtn("Turn off sync", "wd-dialog-cancel", () => setSyncState("confirm-off")),   // 4b: dim — the shared-device exit, whispering
-      _syncBtn("?", "wd-dialog-cancel", () => setSyncState("help"))
+      _syncBtn("?", "wd-dialog-cancel", () => setSyncState("help"))   // v26.83: Turn off sync moved to About → Devices & your key
     ));
   } else {
     pane.appendChild(_syncTitle("Sync is off"));
@@ -3767,20 +3766,19 @@ function showConsentDialog(finalAsk){
           (finalAsk ? "Keep your progress safe?" : "Keep your progress safe?") +
         '</div>' +
         '<div class="wd-dialog-body">' + bodyTop + '</div>' + bodyTail +
-        '<div class="wd-dialog-actions">' +
+        '<div class="wd-dialog-body" style="margin-top:6px;opacity:.8">Not your own device? ' +
+          'Use a private/incognito window instead.</div>' +
+        '<div class="wd-dialog-actions" style="flex-wrap:wrap">' +
           '<button class="wd-dialog-btn wd-dialog-ok" type="button" data-act="yes">Yes, keep it safe</button>' +
-          '<button class="wd-dialog-btn" type="button" data-act="later">Not now</button>' +
+          '<button class="wd-dialog-btn" type="button" data-act="havekey">I have a key</button>' +
+          '<button class="wd-dialog-btn wd-dialog-cancel" type="button" data-act="later">Not now</button>' +
         '</div>' +
-        '<div class="wd-dialog-body" style="margin-top:2px">Already use WordDock ' +
-          'on another device? <a href="#" data-act="havekey">I have a key</a></div>' +
       '</div>';
     document.body.appendChild(bd);
     function done(v){ bd.remove(); resolve(v); }
     bd.querySelector('[data-act="yes"]').addEventListener("click", () => done("yes"));
     bd.querySelector('[data-act="later"]').addEventListener("click", () => done("later"));
-    bd.querySelector('[data-act="havekey"]').addEventListener("click", (e) => {
-      e.preventDefault(); done("havekey");
-    });
+    bd.querySelector('[data-act="havekey"]').addEventListener("click", () => done("havekey"));
     bd.addEventListener("click", (e) => { if (e.target === bd) done("later"); });
   });
 }
@@ -4076,7 +4074,8 @@ const aboutTopics = [
     '<p class="setting-desc"><b>No key yet?</b> WordDock offers one after your first ' +
     'deck. You can also create one here - but only if you are sure you do not ' +
     'already have one: a new key cannot see an old key\u2019s progress.</p>' +
-    '<p><button type="button" class="wd-dialog-btn wd-dialog-cancel" id="aboutCreateKey">Create a key</button></p>' +
+    '<p><button type="button" class="wd-dialog-btn wd-dialog-cancel" id="aboutCreateKey">Create a key</button> ' +
+    '<button type="button" class="wd-dialog-btn wd-dialog-cancel" id="aboutTurnOff">Turn off sync on this device</button></p>' +
     '<a id="more-devices" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-devices</a>' },
 
   { id:"more", title:"More", html:
@@ -4124,6 +4123,11 @@ function renderAbout(){
   const topic = aboutTopics.find(t => t.id === aboutTopicId) || aboutTopics[0];
   content.innerHTML = topic.html;
   // 4b: the seeker's door to minting lives here, behind R1's guard dialog.
+  const off = document.getElementById("aboutTurnOff");
+  if (off) off.addEventListener("click", () => {
+    if (!getSyncKey()) return;                       // nothing to turn off
+    showSyncPanel(); setSyncState("confirm-off");    // the honest dialog, unchanged
+  });
   const mint = document.getElementById("aboutCreateKey");
   if (mint) mint.addEventListener("click", () => {
     if (getSyncKey()){ showSyncPanel(); setSyncState("main"); return; }   // already have one: show it
