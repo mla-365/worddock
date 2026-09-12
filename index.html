@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.85";
+const WORDDOCK_VERSION = "v26.86";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1520,28 +1520,6 @@ async function parseWordDockXlsx(file){
   // mis-file the list; the filename is what the user sees and controls.
   // Convention: DOMAIN_NAME.xlsx  — underscore separates, first token = domain.
   const parsed = parseFilename(file && file.name);
-
-  // 10c — the two rails must agree. The app introduces cards in ID order; L
-  // is the curator's label for that order. If L goes DOWN while ID goes up
-  // (an A1 after a B3), the curator numbered against their own levels and
-  // students will meet B3 cards before A1 ones. Warn, never block: the file
-  // is valid, the pedagogy is not.
-  {
-    const byId = [...rows].sort((a, b) => a.ID < b.ID ? -1 : 1);
-    let prevL = "", firstBreak = null;
-    for (const r of byId){
-      const L = String(r.L || "").toUpperCase();
-      if (!L) continue;
-      if (prevL && L < prevL){ firstBreak = { id: r.ID, L, prevL }; break; }
-      prevL = L;
-    }
-    if (firstBreak){
-      warnings.push(
-        `L is not in ID order: ${firstBreak.id} is level ${firstBreak.L} but comes after a ${firstBreak.prevL} card. ` +
-        `The app introduces cards by ID, so number IDs in L-order (A1 first, then A2 ...).`
-      );
-    }
-  }
 
   return {
     ok: true,
