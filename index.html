@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.80";
+const WORDDOCK_VERSION = "v26.81";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1471,7 +1471,11 @@ async function parseWordDockXlsx(file){
       continue;
     }
 
-    const idStr = String(id).trim();
+    // v26.81: IDs are 4-digit strings. Excel loves to turn 0001 into 1 unless the
+    // cell is text; a curator should not have to know that. Pad here — 1 and
+    // 0001 land on the same card, so RS never splits across two spellings.
+    let idStr = String(id).trim();
+    if (/^\d{1,4}$/.test(idStr)) idStr = idStr.padStart(4, "0");
 
     // Build the Q/A pairs (only those with both Q and A filled).
     const pairs = [];
