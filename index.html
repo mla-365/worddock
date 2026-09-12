@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.79";
+const WORDDOCK_VERSION = "v26.80";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1378,8 +1378,12 @@ function getRS(id){ return RS[id] || 0; }
    ════════════════════════════════════════════════════════════════════════ */
 
 /* Canonical 25-column SF25 order — the authoritative shape. */
+/* WD26, final order (2026-09-12). L first: the curator decides the level bed
+   BEFORE numbering the ID rail, and the file reads in that order. NOTE is a
+   core column now (was UTAG, an "extra"): one writer per column — NOTE belongs
+   to teacher and student, CAT/CTAG/L to the curator. No pipes anywhere. */
 const COLUMNS = [
-  "ID", "ENTRY", "CAT", "CTAG", "L",
+  "L", "ID", "ENTRY", "CAT", "CTAG", "NOTE",
   "Q1","A1","Q2","A2","Q3","A3","Q4","A4","Q5","A5",
   "Q6","A6","Q7","A7","Q8","A8","Q9","A9","Q10","A10"
 ];
@@ -1403,13 +1407,13 @@ async function parseWordDockXlsx(file){
     return { ok: false, error: "Not a readable .xlsx file: " + e.message };
   }
 
-  // Find the first sheet whose A1 cell is "ID"
+  // Find the first sheet whose A1 cell is "L" (WD26 final order)
   let dataSheet = null;
   let dataSheetName = null;
   for (const name of wb.SheetNames){
     const sheet = wb.Sheets[name];
     const a1 = sheet["A1"];
-    if (a1 && a1.v === "ID"){
+    if (a1 && a1.v === "L"){
       dataSheet = sheet;
       dataSheetName = name;
       break;
@@ -1417,7 +1421,7 @@ async function parseWordDockXlsx(file){
   }
   if (!dataSheet){
     return { ok: false, error:
-      "No data sheet found. A WordDock file must have a sheet whose A1 cell is \"ID\"." };
+      "No data sheet found. A WordDock file must have a sheet whose A1 cell is \"L\"." };
   }
 
   // Convert to row-of-arrays form, preserving the header row.
@@ -1436,7 +1440,7 @@ async function parseWordDockXlsx(file){
     if (header[i] !== COLUMNS[i]){
       return { ok: false, error:
         `Column ${i+1} should be "${COLUMNS[i]}" but is "${header[i] || "(empty)"}". ` +
-        `WordDock files use a fixed 25-column order.` };
+        `WordDock files use a fixed 26-column order: L, ID, ENTRY, CAT, CTAG, NOTE, Q1, A1 ... Q10, A10.` };
     }
   }
   // Capture any extra columns beyond the canonical 25 (preserve through
@@ -1487,7 +1491,8 @@ async function parseWordDockXlsx(file){
       pairs,
         _preserved: {
         L: arr[COL_INDEX.L]     ?? null,
-        ENTRY: arr[COL_INDEX.ENTRY] ?? null
+        ENTRY: arr[COL_INDEX.ENTRY] ?? null,
+        NOTE: arr[COL_INDEX.NOTE] ?? null
       },
       // WD26 no-wipe: values beyond the canonical 25 are CARRIED, never
       // interpreted. null when the file has no extra columns.
@@ -1555,10 +1560,9 @@ function serializeToXlsx(list, exportName){
   // casing); an all-empty UTAG stores nothing on re-import (sparse), so
   // the column costs nothing.
   const extras = [...(list.extraColumns || [])];
-  if (!extras.some(h => String(h).toLowerCase() === "utag")) extras.push("UTAG");
-  // v26.77: RS follows UTAG — read-only export for backup/analysis; never imported
-  const rsHeader = "RS";
-  const headers = [...COLUMNS, ...extras, rsHeader];
+  // v26.80: NOTE is a core column; nothing is auto-appended. RS is NOT exported
+  // (decided 2026-09-12): the key is the RS channel, Excel carries content only.
+  const headers = [...COLUMNS, ...extras];
   const aoa = [headers];
   for (const row of list.rows){
     const arr = new Array(headers.length).fill(null);
@@ -1568,6 +1572,7 @@ function serializeToXlsx(list, exportName){
     arr[COL_INDEX.CAT]   = row.CAT || null;
     arr[COL_INDEX.CTAG]  = row.CTAG || null;
     arr[COL_INDEX.L]     = pres.L ?? null;
+    arr[COL_INDEX.NOTE]  = pres.NOTE ?? null;
     for (let i = 0; i < 10; i++){
       const p = row.pairs[i];
       arr[COL_INDEX["Q"+(i+1)]] = p ? p.q : null;
@@ -1581,11 +1586,6 @@ function serializeToXlsx(list, exportName){
         arr[COLUMNS.length + i] = row._extras[i] ?? null;
       }
     }
-    // v26.77: RS is written as a read-only column after UTAG — useful as a
-    // human-readable backup and for classroom/curator analysis. It is NEVER
-    // read back on import (ignored like any extra column). The sync key
-    // remains the only authoritative channel for RS between devices.
-    arr[headers.length - 1] = getRS(row.ID) || null;   // v26.78: correct index, not push
     aoa.push(arr);
   }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -4592,13 +4592,13 @@ document.querySelector("#aboutbrowser .browser-head-rail").addEventListener("cli
    and leave them where they were. */
 const FILE_RULES_HTML =
   "<ol class='dlg-rules'>" +
-  "<li>A sheet whose <b>header row is exactly these 25 columns</b>, in order - " +
-  "so cell A1 reads <code>ID</code>:<br>" +
-  "<code>ID · ENTRY · CAT · CTAG · L · Q1 · A1 · … · Q10 · A10</code></li>" +
+  "<li>A sheet whose <b>header row is exactly these 26 columns</b>, in order - " +
+  "so cell A1 reads <code>L</code>:<br>" +
+  "<code>L · ID · ENTRY · CAT · CTAG · NOTE · Q1 · A1 · … · Q10 · A10</code></li>" +
   "<li>At least <b>10 rows</b> where <code>ID</code>, <code>Q1</code> and " +
   "<code>A1</code> are all filled.</li>" +
   "<li>A filename shaped <b><code>DOMAIN_name.xlsx</code></b> - domain first, " +
-  "then an underscore, then your own name. Like <code>NL-RU_holiday.xlsx</code>." +
+  "then an underscore, then your list name. Like <code>NL-RU_Holiday.xlsx</code>." +
   "</li>" +
   "<li>Within one domain, <b>every entry needs its own ID</b> - never restart " +
   "numbering in a new file.</li>" +
