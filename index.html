@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.83";
+const WORDDOCK_VERSION = "v26.84";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -3767,10 +3767,10 @@ function showConsentDialog(finalAsk){
         '</div>' +
         '<div class="wd-dialog-body">' + bodyTop + '</div>' + bodyTail +
         '<div class="wd-dialog-body" style="margin-top:6px;opacity:.8">Not your own device? ' +
-          'Use a private/incognito window instead.</div>' +
+          'Use a private/incognito window instead - otherwise other users\u2019 scores could get mixed up.</div>' +
         '<div class="wd-dialog-actions" style="flex-wrap:wrap">' +
           '<button class="wd-dialog-btn wd-dialog-ok" type="button" data-act="yes">Yes, keep it safe</button>' +
-          '<button class="wd-dialog-btn" type="button" data-act="havekey">I have a key</button>' +
+          '<button class="wd-dialog-btn" type="button" data-act="havekey">I already have a key</button>' +
           '<button class="wd-dialog-btn wd-dialog-cancel" type="button" data-act="later">Not now</button>' +
         '</div>' +
       '</div>';
