@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.81";
+const WORDDOCK_VERSION = "v26.82";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -4367,7 +4367,7 @@ $fileInput.addEventListener("change", async (e) => {
     // human knows. So state the consequence plainly and let them judge.
     ok = await wdConfirm(
       domain + " isn't a WordDock domain",
-      "Your file will be imported under a new DOMAIN called \"" + domain + "\" with list name \"" + name + "\". " +
+      "Your file will be imported under a new DOMAIN called \"" + domain + "\" with list name \"" + list.name + "\". " +
       "Every file starting with " + domain + "_ will share the same progress. " +
       "If that isn't what you meant, cancel and rename the file.",
       "Create DOMAIN and import", "Cancel"
