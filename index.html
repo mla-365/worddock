@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.89";
+const WORDDOCK_VERSION = "v26.90";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -924,6 +924,35 @@ body{
   color:var(--tag);margin-bottom:12px;
 }
 .browser-lists{display:flex;flex-direction:column;gap:6px}
+/* ── Phase 2: the filter door and its panel (browse side only) ── */
+.detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.filter-door{
+  font-family:'Poppins',sans-serif;font-size:12px;padding:5px 12px;border-radius:9px;
+  background:transparent;color:var(--tag);border:1px solid var(--menu-border);cursor:pointer;
+}
+.filter-door:hover{background:var(--menu-hover);color:var(--ink)}
+.filter-door.on{background:var(--domain-bg);color:#fff;border-color:transparent;font-weight:500}
+.filter-panel{
+  border:1px solid var(--menu-border);border-radius:11px;padding:12px 14px 10px;margin-bottom:10px;
+  background:rgba(255,255,255,0.03);
+}
+.filter-axis{display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 10px;align-items:start;padding:5px 0}
+.filter-axis-name{font-size:12px;color:var(--tag);padding-top:5px}
+.filter-chips{display:flex;flex-wrap:wrap;gap:5px}
+.filter-chip{
+  font-family:'Poppins',sans-serif;font-size:12px;padding:3px 9px;border-radius:8px;
+  background:transparent;color:var(--tag);border:1px solid var(--menu-border);cursor:pointer;
+}
+.filter-chip:hover{background:var(--menu-hover);color:var(--ink)}
+.filter-chip.sel{background:var(--domain-bg);color:#fff;border-color:transparent}
+.filter-chip .n{opacity:0.7;margin-left:4px}
+.filter-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--menu-border)}
+.filter-count{font-size:13px;color:var(--ink)}
+.filter-count.zero{color:#e89090}
+.filter-foot .wd-dialog-btn{padding:7px 14px;font-size:13px}
+.list-row.filtered-out{opacity:0.45}
+.list-row-meta .in-filter{color:#90d090}
+@media (max-width:600px){ .filter-axis{grid-template-columns:1fr} .filter-axis-name{padding-top:0} }
 .list-row{
   display:flex;align-items:center;justify-content:space-between;
   padding:12px 14px;border-radius:11px;cursor:pointer;
@@ -1178,7 +1207,8 @@ body{
     <div class="browser-detail">
       <!-- LISTS view -->
       <div class="detail-view" id="viewLists">
-        <div class="detail-head" id="browserDetailHead">Lists</div>
+        <div class="detail-head" id="browserDetailHead"><span id="browserDetailTitle">Lists</span><button type="button" class="filter-door" id="filterDoor" hidden>Filter: all cards</button></div>
+        <div id="filterPanel" class="filter-panel" hidden></div>
         <div id="browserLists" class="browser-lists"></div>
         <div class="upload-row" id="browserUpload">+ Import a list (.xlsx)<button type="button" id="importRulesHelp" class="import-rules-help" aria-label="What a WordDock file needs"><span>?</span><span class="rules-word">What a file needs</span></button></div>
         <div id="listMessage" class="list-message"></div>
@@ -1369,21 +1399,21 @@ function getRS(id){ return RS[id] || 0; }
 
 /* ════════════════════════════════════════════════════════════════════════
    LAYER 2 — Excel I/O
-   WordDock file = the 25-column SF25 shape, headers in row 1 starting with
-   ID, ≥10 valid rows. The app reads ID + Q/A pairs + the grammatical tags;
+   WordDock file = the 26-column WD26 shape, headers in row 1 starting with
+   L. Rows without ID, Q1 and A1 are skipped. The app reads ID + Q/A pairs + the grammatical tags;
    RS is NOT in the file (it lives only in localStorage). The app's internal
    field names now match the WD26 column names directly (ID, ENTRY, CAT, SUBCAT,
    L) — no adapter mapping; the old SEQ_ID/GRAMCAT/GRAMTAG/LEMMA/LEVEL names
    were retired in the 2026-07-10 rename pass.
    ════════════════════════════════════════════════════════════════════════ */
 
-/* Canonical 25-column SF25 order — the authoritative shape. */
+/* Canonical 26-column WD26 order — the authoritative shape. */
 /* WD26, final order (2026-09-12). L first: the curator decides the level bed
    BEFORE numbering the ID rail, and the file reads in that order. NOTE is a
-   core column now (was UTAG, an "extra"): one writer per column — NOTE belongs
+   core column: one writer per column — NOTE belongs
    to whoever curates the domain, like CAT/SUBCAT/L. No pipes anywhere.
-   v26.89: CTAG renamed SUBCAT (sub-category). SUBCAT and NOTE may carry several
-   tags separated by commas; tagsOf() is the one reader of that convention. */
+   SUBCAT and NOTE may carry several tags separated by commas; tagsOf() is the
+   one reader of that convention. */
 const COLUMNS = [
   "L", "ID", "ENTRY", "CAT", "SUBCAT", "NOTE",
   "Q1","A1","Q2","A2","Q3","A3","Q4","A4","Q5","A5",
@@ -1395,6 +1425,56 @@ const COL_INDEX = Object.fromEntries(COLUMNS.map((n, i) => [n, i]));
    written; matching (the filter) folds case. "masculine, irregular" → two tags. */
 function tagsOf(cell){
   return String(cell || "").split(",").map(t => t.trim()).filter(Boolean);
+}
+
+/* ── Phase 2: one filter per DOMAIN ─────────────────────────────────────────
+   { L, CAT, SUBCAT, NOTE } — each null ("all") or a case-folded value. All four
+   null = no filter = the key is absent = today's behaviour. The filter lives on
+   the browse side and in wd_filter_<DOMAIN>; the study side only feels it
+   through buildDeck(). RS is never touched by a filter. */
+const FILTER_AXES = [
+  { key:"L",      label:"Level" },
+  { key:"CAT",    label:"Category" },
+  { key:"SUBCAT", label:"Subcategory" },
+  { key:"NOTE",   label:"Note" }
+];
+function filterKey(domain){ return "wd_filter_" + domain; }
+function emptyFilter(){ return { L:null, CAT:null, SUBCAT:null, NOTE:null }; }
+function filterIsEmpty(f){ return !f || FILTER_AXES.every(a => f[a.key] === null); }
+function getFilter(domain){
+  try {
+    const f = JSON.parse(localStorage.getItem(filterKey(domain)));
+    return (f && !filterIsEmpty(f)) ? { ...emptyFilter(), ...f } : null;
+  } catch { return null; }
+}
+function setFilter(domain, f){
+  try {
+    if (filterIsEmpty(f)) localStorage.removeItem(filterKey(domain));
+    else localStorage.setItem(filterKey(domain), JSON.stringify(f));
+  } catch {}
+}
+function fold(v){ return String(v || "").trim().toLowerCase(); }
+/* The values a row offers per axis, case-folded. L and CAT are one value;
+   SUBCAT and NOTE are comma-separated tags. */
+function rowValues(row, key){
+  if (key === "L")   return [fold(row.L)].filter(Boolean);
+  if (key === "CAT") return [fold(row.CAT)].filter(Boolean);
+  const cell = key === "SUBCAT" ? row.SUBCAT : (row._preserved && row._preserved.NOTE);
+  return tagsOf(cell).map(fold);
+}
+function rowMatches(row, f){
+  if (!f) return true;
+  return FILTER_AXES.every(a => f[a.key] === null || rowValues(row, a.key).includes(f[a.key]));
+}
+function filteredRows(rows, f){ return f ? rows.filter(r => rowMatches(r, f)) : rows; }
+/* Every card of a domain, once (lists overlap by ID). Counts come from here. */
+function domainRows(domain){
+  const byId = new Map();
+  for (const l of listsInDomain(domain)) for (const r of l.rows) if (!byId.has(r.ID)) byId.set(r.ID, r);
+  return [...byId.values()];
+}
+function filterSummary(f){
+  return FILTER_AXES.map(a => f[a.key]).filter(Boolean).join(" \u00B7 ");
 }
 const MIN_VALID_ROWS = 10;
 
@@ -1442,8 +1522,7 @@ async function parseWordDockXlsx(file){
     return { ok: false, error: "Data sheet is empty (header only)." };
   }
 
-  const header = aoa[0].map(h => h === null ? "" : String(h))
-    .map(h => h.trim().toUpperCase() === "CTAG" ? "SUBCAT" : h);   // v26.89: old header name forgiven
+  const header = aoa[0].map(h => h === null ? "" : String(h));
   // Verify the canonical 26 columns (WD26) are present in order.
   for (let i = 0; i < COLUMNS.length; i++){
     if (header[i] !== COLUMNS[i]){
@@ -1452,7 +1531,7 @@ async function parseWordDockXlsx(file){
         `WordDock files use a fixed 26-column order: L, ID, ENTRY, CAT, SUBCAT, NOTE, Q1, A1 ... Q10, A10.` };
     }
   }
-  // Capture any extra columns beyond the canonical 25 (preserve through
+  // Capture any extra columns beyond the canonical 26 (preserve through
   // round-trip). Offsets are kept so values stay aligned to their headers
   // even if an unnamed (empty-header) column sits between named ones.
   const extraOffsets = [];
@@ -1494,7 +1573,7 @@ async function parseWordDockXlsx(file){
       if (q && a) pairs.push({ q: String(q), a: String(a) });
     }
 
-    // Build the row in the app's field names, which now equal the SF25
+    // Build the row in the app's field names, which equal the WD26
     // column names directly (ID, CAT, SUBCAT, L, ENTRY). RS is NOT in the
     // file — it lives only in localStorage, joined at runtime by (domain + ID).
     const row = {
@@ -1507,7 +1586,7 @@ async function parseWordDockXlsx(file){
         ENTRY: arr[COL_INDEX.ENTRY] ?? null,
         NOTE: arr[COL_INDEX.NOTE] ?? null
       },
-      // WD26 no-wipe: values beyond the canonical 25 are CARRIED, never
+      // WD26 no-wipe: values beyond the canonical 26 are CARRIED, never
       // interpreted. null when the file has no extra columns.
       _extras: extraOffsets.length
         ? extraOffsets.map(i =>
@@ -1547,7 +1626,7 @@ async function parseWordDockXlsx(file){
 /* Split "NL-RU_vakantie.xlsx" into { domain:"NL-RU", name:"vakantie" }.
    Underscore is the separator; everything after the first one is the name
    (so "NL-RU_zomer_2026" → name "zomer_2026"). Hyphens are ordinary name
-   characters, which is why domain codes (NL-RU) and Full-List both work.
+   characters, which is why domain codes (NL-RU) and Full both work.
    Returns domain:null when the leading token isn't a plausible domain - the
    import dialog then asks the user instead of guessing. */
 function parseFilename(rawName){
@@ -1589,7 +1668,7 @@ function serializeToXlsx(list, exportName){
       arr[COL_INDEX["Q"+(i+1)]] = p ? p.q : null;
       arr[COL_INDEX["A"+(i+1)]] = p ? p.a : null;
     }
-    // WD26 no-wipe: extra (beyond-25) values ride back under their own
+    // WD26 no-wipe: extra (beyond-26) values ride back under their own
     // headers — carried, never interpreted.
     if (row._extras){
       const maxExtras = headers.length - COLUMNS.length;
@@ -1642,7 +1721,7 @@ const LISTS = {};
 
 /* The one reserved list name: the curated master shipped with a domain.
    An export can never produce it (the Save-as dialog forbids it), so a
-   user file can never collide with the curated Full-List. */
+   user file can never collide with the curated Full. */
 const FULL_LIST_NAME = "Full";   // v26.77: shorter, less redundant
 
 const LISTS_KEY = "wd_lists";
@@ -1654,7 +1733,7 @@ const LISTS_KEY = "wd_lists";
    • CURATED domain (e.g. a slice of NL-RU) → store only the IDs. Every row
      already exists in the <DOMAIN>.json the app fetches on boot, so storing
      675 rows again would duplicate ~135 KB for nothing. IDs alone are ~5 KB.
-     Rehydration resolves them against the domain's Full-List.
+     Rehydration resolves them against the domain's Full.
      (Accepted consequence: if the curator later removes a word from the
      corpus, that ID resolves to nothing and quietly drops from the list —
      which is the correct outcome, the curator removed it.)
@@ -1699,7 +1778,7 @@ function saveLists(){
    the engine must see one row shape everywhere, whatever the source). */
 function hydrateRow(r){
   return {
-    ID: r.ID, CAT: r.CAT || "", SUBCAT: r.SUBCAT ?? r.CTAG ?? "",   // CTAG: lists stored before v26.89
+    ID: r.ID, CAT: r.CAT || "", SUBCAT: r.SUBCAT || "",
     pairs: r.pairs || [],
     _preserved: { L: r.L ?? null, ENTRY: r.ENTRY ?? null, NOTE: r.NOTE ?? null },
     _extras: r._extras ?? null,
@@ -1708,7 +1787,7 @@ function hydrateRow(r){
 }
 
 /* Rehydrate imported lists on boot.
-   "rows" lists rebuild immediately. "ids" lists need their domain's Full-List
+   "rows" lists rebuild immediately. "ids" lists need their domain's Full
    fetched first, so they resolve lazily — see resolveIdLists(). */
 const PENDING_ID_LISTS = [];
 
@@ -1730,8 +1809,8 @@ function loadPersistedLists(){
   }
 }
 
-/* Resolve any stored ID-only lists for a domain, now that its Full-List rows
-   are in memory. Each ID is looked up in the Full-List; missing IDs (removed
+/* Resolve any stored ID-only lists for a domain, now that its Full rows
+   are in memory. Each ID is looked up in the Full; missing IDs (removed
    from the corpus since) are simply skipped. */
 function resolveIdLists(domain, fullRows){
   if (!PENDING_ID_LISTS.length) return;
@@ -1746,7 +1825,7 @@ function resolveIdLists(domain, fullRows){
       if (!ex || !ex[id]) return base;      // unmarked rows stay shared
       // WD26: a marked row gets a per-list clone. Extras belong to the FILE,
       // not the word — the same word may carry different marks in different
-      // lists, and the shared Full-List row must never be polluted.
+      // lists, and the shared Full row must never be polluted.
       return {
         ID: base.ID, CAT: base.CAT, SUBCAT: base.SUBCAT,
         pairs: base.pairs,
@@ -2436,7 +2515,16 @@ async function loadDomainMaster(domain){
 
 /* ─── Deck construction (§5.7.1): take lowest-RS 10 ─── */
 function buildDeck(){
-  const sorted = [...ALL].sort((a,b) => {
+  // Phase 2: the domain's filter narrows the source; sorting is unchanged and
+  // the RS pool is untouched. An empty result must never reach the card — if a
+  // stored filter matches nothing in this list (its content changed under it),
+  // the filter is removed and the deck is built from everything.
+  let src = filteredRows(ALL, getFilter(DOMAIN_RUNTIME));
+  if (!src.length && ALL.length){
+    setFilter(DOMAIN_RUNTIME, null);
+    src = ALL;
+  }
+  const sorted = [...src].sort((a,b) => {
     const ra = getRS(a.ID), rb = getRS(b.ID);
     if (ra !== rb) return ra - rb;
     return a.ID < b.ID ? -1 : 1;
@@ -2678,7 +2766,7 @@ function wdConfirm(title, body, okLabel = "OK", cancelLabel = "Cancel", isHtml =
 /* Ask the user to name a list, showing the resulting filename live as they
    type. The preview is the teaching device: naming has consequences, and the
    user sees them assemble. Resolves to the chosen name, or null on cancel.
-   The reserved name (Full-List) is refused — only a curated master carries it,
+   The reserved name (Full) is refused — only a curated master carries it,
    so an export can never mint a file that collides with one. */
 function wdPromptName(title, body, domain, prefill){
   return new Promise(resolve => {
@@ -2947,7 +3035,16 @@ const $fileInput    = document.getElementById("fileInput");
 const $listMessage  = document.getElementById("listMessage");
 const $browserRail  = document.getElementById("browserRail");
 const $browserLists = document.getElementById("browserLists");
-const $browserDetailHead = document.getElementById("browserDetailHead");
+const $browserDetailHead  = document.getElementById("browserDetailHead");
+const $browserDetailTitle = document.getElementById("browserDetailTitle");
+const $filterDoor         = document.getElementById("filterDoor");
+const $filterPanel        = document.getElementById("filterPanel");
+$filterDoor.addEventListener("click", () => {
+  filterPanelOpen = !filterPanelOpen;
+  if (!filterPanelOpen) filterDraft = null;
+  renderFilterDoor();
+  renderFilterPanel();
+});
 
 function setListMessage(text, kind){
   $listMessage.textContent = text || "";
@@ -3848,8 +3945,109 @@ function renderSyncAnchor(){
     (on ? "Sync is on" : "Sync is off");
 }
 
+let filterPanelOpen = false;
+let filterDraft = null;        // the panel's working copy while open
+
+function renderFilterDoor(){
+  const f = getFilter(browserDomain);
+  const lists = listsInDomain(browserDomain);
+  $filterDoor.hidden = !lists.length;
+  $filterDoor.classList.toggle("on", !!f);
+  $filterDoor.textContent = f ? "Filter: " + filterSummary(f) : "Filter: all cards";
+  $filterDoor.setAttribute("aria-expanded", filterPanelOpen ? "true" : "false");
+}
+
+/* The panel: four rows of chips with counts over the whole domain, a live
+   match count, Apply and Show all. Counts are the discipline — a typo shows
+   up as its own chip with a count of 1. */
+function renderFilterPanel(){
+  $filterPanel.hidden = !filterPanelOpen;
+  if (!filterPanelOpen) return;
+  const rows = domainRows(browserDomain);
+  if (!filterDraft) filterDraft = getFilter(browserDomain) || emptyFilter();
+  $filterPanel.innerHTML = "";
+  for (const axis of FILTER_AXES){
+    const counts = new Map();   // folded → { label, n }
+    for (const r of rows){
+      for (const v of rowValues(r, axis.key)){
+        const raw = axis.key === "L" ? r.L : axis.key === "CAT" ? r.CAT :
+                    axis.key === "SUBCAT" ? tagsOf(r.SUBCAT).find(t => fold(t) === v) :
+                    tagsOf(r._preserved && r._preserved.NOTE).find(t => fold(t) === v);
+        const e = counts.get(v) || { label: String(raw || v).trim(), n: 0 };
+        e.n++; counts.set(v, e);
+      }
+    }
+    if (!counts.size) continue;   // an axis nobody filled stays out of sight
+    const values = [...counts.entries()];
+    if (axis.key === "L") values.sort((a,b) => a[0] < b[0] ? -1 : 1);
+    else values.sort((a,b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : 1));
+
+    const line = document.createElement("div"); line.className = "filter-axis";
+    const name = document.createElement("div"); name.className = "filter-axis-name"; name.textContent = axis.label;
+    const chips = document.createElement("div"); chips.className = "filter-chips";
+    const mk = (label, value, n) => {
+      const b = document.createElement("button"); b.type = "button";
+      b.className = "filter-chip" + (filterDraft[axis.key] === value ? " sel" : "");
+      b.textContent = label;
+      if (n !== null){ const sp = document.createElement("span"); sp.className = "n"; sp.textContent = n; b.appendChild(sp); }
+      b.addEventListener("click", () => { filterDraft[axis.key] = value; renderFilterPanel(); });
+      chips.appendChild(b);
+    };
+    mk("all", null, null);
+    for (const [v, e] of values) mk(e.label, v, e.n);
+    line.appendChild(name); line.appendChild(chips);
+    $filterPanel.appendChild(line);
+  }
+
+  const n = filteredRows(rows, filterIsEmpty(filterDraft) ? null : filterDraft).length;
+  const foot = document.createElement("div"); foot.className = "filter-foot";
+  const count = document.createElement("div");
+  count.className = "filter-count" + (n === 0 ? " zero" : "");
+  count.textContent = filterIsEmpty(filterDraft) ? "All " + rows.length + " cards"
+                    : (n === 0 ? "No cards match" : n + " card" + (n === 1 ? "" : "s") + " match");
+  const btns = document.createElement("div"); btns.style.display = "flex"; btns.style.gap = "8px";
+  const all = document.createElement("button"); all.type = "button";
+  all.className = "wd-dialog-btn wd-dialog-cancel"; all.textContent = "Show all";
+  all.addEventListener("click", () => applyFilter(emptyFilter()));
+  const apply = document.createElement("button"); apply.type = "button";
+  apply.className = "wd-dialog-btn wd-dialog-ok"; apply.textContent = "Apply";
+  apply.addEventListener("click", () => {
+    if (n === 0){ setListMessage("No cards match this filter - loosen a row first.", "error"); return; }
+    applyFilter(filterDraft);
+  });
+  btns.appendChild(all); btns.appendChild(apply);
+  foot.appendChild(count); foot.appendChild(btns);
+  $filterPanel.appendChild(foot);
+}
+
+/* Applying rebuilds the deck only when the studied list is in this domain.
+   RS writes only at deck completion, so an unfinished deck loses nothing
+   persistent - but it does restart, and the person is told. */
+async function applyFilter(f){
+  const domain = browserDomain;
+  const studiedHere = (domain === DOMAIN_RUNTIME);
+  const midDeck = studiedHere && deckScore > 0 && !deckDone;
+  if (midDeck){
+    const go = await wdConfirm(filterIsEmpty(f) ? "Show all cards?" : "Apply this filter?",
+      "Your current deck in " + domainDisplayName(domain) + " restarts with the new selection.",
+      filterIsEmpty(f) ? "Show all" : "Apply", "Keep deck");
+    if (!go) return;
+  }
+  setFilter(domain, f);
+  filterPanelOpen = false;
+  filterDraft = null;
+  if (studiedHere) initDeck();
+  setListMessage(filterIsEmpty(f) ? "Filter removed - all cards." : "Filter on: " + filterSummary(f), "success");
+  renderBrowserLists();
+}
+
+let filterPanelDomain = null;  // the panel belongs to one domain; leaving closes it
 function renderBrowserLists(){
-  $browserDetailHead.textContent = "Lists in " + domainDisplayName(browserDomain);
+  $browserDetailTitle.textContent = "Lists in " + domainDisplayName(browserDomain);
+  if (filterPanelDomain !== browserDomain){ filterPanelOpen = false; filterDraft = null; filterPanelDomain = browserDomain; }
+  const filter = getFilter(browserDomain);
+  renderFilterDoor();
+  renderFilterPanel();
   $browserLists.innerHTML = "";
   const lists = listsInDomain(browserDomain).sort((a,b) => {
     if (a.source === "embedded" && b.source !== "embedded") return -1;
@@ -3871,7 +4069,7 @@ function renderBrowserLists(){
     main.className = "list-row-main";
     const name = document.createElement("div");
     name.className = "list-row-name";
-    // Show the FULL identity (NL-RU_Full-List), not just the name. It repeats
+    // Show the FULL identity (NL-RU_Full), not just the name. It repeats
     // the pane header, and that redundancy is accepted deliberately: a new user
     // hasn't yet internalised the left-pane/right-pane structure, and seeing the
     // whole name teaches the naming convention they must use when exporting.
@@ -3885,6 +4083,17 @@ function renderBrowserLists(){
     const covStr = (cov !== null) ? " · " + formatCoverage(cov) : "";
     meta.textContent = list.rows.length + " lemmas" + covStr +
       (list.listId === activeListId ? " · studying now" : "");
+    // Phase 2: with a filter on, each list shows its share; a list with none
+    // dims, and studying it is refused (below) rather than handed an empty deck.
+    let inFilter = null;
+    if (filter){
+      inFilter = filteredRows(list.rows, filter).length;
+      const sp = document.createElement("span");
+      sp.className = "in-filter";
+      sp.textContent = " · " + inFilter + " in filter";
+      meta.appendChild(sp);
+      if (inFilter === 0) row.classList.add("filtered-out");
+    }
     main.appendChild(name);
     main.appendChild(meta);
 
@@ -3907,7 +4116,7 @@ function renderBrowserLists(){
     dl.addEventListener("mouseleave", cueOff);
     dl.addEventListener("click", (e) => { e.stopPropagation(); exportList(list.listId); });
     actions.appendChild(dl);
-    // Delete — only on the user's own imported lists. The curated Full-List
+    // Delete — only on the user's own imported lists. The curated Full
     // re-fetches on every boot, so "deleting" it would be theatre.
     if (list.source === "imported"){
       const del = document.createElement("button");
@@ -3931,6 +4140,15 @@ function renderBrowserLists(){
         setListMessage("");
         closeAllSurfaces();
         return;
+      }
+      if (inFilter === 0){
+        const showAll = await wdConfirm(
+          "No cards in \u201C" + list.name + "\u201D match your filter",
+          "Filter: " + filterSummary(filter) + ". Show all cards to study this list, or go back and pick another.",
+          "Show all", "Back");
+        if (!showAll) return;
+        setFilter(list.domain, null);
+        renderBrowserLists();
       }
       // EVERY switch asks. Not because every switch destroys something, but
       // because switching lists is the erratic behaviour WordDock exists to
@@ -4025,7 +4243,7 @@ const aboutTopics = [
   { id:"domains", title:"Domains &amp; lists", html:
     '<h2 class="section-title gz-first">Domains &amp; lists</h2>' +
     '<p class="setting-desc">A <b>domain</b> is a subject - a language pair ' +
-    'like <code>NL-RU</code>, or a field. Within it, the <b>Full-List</b> is the ' +
+    'like <code>NL-RU</code>, or a field. Within it, <b>Full</b> is the ' +
     'complete set WordDock provides; your own imported files sit alongside it. ' +
     'Progress is shared across a whole domain, so studying any list in it builds ' +
     'the same scores.</p><a id="more-domains" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-domains</a>' },
@@ -4092,7 +4310,7 @@ const aboutTopics = [
     '<li><a href="#more-studying">#more-studying</a> - Studying: deck logic, grading rules, 12-pass contract</li>' +
     '<li><a href="#more-progress">#more-progress</a> - Progress: coverage metric, two-number principle</li>' +
     '<li><a href="#more-domains">#more-domains</a> - Domains: shared scores, domain permanence</li>' +
-    '<li><a href="#more-ownlists">#more-ownlists</a> - Your own lists: SF25 spec, ID rule, curator notes</li>' +
+    '<li><a href="#more-ownlists">#more-ownlists</a> - Your own lists: WD26 file rules, ID rule</li>' +
     '<li><a href="#more-devices">#more-devices</a> - Devices: sync protocol, privacy, key rotation policy</li>' +
     '</ul>' },
 ];
@@ -4252,7 +4470,7 @@ function showBrowserPane(pane){
 
 /* Find IDs the incoming list reuses for a DIFFERENT word than the domain
    already knows. Compares against every list already in that domain — the
-   curated Full-List included (fetching it if it isn't loaded yet, since the
+   curated Full included (fetching it if it isn't loaded yet, since the
    check is worthless without it).
 
    The list being REPLACED is excluded: re-importing an edited version of your
@@ -4474,13 +4692,13 @@ async function exportList(listId){
     return;
   }
   // The user names their own copy. The curated master's reserved name
-  // (Full-List) is never offered as a prefill and never accepted, so an
+  // (Full) is never offered as a prefill and never accepted, so an
   // exported file can't collide with the curated list on re-import.
   const isFull = (list.name === FULL_LIST_NAME);
   const name = await wdPromptName(
     "Save this list as\u2026",
     (isFull
-      ? "This is the " + list.domain + " Full-List. Give your copy a name."
+      ? "This is " + list.domain + " Full. Give your copy a name."
       : "Name your copy of \u201C" + list.name + "\u201D.")
       + " Type only the name - WordDock puts " + list.domain +
       "_ in front: the domain links this file to your " + list.domain +
@@ -4510,7 +4728,7 @@ async function exportList(listId){
 /* Remove one of the user's own lists.
 
    A list is a LENS; the progress lives in the domain's pool. So removing a
-   slice of a curated domain destroys nothing — the words are in the Full-List,
+   slice of a curated domain destroys nothing — the words are in the Full,
    the scores are in wd_rs_<DOMAIN>, and re-importing the same slice rejoins
    both. But an UNCURATED list's rows exist only in this browser, and its pool
    belongs to that domain alone — so when its last list goes, the pool goes
@@ -4532,7 +4750,7 @@ async function deleteList(listId){
   // deleted" read as if the deed were done. Say what the button will do.
   let body;
   if (curated){
-    body = "Your progress stays in the " + list.domain + " Full-List.";
+    body = "Your progress stays in " + list.domain + ".";
   } else if (lastOfDomain){
     body = "This deletes the list and its progress. You'd need the file to bring it back.";
   } else {
@@ -4552,12 +4770,13 @@ async function deleteList(listId){
 
   if (lastOfDomain){
     try { localStorage.removeItem("wd_rs_" + domain); } catch {}
+    setFilter(domain, null);   // the filter goes with the pot
   }
 
-  // If we just deleted what was being studied, fall back to a Full-List. The
+  // If we just deleted what was being studied, fall back to a Full. The
   // deleted list's own domain may have none (it was uncurated), and NL-RU's
   // may not even be loaded (we boot into the last-studied domain) — so take
-  // any loaded Full-List, and fetch the default only if there is none.
+  // any loaded Full, and fetch the default only if there is none.
   if (wasActive){
     let fallback = LISTS["embedded_" + domain]
                 || Object.values(LISTS).find(l => l.source === "embedded");
@@ -4673,7 +4892,7 @@ function normalizeEmbeddedRows(rawRows){
   return rawRows.map(r => ({
     ID:  r.ID,
     CAT: r.CAT || "",
-    SUBCAT: r.SUBCAT ?? r.CTAG ?? "",   // CTAG: JSON published before v26.89
+    SUBCAT: r.SUBCAT || "",
     pairs:   r.pairs || [],
     _preserved: {
       L: r.L || null,
@@ -4686,7 +4905,7 @@ function normalizeEmbeddedRows(rawRows){
 }
 
 /* Last studied list — so a reload resumes where the user left off, instead of
-   always dumping them back on NL-RU's Full-List. A preference, not progress:
+   always dumping them back on NL-RU's Full. A preference, not progress:
    last write wins, and an unresolvable value silently falls back. */
 const LAST_LIST_KEY = "wd_last_list";
 
@@ -4752,7 +4971,7 @@ function readLastList(){
 
   loadRS();
 
-  // Resume the last list if it still exists; otherwise the domain's Full-List.
+  // Resume the last list if it still exists; otherwise the domain's Full.
   const resume = (wanted && LISTS[wanted]) ? wanted : ("embedded_" + bootDomain);
   switchActiveList(resume);
   handleKeyLink();   // 3b: arrived via a scanned QR?
