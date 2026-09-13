@@ -1,17 +1,20 @@
 <!DOCTYPE html>
-<!-- WordDock converter v1.0 -->
+<!-- WordDock converter v2.0 — WD26 (2026-09-13) -->
 <!--
   A curator's tool, not part of the app. It is deliberately NOT linked from
   WordDock and knows nothing about scores, sync or study.
 
-  Its one job: turn a curated SF25 workbook into the <DOMAIN>.json the app
+  Its one job: turn a curated WD26 workbook into the <DOMAIN>.json the app
   fetches on boot — on Michel's laptop, without a Python install and without a
   session with Claude. That is what makes "Excel is the source, JSON is the
   published edition" a rule that can actually be kept.
 
-  It must produce output byte-for-byte identical to sf25_to_json.py, so that a
+  WD26 (since 2026-09-12): 26 columns, L first, A1 sentinel = "L". The six core
+  columns L, ID, ENTRY, CAT, CTAG, NOTE are published; anything beyond column 26
+  (curators' working notes) never is. IDs are padded to 4 digits. The output is
+  written in Python json.dumps style (space after colon and comma), so a
   regenerated file shows a git diff containing ONLY the words that changed.
-  A diff that reformats the whole file is a diff nobody reads.
+  This is the only converter (the Python script was retired 2026-09-13).
 
   IDENTITY: the filename decides the domain — the same rule the app uses on
   import. The Metadata sheet stays inert: it is read only to cross-check, and
@@ -121,7 +124,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:
 </header>
 
 <div id="drop" tabindex="0" role="button" aria-label="Choose or drop an xlsx file">
-  <div class="big">Drop a Full-List <code>.xlsx</code> here</div>
+  <div class="big">Drop a WD26 Full <code>.xlsx</code> here</div>
   <div class="small">or click to choose one</div>
 </div>
 <input type="file" id="file" accept=".xlsx" hidden>
@@ -136,19 +139,18 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="xlsx.full.min.js"></script>
 <script>
 "use strict";
 
 const COLUMNS = [
-  "ID","ENTRY","CAT","CTAG","L",
+  "L","ID","ENTRY","CAT","CTAG","NOTE",
   "Q1","A1","Q2","A2","Q3","A3","Q4","A4","Q5","A5",
   "Q6","A6","Q7","A7","Q8","A8","Q9","A9","Q10","A10"
 ];
+const MIN_ROWS = 10;
 
-/* Cell -> trimmed string, or null when empty. Mirrors _clean() in
-   sf25_to_json.py exactly, including the trim, so both tools agree on what
-   counts as an empty cell. */
+/* Cell -> trimmed string, or null when empty. */
 function clean(v){
   if (v === null || v === undefined) return null;
   const s = String(v).trim();
@@ -162,7 +164,7 @@ function clean(v){
    hides the one word that actually changed. */
 function pyRow(row){
   const parts = [];
-  for (const k of ["ID","ENTRY","CAT","CTAG","L"]){
+  for (const k of ["ID","ENTRY","CAT","CTAG","L","NOTE"]){
     parts.push(JSON.stringify(k) + ": " + JSON.stringify(row[k]));
   }
   const pairs = row.pairs
@@ -172,28 +174,30 @@ function pyRow(row){
   return "{" + parts.join(", ") + "}";
 }
 
-/* Split "NL-RU_Full-List.xlsx" into { domain, name }. Underscore separates;
+/* Split "NL-RU_Full.xlsx" into { domain, name }. Underscore separates;
    everything after the first one is the name. No underscore means no domain,
    and the tool says so rather than guessing. */
 function parseFilename(raw){
   const base = String(raw || "").replace(/\.xlsx$/i, "").trim();
   const cut = base.indexOf("_");
   if (cut < 1) return { domain: null, name: base };
-  return { domain: base.slice(0, cut).trim(), name: base.slice(cut + 1).trim() };
+  return { domain: base.slice(0, cut).trim().toUpperCase(), name: base.slice(cut + 1).trim() };
 }
 
 function convert(wb, filename){
   const out = { ok:false, error:null, rows:[], skipped:[], domain:null,
-                name:null, metaDomain:null, sheet:null };
+                name:null, metaDomain:null, sheet:null, railWarnings:[] };
 
-  // The data sheet is the first one whose A1 is literally "ID".
+  // The data sheet is the first one whose A1 is literally "L" (WD26).
+  // Old SF25 files (A1 = "ID") are refused on purpose: deliberate break, 2026-09-12.
   let sheet = null;
   for (const nm of wb.SheetNames){
     const a1 = wb.Sheets[nm]["A1"];
-    if (a1 && clean(a1.v) === "ID"){ sheet = wb.Sheets[nm]; out.sheet = nm; break; }
+    if (a1 && clean(a1.v) === "L"){ sheet = wb.Sheets[nm]; out.sheet = nm; break; }
   }
   if (!sheet){
-    out.error = "No data sheet found. One sheet must have \u201CID\u201D in cell A1.";
+    out.error = "No WD26 data sheet found. One sheet must have \u201CL\u201D in cell A1 " +
+                "(older files with \u201CID\u201D in A1 are not accepted any more).";
     return out;
   }
 
@@ -205,7 +209,7 @@ function convert(wb, filename){
     if (header[i] !== COLUMNS[i]){
       out.error = "Column " + (i+1) + " should be \u201C" + COLUMNS[i] +
                   "\u201D but is \u201C" + (header[i] || "empty") +
-                  "\u201D. The 25 columns must be in the canonical order.";
+                  "\u201D. The 26 columns must be in the WD26 order: L, ID, ENTRY, CAT, CTAG, NOTE, Q1, A1 \u2026 Q10, A10.";
       return out;
     }
   }
@@ -217,7 +221,8 @@ function convert(wb, filename){
     const arr = aoa[r];
     if (!arr || arr.every(c => clean(c) === null)) continue;   // blank row
 
-    const id = clean(arr[idx.ID]);
+    let id = clean(arr[idx.ID]);
+    if (id && /^\d+$/.test(id)) id = id.padStart(4, "0");   // Excel turns 0001 into 1
     const q1 = clean(arr[idx.Q1]);
     const a1 = clean(arr[idx.A1]);
 
@@ -240,8 +245,27 @@ function convert(wb, filename){
       CAT:   clean(arr[idx.CAT])   || "",
       CTAG:  clean(arr[idx.CTAG])  || "",
       L:     clean(arr[idx.L])     || "",
+      NOTE:  clean(arr[idx.NOTE])  || "",
       pairs: pairs
     });
+  }
+
+  if (out.rows.length < MIN_ROWS){
+    out.error = "Only " + out.rows.length + " valid row" + (out.rows.length === 1 ? "" : "s") +
+                "; a list needs at least " + MIN_ROWS + ".";
+    return out;
+  }
+
+  // 10c: the two rails must agree. The app introduces cards in ID order and L
+  // labels that order; if L goes down while ID goes up, the curator numbered
+  // against their own levels. Warn loudly; publishing stays the curator's call.
+  let prevL = "", prevId = "";
+  for (const row of [...out.rows].sort((a,b) => a.ID < b.ID ? -1 : a.ID > b.ID ? 1 : 0)){
+    const L = (row.L || "").toUpperCase();
+    if (L && prevL && L < prevL){
+      out.railWarnings.push(row.ID + " is " + L + " but comes after " + prevId + " (" + prevL + ")");
+    }
+    if (L){ prevL = L; prevId = row.ID; }
   }
 
   // Identity from the filename — never from Metadata.
@@ -307,7 +331,7 @@ function handle(file){
     if (!res.domain){
       return fail("The filename has no underscore, so there is no domain to " +
                   "name the output after. Rename it to DOMAIN_name.xlsx " +
-                  "\u2014 for example NL-RU_Full-List.xlsx \u2014 and drop it again.");
+                  "\u2014 for example NL-RU_Full.xlsx \u2014 and drop it again.");
     }
 
     const json = buildJson(res.rows);
@@ -322,6 +346,16 @@ function handle(file){
         esc(res.domain) + '</b>, but the Metadata sheet inside says <b>' +
         esc(res.metaDomain) + '</b>. The filename wins, so this will be saved as ' +
         esc(outName) + '. If that is wrong, rename the file and drop it again.</p>';
+    }
+    if (res.railWarnings.length){
+      notes += '<p class="note warn">L goes down while ID goes up in ' + res.railWarnings.length +
+        ' place' + (res.railWarnings.length === 1 ? "" : "s") +
+        '. The app introduces cards in ID order, so these levels will be met out of sequence. ' +
+        'Check the numbering before publishing.</p>' +
+        '<ul class="skips">' +
+        res.railWarnings.slice(0,12).map(s => "<li>" + esc(s) + "</li>").join("") +
+        (res.railWarnings.length > 12 ? "<li>\u2026 and " + (res.railWarnings.length-12) + " more</li>" : "") +
+        '</ul>';
     }
     if (res.skipped.length){
       notes += '<p class="note warn">' + res.skipped.length +
