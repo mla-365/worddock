@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.86";
+const WORDDOCK_VERSION = "v26.87";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1559,10 +1559,8 @@ function parseFilename(rawName){
 /* Serialize the active list back to a WordDock xlsx (Blob).
    Uses the row's current localStorage RS, not the value that came in from file. */
 function serializeToXlsx(list, exportName){
-  // WD26: every export carries the UTAG header — the export itself teaches
-  // that column Z is the user's space. Appended only when absent (any
-  // casing); an all-empty UTAG stores nothing on re-import (sparse), so
-  // the column costs nothing.
+  // v26.87: the six core columns (L, ID, ENTRY, CAT, CTAG, NOTE) always round-trip;
+  // extras (beyond column 26) ride along uninterpreted.
   const extras = [...(list.extraColumns || [])];
   // v26.80: NOTE is a core column; nothing is auto-appended. RS is NOT exported
   // (decided 2026-09-12): the key is the RS channel, Excel carries content only.
@@ -1678,7 +1676,7 @@ function saveLists(){
     } else {
       out[l.listId] = { ...base, mode: "rows", rows: l.rows.map(r => ({
         ID: r.ID, CAT: r.CAT, CTAG: r.CTAG,
-        L: r._preserved.L, ENTRY: r._preserved.ENTRY,
+        L: r._preserved.L, ENTRY: r._preserved.ENTRY, NOTE: r._preserved.NOTE ?? null,
         pairs: r.pairs,
         _extras: r._extras || null
       })) };
@@ -1694,7 +1692,7 @@ function hydrateRow(r){
   return {
     ID: r.ID, CAT: r.CAT || "", CTAG: r.CTAG || "",
     pairs: r.pairs || [],
-    _preserved: { L: r.L ?? null, ENTRY: r.ENTRY ?? null },
+    _preserved: { L: r.L ?? null, ENTRY: r.ENTRY ?? null, NOTE: r.NOTE ?? null },
     _extras: r._extras ?? null,
     get L(){ return this._preserved.L; }
   };
@@ -4662,7 +4660,8 @@ function normalizeEmbeddedRows(rawRows){
     pairs:   r.pairs || [],
     _preserved: {
       L: r.L || null,
-      ENTRY: r.ENTRY || null
+      ENTRY: r.ENTRY || null,
+      NOTE: r.NOTE || null      // v26.87: NOTE travels on every road (catalog JSON, storage, Excel)
     },
     _extras: null,
     get L(){ return this._preserved.L; }
