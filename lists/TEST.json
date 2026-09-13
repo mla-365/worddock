@@ -1,0 +1,182 @@
+[
+ {
+  "ID": "0001",
+  "ENTRY": "я",
+  "CAT": "voornaamwoord",
+  "CTAG": "persoonlijk",
+  "L": "A1",
+  "NOTE": "Familie",
+  "pairs": [
+   {
+    "q": "ik",
+    "a": "я"
+   },
+   {
+    "q": "ik ben student",
+    "a": "я студе́нт"
+   }
+  ]
+ },
+ {
+  "ID": "0002",
+  "ENTRY": "ты",
+  "CAT": "voornaamwoord",
+  "CTAG": "persoonlijk",
+  "L": "A1",
+  "NOTE": "familie",
+  "pairs": [
+   {
+    "q": "jij",
+    "a": "ты"
+   },
+   {
+    "q": "jij bent mijn vriend",
+    "a": "ты мой друг"
+   }
+  ]
+ },
+ {
+  "ID": "0003",
+  "ENTRY": "он",
+  "CAT": "voornaamwoord",
+  "CTAG": "persoonlijk",
+  "L": "A1",
+  "NOTE": "Familie",
+  "pairs": [
+   {
+    "q": "hij",
+    "a": "он"
+   },
+   {
+    "q": "hij is thuis",
+    "a": "он до́ма"
+   }
+  ]
+ },
+ {
+  "ID": "0004",
+  "ENTRY": "она",
+  "CAT": "voornaamwoord",
+  "CTAG": "persoonlijk",
+  "L": "A1",
+  "NOTE": "familie",
+  "pairs": [
+   {
+    "q": "zij",
+    "a": "она́"
+   },
+   {
+    "q": "zij is mijn zus",
+    "a": "она́ моя́ сестра́"
+   }
+  ]
+ },
+ {
+  "ID": "0005",
+  "ENTRY": "оно",
+  "CAT": "voornaamwoord",
+  "CTAG": "persoonlijk",
+  "L": "A1",
+  "NOTE": "Familie",
+  "pairs": [
+   {
+    "q": "het",
+    "a": "оно́"
+   },
+   {
+    "q": "het is daar",
+    "a": "оно́ там"
+   }
+  ]
+ },
+ {
+  "ID": "0006",
+  "ENTRY": "мы",
+  "CAT": "voornaamwoord",
+  "CTAG": "persoonlijk",
+  "L": "A1",
+  "NOTE": "familie",
+  "pairs": [
+   {
+    "q": "wij",
+    "a": "мы"
+   },
+   {
+    "q": "wij zijn hier",
+    "a": "мы здесь"
+   }
+  ]
+ },
+ {
+  "ID": "0007",
+  "ENTRY": "вы",
+  "CAT": "voornaamwoord",
+  "CTAG": "persoonlijk",
+  "L": "A1",
+  "NOTE": "Familie",
+  "pairs": [
+   {
+    "q": "jullie",
+    "a": "вы"
+   },
+   {
+    "q": "bent u thuis?",
+    "a": "вы до́ма?"
+   }
+  ]
+ },
+ {
+  "ID": "0008",
+  "ENTRY": "они",
+  "CAT": "voornaamwoord",
+  "CTAG": "persoonlijk",
+  "L": "A1",
+  "NOTE": "familie",
+  "pairs": [
+   {
+    "q": "zij (mv.)",
+    "a": "они́"
+   },
+   {
+    "q": "zij zijn daar",
+    "a": "они́ там"
+   }
+  ]
+ },
+ {
+  "ID": "0009",
+  "ENTRY": "мой",
+  "CAT": "voornaamwoord",
+  "CTAG": "bezittelijk",
+  "L": "A1",
+  "NOTE": "Familie",
+  "pairs": [
+   {
+    "q": "mijn",
+    "a": "мой"
+   },
+   {
+    "q": "mijn huis",
+    "a": "мой дом"
+   }
+  ]
+ },
+ {
+  "ID": "0010",
+  "ENTRY": "твой",
+  "CAT": "voornaamwoord",
+  "CTAG": "bezittelijk",
+  "L": "A1",
+  "NOTE": "familie",
+  "pairs": [
+   {
+    "q": "jouw",
+    "a": "твой"
+   },
+   {
+    "q": "jouw kaartje",
+    "a": "твой биле́т"
+   }
+  ]
+ }
+]
