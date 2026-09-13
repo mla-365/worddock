@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- WordDock converter v2.0 — WD26 (2026-09-13) -->
+<!-- WordDock converter v2.1 — WD26, SUBCAT (2026-09-13) -->
 <!--
   A curator's tool, not part of the app. It is deliberately NOT linked from
   WordDock and knows nothing about scores, sync or study.
@@ -10,7 +10,7 @@
   published edition" a rule that can actually be kept.
 
   WD26 (since 2026-09-12): 26 columns, L first, A1 sentinel = "L". The six core
-  columns L, ID, ENTRY, CAT, CTAG, NOTE are published; anything beyond column 26
+  columns L, ID, ENTRY, CAT, SUBCAT, NOTE are published; anything beyond column 26
   (curators' working notes) never is. IDs are padded to 4 digits. The output is
   written in Python json.dumps style (space after colon and comma), so a
   regenerated file shows a git diff containing ONLY the words that changed.
@@ -144,7 +144,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:
 "use strict";
 
 const COLUMNS = [
-  "L","ID","ENTRY","CAT","CTAG","NOTE",
+  "L","ID","ENTRY","CAT","SUBCAT","NOTE",
   "Q1","A1","Q2","A2","Q3","A3","Q4","A4","Q5","A5",
   "Q6","A6","Q7","A7","Q8","A8","Q9","A9","Q10","A10"
 ];
@@ -164,7 +164,7 @@ function clean(v){
    hides the one word that actually changed. */
 function pyRow(row){
   const parts = [];
-  for (const k of ["ID","ENTRY","CAT","CTAG","L","NOTE"]){
+  for (const k of ["ID","ENTRY","CAT","SUBCAT","L","NOTE"]){
     parts.push(JSON.stringify(k) + ": " + JSON.stringify(row[k]));
   }
   const pairs = row.pairs
@@ -204,12 +204,12 @@ function convert(wb, filename){
   const aoa = XLSX.utils.sheet_to_json(sheet, { header:1, defval:null, raw:true });
   if (aoa.length < 2){ out.error = "The data sheet has a header but no rows."; return out; }
 
-  const header = aoa[0].map(h => clean(h) || "");
+  const header = aoa[0].map(h => clean(h) || "").map(h => h.toUpperCase() === "CTAG" ? "SUBCAT" : h);
   for (let i = 0; i < COLUMNS.length; i++){
     if (header[i] !== COLUMNS[i]){
       out.error = "Column " + (i+1) + " should be \u201C" + COLUMNS[i] +
                   "\u201D but is \u201C" + (header[i] || "empty") +
-                  "\u201D. The 26 columns must be in the WD26 order: L, ID, ENTRY, CAT, CTAG, NOTE, Q1, A1 \u2026 Q10, A10.";
+                  "\u201D. The 26 columns must be in the WD26 order: L, ID, ENTRY, CAT, SUBCAT, NOTE, Q1, A1 \u2026 Q10, A10.";
       return out;
     }
   }
@@ -243,7 +243,7 @@ function convert(wb, filename){
       ID: id,
       ENTRY: clean(arr[idx.ENTRY]) || "",
       CAT:   clean(arr[idx.CAT])   || "",
-      CTAG:  clean(arr[idx.CTAG])  || "",
+      SUBCAT: clean(arr[idx.SUBCAT]) || "",
       L:     clean(arr[idx.L])     || "",
       NOTE:  clean(arr[idx.NOTE])  || "",
       pairs: pairs

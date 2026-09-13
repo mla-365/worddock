@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.88";
+const WORDDOCK_VERSION = "v26.89";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1372,7 +1372,7 @@ function getRS(id){ return RS[id] || 0; }
    WordDock file = the 25-column SF25 shape, headers in row 1 starting with
    ID, ≥10 valid rows. The app reads ID + Q/A pairs + the grammatical tags;
    RS is NOT in the file (it lives only in localStorage). The app's internal
-   field names now match the SF25 column names directly (ID, ENTRY, CAT, CTAG,
+   field names now match the WD26 column names directly (ID, ENTRY, CAT, SUBCAT,
    L) — no adapter mapping; the old SEQ_ID/GRAMCAT/GRAMTAG/LEMMA/LEVEL names
    were retired in the 2026-07-10 rename pass.
    ════════════════════════════════════════════════════════════════════════ */
@@ -1381,13 +1381,21 @@ function getRS(id){ return RS[id] || 0; }
 /* WD26, final order (2026-09-12). L first: the curator decides the level bed
    BEFORE numbering the ID rail, and the file reads in that order. NOTE is a
    core column now (was UTAG, an "extra"): one writer per column — NOTE belongs
-   to teacher and student, CAT/CTAG/L to the curator. No pipes anywhere. */
+   to whoever curates the domain, like CAT/SUBCAT/L. No pipes anywhere.
+   v26.89: CTAG renamed SUBCAT (sub-category). SUBCAT and NOTE may carry several
+   tags separated by commas; tagsOf() is the one reader of that convention. */
 const COLUMNS = [
-  "L", "ID", "ENTRY", "CAT", "CTAG", "NOTE",
+  "L", "ID", "ENTRY", "CAT", "SUBCAT", "NOTE",
   "Q1","A1","Q2","A2","Q3","A3","Q4","A4","Q5","A5",
   "Q6","A6","Q7","A7","Q8","A8","Q9","A9","Q10","A10"
 ];
 const COL_INDEX = Object.fromEntries(COLUMNS.map((n, i) => [n, i]));
+
+/* Comma-separated tags in a cell, trimmed, empties dropped. Case is kept as
+   written; matching (the filter) folds case. "masculine, irregular" → two tags. */
+function tagsOf(cell){
+  return String(cell || "").split(",").map(t => t.trim()).filter(Boolean);
+}
 const MIN_VALID_ROWS = 10;
 
 /* Parse a WordDock xlsx file (File or ArrayBuffer).
@@ -1434,13 +1442,14 @@ async function parseWordDockXlsx(file){
     return { ok: false, error: "Data sheet is empty (header only)." };
   }
 
-  const header = aoa[0].map(h => h === null ? "" : String(h));
-  // Verify the canonical 25 columns (SF25) are present in order.
+  const header = aoa[0].map(h => h === null ? "" : String(h))
+    .map(h => h.trim().toUpperCase() === "CTAG" ? "SUBCAT" : h);   // v26.89: old header name forgiven
+  // Verify the canonical 26 columns (WD26) are present in order.
   for (let i = 0; i < COLUMNS.length; i++){
     if (header[i] !== COLUMNS[i]){
       return { ok: false, error:
         `Column ${i+1} should be "${COLUMNS[i]}" but is "${header[i] || "(empty)"}". ` +
-        `WordDock files use a fixed 26-column order: L, ID, ENTRY, CAT, CTAG, NOTE, Q1, A1 ... Q10, A10.` };
+        `WordDock files use a fixed 26-column order: L, ID, ENTRY, CAT, SUBCAT, NOTE, Q1, A1 ... Q10, A10.` };
     }
   }
   // Capture any extra columns beyond the canonical 25 (preserve through
@@ -1486,12 +1495,12 @@ async function parseWordDockXlsx(file){
     }
 
     // Build the row in the app's field names, which now equal the SF25
-    // column names directly (ID, CAT, CTAG, L, ENTRY). RS is NOT in the
+    // column names directly (ID, CAT, SUBCAT, L, ENTRY). RS is NOT in the
     // file — it lives only in localStorage, joined at runtime by (domain + ID).
     const row = {
       ID: idStr,
       CAT: arr[COL_INDEX.CAT]  ? String(arr[COL_INDEX.CAT])  : "",
-      CTAG: arr[COL_INDEX.CTAG] ? String(arr[COL_INDEX.CTAG]) : "",
+      SUBCAT: arr[COL_INDEX.SUBCAT] ? String(arr[COL_INDEX.SUBCAT]) : "",
       pairs,
         _preserved: {
         L: arr[COL_INDEX.L]     ?? null,
@@ -1559,7 +1568,7 @@ function parseFilename(rawName){
 /* Serialize the active list back to a WordDock xlsx (Blob).
    Uses the row's current localStorage RS, not the value that came in from file. */
 function serializeToXlsx(list, exportName){
-  // v26.87: the six core columns (L, ID, ENTRY, CAT, CTAG, NOTE) always round-trip;
+  // v26.87: the six core columns (L, ID, ENTRY, CAT, SUBCAT, NOTE) always round-trip;
   // extras (beyond column 26) ride along uninterpreted.
   const extras = [...(list.extraColumns || [])];
   // v26.80: NOTE is a core column; nothing is auto-appended. RS is NOT exported
@@ -1572,7 +1581,7 @@ function serializeToXlsx(list, exportName){
     arr[COL_INDEX.ID]    = row.ID;
     arr[COL_INDEX.ENTRY] = pres.ENTRY ?? null;
     arr[COL_INDEX.CAT]   = row.CAT || null;
-    arr[COL_INDEX.CTAG]  = row.CTAG || null;
+    arr[COL_INDEX.SUBCAT] = row.SUBCAT || null;
     arr[COL_INDEX.L]     = pres.L ?? null;
     arr[COL_INDEX.NOTE]  = pres.NOTE ?? null;
     for (let i = 0; i < 10; i++){
@@ -1675,7 +1684,7 @@ function saveLists(){
                         ...(anyExtras ? { extras } : {}) };
     } else {
       out[l.listId] = { ...base, mode: "rows", rows: l.rows.map(r => ({
-        ID: r.ID, CAT: r.CAT, CTAG: r.CTAG,
+        ID: r.ID, CAT: r.CAT, SUBCAT: r.SUBCAT,
         L: r._preserved.L, ENTRY: r._preserved.ENTRY, NOTE: r._preserved.NOTE ?? null,
         pairs: r.pairs,
         _extras: r._extras || null
@@ -1690,7 +1699,7 @@ function saveLists(){
    the engine must see one row shape everywhere, whatever the source). */
 function hydrateRow(r){
   return {
-    ID: r.ID, CAT: r.CAT || "", CTAG: r.CTAG || "",
+    ID: r.ID, CAT: r.CAT || "", SUBCAT: r.SUBCAT ?? r.CTAG ?? "",   // CTAG: lists stored before v26.89
     pairs: r.pairs || [],
     _preserved: { L: r.L ?? null, ENTRY: r.ENTRY ?? null, NOTE: r.NOTE ?? null },
     _extras: r._extras ?? null,
@@ -1739,7 +1748,7 @@ function resolveIdLists(domain, fullRows){
       // not the word — the same word may carry different marks in different
       // lists, and the shared Full-List row must never be polluted.
       return {
-        ID: base.ID, CAT: base.CAT, CTAG: base.CTAG,
+        ID: base.ID, CAT: base.CAT, SUBCAT: base.SUBCAT,
         pairs: base.pairs,
         _preserved: base._preserved,
         _extras: ex[id],
@@ -2545,12 +2554,11 @@ function render(){
   $card.classList.remove("deck-done");
   const s     = cur();
   const field = s.row.pairs[s.fi];
-  // CAT-CTAG, uppercase, hyphen-joined; or just CAT if no tag.
-  // WD26 pipe cut: only the part BEFORE "|" is shown; everything after is
-  // machine space for future filtering. Display is a lens — the full CTAG
-  // stays intact in data, storage, export and JSON.
+  // CAT · SUBCAT, or just CAT if no sub-category.
+  // CAT · SUBCAT, uppercase, as written (commas included). Order is fixed
+  // on purpose: stability over the odd Dutch reading (decided 2026-09-13).
   const cat = (s.row.CAT || "").toUpperCase();
-  const tag = (s.row.CTAG || "").split("|")[0].trim().toUpperCase();
+  const tag = (s.row.SUBCAT || "").trim().toUpperCase();
   $cardTag.textContent = tag ? cat + " \u00B7 " + tag : cat;
   if (showingA){
     if (peeking){
@@ -4029,11 +4037,11 @@ const aboutTopics = [
     'list\u2019s <b>content</b> - its words and cards - never your ' +
     'scores. For an import to be accepted it needs all of the following:</p>' +
     '<ol class="about-rules">' +
-    '<li>A sheet whose <b>cell A1 is literally <code>ID</code></b>.</li>' +
-    '<li>The <b>25 columns</b>, in order: <code>ID \u00B7 ENTRY \u00B7 CAT \u00B7 ' +
-    'CTAG \u00B7 L \u00B7 Q1 \u00B7 A1 \u00B7 \u2026 \u00B7 Q10 \u00B7 A10</code>.</li>' +
-    '<li>At least <b>10 rows</b> with <code>ID</code>, <code>Q1</code> and ' +
-    '<code>A1</code> filled.</li>' +
+    '<li>A sheet whose <b>header row is exactly these 26 columns</b>, in order - ' +
+    'so cell A1 reads <code>L</code>: <code>L \u00B7 ID \u00B7 ENTRY \u00B7 CAT \u00B7 ' +
+    'SUBCAT \u00B7 NOTE \u00B7 Q1 \u00B7 A1 \u00B7 \u2026 \u00B7 Q10 \u00B7 A10</code>.</li>' +
+    '<li>Rows with <code>ID</code>, <code>Q1</code> and <code>A1</code> filled - ' +
+    'other rows are skipped.</li>' +
     '<li>A filename shaped <b><code>DOMAIN_name.xlsx</code></b> - the domain, ' +
     'an underscore, then your name (e.g. <code>NL-RU_holiday.xlsx</code>). The ' +
     'filename is the list\u2019s identity.</li>' +
@@ -4615,9 +4623,9 @@ const FILE_RULES_HTML =
   "<ol class='dlg-rules'>" +
   "<li>A sheet whose <b>header row is exactly these 26 columns</b>, in order - " +
   "so cell A1 reads <code>L</code>:<br>" +
-  "<code>L · ID · ENTRY · CAT · CTAG · NOTE · Q1 · A1 · … · Q10 · A10</code></li>" +
-  "<li>At least <b>10 rows</b> where <code>ID</code>, <code>Q1</code> and " +
-  "<code>A1</code> are all filled.</li>" +
+  "<code>L · ID · ENTRY · CAT · SUBCAT · NOTE · Q1 · A1 · … · Q10 · A10</code></li>" +
+  "<li>Rows where <code>ID</code>, <code>Q1</code> and <code>A1</code> are all " +
+  "filled - other rows are skipped.</li>" +
   "<li>A filename shaped <b><code>DOMAIN_name.xlsx</code></b> - domain first, " +
   "then an underscore, then your list name. Like <code>NL-RU_Holiday.xlsx</code>." +
   "</li>" +
@@ -4665,7 +4673,7 @@ function normalizeEmbeddedRows(rawRows){
   return rawRows.map(r => ({
     ID:  r.ID,
     CAT: r.CAT || "",
-    CTAG: r.CTAG || "",
+    SUBCAT: r.SUBCAT ?? r.CTAG ?? "",   // CTAG: JSON published before v26.89
     pairs:   r.pairs || [],
     _preserved: {
       L: r.L || null,
