@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.87";
+const WORDDOCK_VERSION = "v26.88";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -4361,6 +4361,15 @@ $fileInput.addEventListener("change", async (e) => {
       "Import into " + domain + "?",
       "\u201C" + list.name + "\u201D will be added to " + domain +
       " and will share progress with the lists already there.",
+      "Import", "Cancel"
+    );
+  } else if (listsInDomain(domain).length){
+    // v26.88: a My domain that already holds lists is not "new". Same shape as
+    // the Catalog wording, so both kinds of domain are seen to work alike.
+    ok = await wdConfirm(
+      "Import into " + domain + "?",
+      "\u201C" + list.name + "\u201D will be added to " + domain +
+      ", one of your domains, and will share progress with the lists already there.",
       "Import", "Cancel"
     );
   } else {
