@@ -51,16 +51,14 @@ body{
 .wrap{max-width:720px;margin:0 auto}
 
 header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:28px}
-/* The app's brand lockup, centred, verbatim from index.html. */
-.brand{display:flex;align-items:center;justify-content:center;gap:3px;margin:6px 0 22px}
-.logo-badge{
-  width:40px;height:40px;border-radius:11px;
+h1{font-family:'Poppins',sans-serif;font-size:18px;font-weight:600;color:var(--ink);letter-spacing:.01em;display:flex;align-items:center;gap:2px}
+/* The app's W, inline and sized to the title. Remove the span to drop it. */
+.w-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:1.5em;height:1.5em;border-radius:.4em;
   background:var(--green);color:#fff;
-  display:flex;align-items:center;justify-content:center;
-  font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:25px;line-height:1;flex-shrink:0;
+  font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:1em;line-height:1;
 }
-.logo-word{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:20px;font-weight:400;color:var(--ink);letter-spacing:.01em}
-h1{font-family:'Poppins',sans-serif;font-size:18px;font-weight:600;color:var(--ink);letter-spacing:.01em}
 .sub{color:var(--muted);font-size:13px;margin-top:8px}
 
 /* The drop target is the whole interface until a file arrives. */
@@ -121,12 +119,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:
 <body>
 <div class="wrap">
 
-<div class="brand">
-  <span class="logo-badge">W</span><span class="logo-word">ordDock</span>
-</div>
-
 <header>
-  <h1>Converter</h1>
+  <h1><span class="w-badge">W</span>ordDock Converter</h1>
   <div class="sub">Excel is the source. This makes the published copy.</div>
 </header>
 
