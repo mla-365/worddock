@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.92";
+const WORDDOCK_VERSION = "v26.93";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -512,7 +512,13 @@ body{
   color:var(--btn-ink);
   outline:none;
   transition:background-color .12s;
+  /* Samsung/Chrome paints its own focus box on tap; suppress it and the
+     tap flash so Good/Again keep their shape when pressed. */
+  -webkit-tap-highlight-color:transparent;
+  -webkit-appearance:none;appearance:none;
+  -webkit-user-select:none;user-select:none;
 }
+.btn:focus,.btn:focus-visible,.btn:active{outline:none;box-shadow:none}
 .btn-again{background:var(--btn-again-bg)}
 .btn-good {background:var(--btn-good-bg)}
 .btn:hover{filter:brightness(1.15)}
