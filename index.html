@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.90";
+const WORDDOCK_VERSION = "v26.91";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1467,11 +1467,21 @@ function rowMatches(row, f){
   return FILTER_AXES.every(a => f[a.key] === null || rowValues(row, a.key).includes(f[a.key]));
 }
 function filteredRows(rows, f){ return f ? rows.filter(r => rowMatches(r, f)) : rows; }
-/* Every card of a domain, once (lists overlap by ID). Counts come from here. */
+/* Every row of every list in the domain. Lists overlap by ID (Full and a
+   teacher's copy carry the same words with different NOTEs), so counting must
+   see all rows and count IDs, not rows: a value's count = how many distinct
+   cards in the domain carry it, in any list. */
 function domainRows(domain){
-  const byId = new Map();
-  for (const l of listsInDomain(domain)) for (const r of l.rows) if (!byId.has(r.ID)) byId.set(r.ID, r);
-  return [...byId.values()];
+  const out = [];
+  for (const l of listsInDomain(domain)) for (const r of l.rows) out.push(r);
+  return out;
+}
+function domainCardCount(domain){
+  return new Set(domainRows(domain).map(r => r.ID)).size;
+}
+/* Distinct cards matching a filter across the domain's lists. */
+function domainMatchCount(domain, f){
+  return new Set(filteredRows(domainRows(domain), f).map(r => r.ID)).size;
 }
 function filterSummary(f){
   return FILTER_AXES.map(a => f[a.key]).filter(Boolean).join(" \u00B7 ");
@@ -2516,14 +2526,12 @@ async function loadDomainMaster(domain){
 /* ─── Deck construction (§5.7.1): take lowest-RS 10 ─── */
 function buildDeck(){
   // Phase 2: the domain's filter narrows the source; sorting is unchanged and
-  // the RS pool is untouched. An empty result must never reach the card — if a
-  // stored filter matches nothing in this list (its content changed under it),
-  // the filter is removed and the deck is built from everything.
+  // the RS pool is untouched. An empty result must never reach the card, so a
+  // filter that matches nothing in THIS list is ignored here (the deck is built
+  // from everything) and left in place: the browse side shows "0 in filter" on
+  // the row, and the list click and boot paths decide what to say about it.
   let src = filteredRows(ALL, getFilter(DOMAIN_RUNTIME));
-  if (!src.length && ALL.length){
-    setFilter(DOMAIN_RUNTIME, null);
-    src = ALL;
-  }
+  if (!src.length) src = ALL;
   const sorted = [...src].sort((a,b) => {
     const ra = getRS(a.ID), rb = getRS(b.ID);
     if (ra !== rb) return ra - rb;
@@ -3967,18 +3975,18 @@ function renderFilterPanel(){
   if (!filterDraft) filterDraft = getFilter(browserDomain) || emptyFilter();
   $filterPanel.innerHTML = "";
   for (const axis of FILTER_AXES){
-    const counts = new Map();   // folded → { label, n }
+    const counts = new Map();   // folded → { label, ids:Set }
     for (const r of rows){
       for (const v of rowValues(r, axis.key)){
         const raw = axis.key === "L" ? r.L : axis.key === "CAT" ? r.CAT :
                     axis.key === "SUBCAT" ? tagsOf(r.SUBCAT).find(t => fold(t) === v) :
                     tagsOf(r._preserved && r._preserved.NOTE).find(t => fold(t) === v);
-        const e = counts.get(v) || { label: String(raw || v).trim(), n: 0 };
-        e.n++; counts.set(v, e);
+        const e = counts.get(v) || { label: String(raw || v).trim(), ids: new Set() };
+        e.ids.add(r.ID); counts.set(v, e);
       }
     }
     if (!counts.size) continue;   // an axis nobody filled stays out of sight
-    const values = [...counts.entries()];
+    const values = [...counts.entries()].map(([v,e]) => [v, { label:e.label, n:e.ids.size }]);
     if (axis.key === "L") values.sort((a,b) => a[0] < b[0] ? -1 : 1);
     else values.sort((a,b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : 1));
 
@@ -3999,11 +4007,11 @@ function renderFilterPanel(){
     $filterPanel.appendChild(line);
   }
 
-  const n = filteredRows(rows, filterIsEmpty(filterDraft) ? null : filterDraft).length;
+  const n = domainMatchCount(browserDomain, filterIsEmpty(filterDraft) ? null : filterDraft);
   const foot = document.createElement("div"); foot.className = "filter-foot";
   const count = document.createElement("div");
   count.className = "filter-count" + (n === 0 ? " zero" : "");
-  count.textContent = filterIsEmpty(filterDraft) ? "All " + rows.length + " cards"
+  count.textContent = filterIsEmpty(filterDraft) ? "All " + domainCardCount(browserDomain) + " cards"
                     : (n === 0 ? "No cards match" : n + " card" + (n === 1 ? "" : "s") + " match");
   const btns = document.createElement("div"); btns.style.display = "flex"; btns.style.gap = "8px";
   const all = document.createElement("button"); all.type = "button";
@@ -4036,8 +4044,15 @@ async function applyFilter(f){
   setFilter(domain, f);
   filterPanelOpen = false;
   filterDraft = null;
-  if (studiedHere) initDeck();
-  setListMessage(filterIsEmpty(f) ? "Filter removed - all cards." : "Filter on: " + filterSummary(f), "success");
+  // The studied list may hold none of the selection (a teacher's tags live in
+  // his copy, not in Full). Then the deck is left alone and the person is
+  // pointed at the rows, where the list that matches is the one not dimmed.
+  const noneHere = studiedHere && !filterIsEmpty(f) && filteredRows(ALL, f).length === 0;
+  if (studiedHere && !noneHere) initDeck();
+  setListMessage(
+    filterIsEmpty(f) ? "Filter removed - all cards."
+    : noneHere ? "Filter on: " + filterSummary(f) + " - no matching cards in \u201C" + activeListName + "\u201D; pick a list below."
+    : "Filter on: " + filterSummary(f), noneHere ? "error" : "success");
   renderBrowserLists();
 }
 
@@ -4974,6 +4989,14 @@ function readLastList(){
   // Resume the last list if it still exists; otherwise the domain's Full.
   const resume = (wanted && LISTS[wanted]) ? wanted : ("embedded_" + bootDomain);
   switchActiveList(resume);
+  // Phase 2: a stored filter that matches nothing in the resumed list (its
+  // content changed under it) is removed here, out loud, rather than left to
+  // contradict the deck.
+  { const f = getFilter(DOMAIN_RUNTIME);
+    if (f && filteredRows(ALL, f).length === 0){
+      setFilter(DOMAIN_RUNTIME, null);
+      showStudyToast("Filter removed: no matching cards in " + activeListName);
+    } }
   handleKeyLink();   // 3b: arrived via a scanned QR?
 
   // If this boot is a REFRESH that happened while the user was in the browser,
