@@ -23,7 +23,7 @@
    The result: offline works, and a deploy still reaches everyone the next time
    they open the app with a connection. */
 
-const VERSION    = "wd-2026-09-08";
+const VERSION    = "wd-2026-09-19";
 const SHELL      = "wd-shell-" + VERSION;   // the app + its data
 const IMMUTABLE  = "wd-static-" + VERSION;  // fonts, icons
 

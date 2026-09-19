@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- WordDock converter v2.1 — WD26, SUBCAT (2026-09-13) -->
+<!-- WordDock converter v2.2 — WD26 final names SEG · ID · ENT · CAT · SUB · TAG (2026-09-19) -->
 <!--
   A curator's tool, not part of the app. It is deliberately NOT linked from
   WordDock and knows nothing about scores, sync or study.
@@ -9,9 +9,11 @@
   session with Claude. That is what makes "Excel is the source, JSON is the
   published edition" a rule that can actually be kept.
 
-  WD26 (since 2026-09-12): 26 columns, L first, A1 sentinel = "L". The six core
-  columns L, ID, ENTRY, CAT, SUBCAT, NOTE are published; anything beyond column 26
-  (curators' working notes) never is. IDs are padded to 4 digits. The output is
+  WD26 (final names 2026-09-19): 26 columns, SEG first, A1 sentinel = "SEG". The
+  six core columns SEG, ID, ENT, CAT, SUB, TAG are published; anything beyond
+  column 26 (curators' working notes) never is. IDs are padded to 4 digits. SEG
+  is one digit 1-9 then one letter (no I, no O); another shape is reported, not
+  refused. The output is
   written in Python json.dumps style (space after colon and comma), so a
   regenerated file shows a git diff containing ONLY the words that changed.
   This is the only converter (the Python script was retired 2026-09-13).
@@ -153,11 +155,12 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:
 "use strict";
 
 const COLUMNS = [
-  "L","ID","ENTRY","CAT","SUBCAT","NOTE",
+  "SEG","ID","ENT","CAT","SUB","TAG",
   "Q1","A1","Q2","A2","Q3","A3","Q4","A4","Q5","A5",
   "Q6","A6","Q7","A7","Q8","A8","Q9","A9","Q10","A10"
 ];
 const MIN_ROWS = 10;
+const SEG_SHAPE = /^[1-9][A-HJ-NP-Z]$/i;   // the one shape of a segment value
 
 /* Cell -> trimmed string, or null when empty. */
 function clean(v){
@@ -173,7 +176,7 @@ function clean(v){
    hides the one word that actually changed. */
 function pyRow(row){
   const parts = [];
-  for (const k of ["ID","ENTRY","CAT","SUBCAT","L","NOTE"]){
+  for (const k of ["SEG","ID","ENT","CAT","SUB","TAG"]){
     parts.push(JSON.stringify(k) + ": " + JSON.stringify(row[k]));
   }
   const pairs = row.pairs
@@ -195,30 +198,31 @@ function parseFilename(raw){
 
 function convert(wb, filename){
   const out = { ok:false, error:null, rows:[], skipped:[], domain:null,
-                name:null, metaDomain:null, sheet:null, railWarnings:[] };
+                name:null, metaDomain:null, sheet:null, railWarnings:[], segWarnings:[] };
 
-  // The data sheet is the first one whose A1 is literally "L" (WD26).
-  // Old SF25 files (A1 = "ID") are refused on purpose: deliberate break, 2026-09-12.
+  // The data sheet is the first one whose A1 is literally "SEG" (WD26 final names).
+  // Older files (A1 = "L" or "ID") are refused on purpose: deliberate break,
+  // 2026-09-12 and again 2026-09-19 — re-head the workbook, then drop it again.
   let sheet = null;
   for (const nm of wb.SheetNames){
     const a1 = wb.Sheets[nm]["A1"];
-    if (a1 && clean(a1.v) === "L"){ sheet = wb.Sheets[nm]; out.sheet = nm; break; }
+    if (a1 && clean(a1.v) === "SEG"){ sheet = wb.Sheets[nm]; out.sheet = nm; break; }
   }
   if (!sheet){
-    out.error = "No WD26 data sheet found. One sheet must have \u201CL\u201D in cell A1 " +
-                "(older files with \u201CID\u201D in A1 are not accepted any more).";
+    out.error = "No WD26 data sheet found. One sheet must have \u201CSEG\u201D in cell A1 " +
+                "(older files with \u201CL\u201D or \u201CID\u201D in A1 are not accepted any more).";
     return out;
   }
 
   const aoa = XLSX.utils.sheet_to_json(sheet, { header:1, defval:null, raw:true });
   if (aoa.length < 2){ out.error = "The data sheet has a header but no rows."; return out; }
 
-  const header = aoa[0].map(h => clean(h) || "").map(h => h.toUpperCase() === "CTAG" ? "SUBCAT" : h);
+  const header = aoa[0].map(h => clean(h) || "");
   for (let i = 0; i < COLUMNS.length; i++){
     if (header[i] !== COLUMNS[i]){
       out.error = "Column " + (i+1) + " should be \u201C" + COLUMNS[i] +
                   "\u201D but is \u201C" + (header[i] || "empty") +
-                  "\u201D. The 26 columns must be in the WD26 order: L, ID, ENTRY, CAT, SUBCAT, NOTE, Q1, A1 \u2026 Q10, A10.";
+                  "\u201D. The 26 columns must be in the WD26 order: SEG, ID, ENT, CAT, SUB, TAG, Q1, A1 \u2026 Q10, A10.";
       return out;
     }
   }
@@ -249,12 +253,12 @@ function convert(wb, filename){
     }
 
     out.rows.push({
-      ID: id,
-      ENTRY: clean(arr[idx.ENTRY]) || "",
-      CAT:   clean(arr[idx.CAT])   || "",
-      SUBCAT: clean(arr[idx.SUBCAT]) || "",
-      L:     clean(arr[idx.L])     || "",
-      NOTE:  clean(arr[idx.NOTE])  || "",
+      SEG: clean(arr[idx.SEG]) || "",
+      ID:  id,
+      ENT: clean(arr[idx.ENT]) || "",
+      CAT: clean(arr[idx.CAT]) || "",
+      SUB: clean(arr[idx.SUB]) || "",
+      TAG: clean(arr[idx.TAG]) || "",
       pairs: pairs
     });
   }
@@ -265,16 +269,22 @@ function convert(wb, filename){
     return out;
   }
 
-  // 10c: the two rails must agree. The app introduces cards in ID order and L
-  // labels that order; if L goes down while ID goes up, the curator numbered
-  // against their own levels. Warn loudly; publishing stays the curator's call.
-  let prevL = "", prevId = "";
+  // 10c: the two rails must agree. The app introduces cards in ID order and SEG
+  // labels that order; if SEG goes down while ID goes up, the curator numbered
+  // against their own segments. Warn loudly; publishing stays the curator's call.
+  let prevSeg = "", prevId = "";
   for (const row of [...out.rows].sort((a,b) => a.ID < b.ID ? -1 : a.ID > b.ID ? 1 : 0)){
-    const L = (row.L || "").toUpperCase();
-    if (L && prevL && L < prevL){
-      out.railWarnings.push(row.ID + " is " + L + " but comes after " + prevId + " (" + prevL + ")");
+    const seg = (row.SEG || "").toUpperCase();
+    if (seg && prevSeg && seg < prevSeg){
+      out.railWarnings.push(row.ID + " is " + seg + " but comes after " + prevId + " (" + prevSeg + ")");
     }
-    if (L){ prevL = L; prevId = row.ID; }
+    if (seg){ prevSeg = seg; prevId = row.ID; }
+  }
+
+  // SEG has one shape: digit 1-9, then a letter that cannot be misread as a
+  // digit. Reported as a whole; the rows are published as written.
+  for (const row of out.rows){
+    if (row.SEG && !SEG_SHAPE.test(row.SEG)) out.segWarnings.push(row.ID + " has \u201C" + row.SEG + "\u201D");
   }
 
   // Identity from the filename — never from Metadata.
@@ -356,10 +366,20 @@ function handle(file){
         esc(res.metaDomain) + '</b>. The filename wins, so this will be saved as ' +
         esc(outName) + '. If that is wrong, rename the file and drop it again.</p>';
     }
+    if (res.segWarnings.length){
+      notes += '<p class="note warn">' + res.segWarnings.length +
+        ' row' + (res.segWarnings.length === 1 ? "" : "s") +
+        ' carry a SEG value that is not one digit 1-9 followed by one letter (no I, no O). ' +
+        'They are published as written; the app\u2019s Segment filter will show them as written too.</p>' +
+        '<ul class="skips">' +
+        res.segWarnings.slice(0,12).map(s => "<li>" + esc(s) + "</li>").join("") +
+        (res.segWarnings.length > 12 ? "<li>\u2026 and " + (res.segWarnings.length-12) + " more</li>" : "") +
+        '</ul>';
+    }
     if (res.railWarnings.length){
-      notes += '<p class="note warn">L goes down while ID goes up in ' + res.railWarnings.length +
+      notes += '<p class="note warn">SEG goes down while ID goes up in ' + res.railWarnings.length +
         ' place' + (res.railWarnings.length === 1 ? "" : "s") +
-        '. The app introduces cards in ID order, so these levels will be met out of sequence. ' +
+        '. The app introduces cards in ID order, so these segments will be met out of sequence. ' +
         'Check the numbering before publishing.</p>' +
         '<ul class="skips">' +
         res.railWarnings.slice(0,12).map(s => "<li>" + esc(s) + "</li>").join("") +

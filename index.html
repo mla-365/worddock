@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.94";
+const WORDDOCK_VERSION = "v26.95";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -469,6 +469,7 @@ body{
   line-height:1.5;
   font-weight:400;
   word-break:break-word;
+  white-space:pre-line;        /* v26.95: a line break typed in a cell is a line break on the card */
   text-align:center;
   width:100%;
   max-height:100%;
@@ -1411,26 +1412,34 @@ function getRS(id){ return RS[id] || 0; }
 /* ════════════════════════════════════════════════════════════════════════
    LAYER 2 — Excel I/O
    WordDock file = the 26-column WD26 shape, headers in row 1 starting with
-   L. Rows without ID, Q1 and A1 are skipped. The app reads ID + Q/A pairs + the grammatical tags;
+   SEG. Rows without ID, Q1 and A1 are skipped. The app reads ID + Q/A pairs + the grammatical tags;
    RS is NOT in the file (it lives only in localStorage). The app's internal
-   field names now match the WD26 column names directly (ID, ENTRY, CAT, SUBCAT,
-   L) — no adapter mapping; the old SEQ_ID/GRAMCAT/GRAMTAG/LEMMA/LEVEL names
-   were retired in the 2026-07-10 rename pass.
+   field names match the WD26 column names directly (SEG, ID, ENT, CAT, SUB,
+   TAG) — no adapter mapping. Final names since v26.95 (2026-09-19); the
+   2026-07-10 pass retired SEQ_ID/GRAMCAT/GRAMTAG/LEMMA/LEVEL, the 2026-09
+   passes retired CTAG/UTAG, then L/ENTRY/SUBCAT/NOTE.
    ════════════════════════════════════════════════════════════════════════ */
 
 /* Canonical 26-column WD26 order — the authoritative shape. */
-/* WD26, final order (2026-09-12). L first: the curator decides the level bed
-   BEFORE numbering the ID rail, and the file reads in that order. NOTE is a
-   core column: one writer per column — NOTE belongs
-   to whoever curates the domain, like CAT/SUBCAT/L. No pipes anywhere.
-   SUBCAT and NOTE may carry several tags separated by commas; tagsOf() is the
-   one reader of that convention. */
+/* WD26, final names (2026-09-19). SEG first: the curator decides the segment
+   bed BEFORE numbering the ID rail, and the file reads in that order.
+   SEG is WordDock's own chain, not CEFR: one digit 1-9 then one letter (no I,
+   no O) — "1A", "3F". The digit is the coarse segment, the letter the step
+   inside it; gates (which forms a lemma's rows carry) are positions on this
+   chain, set per domain by the curator.
+   TAG is a core column anyone may write (curator, teacher, student) — one
+   vocabulary: short tokens, comma-separated; the filter turns each into a chip.
+   SUB and TAG may carry several tags separated by commas; tagsOf() is the one
+   reader of that convention. No pipes anywhere. */
 const COLUMNS = [
-  "L", "ID", "ENTRY", "CAT", "SUBCAT", "NOTE",
+  "SEG", "ID", "ENT", "CAT", "SUB", "TAG",
   "Q1","A1","Q2","A2","Q3","A3","Q4","A4","Q5","A5",
   "Q6","A6","Q7","A7","Q8","A8","Q9","A9","Q10","A10"
 ];
 const COL_INDEX = Object.fromEntries(COLUMNS.map((n, i) => [n, i]));
+/* The SEG shape: digit 1-9, then a letter that cannot be misread as a digit.
+   A warning, never a block — against determination one can only warn. */
+const SEG_SHAPE = /^[1-9][A-HJ-NP-Z]$/i;
 
 /* Comma-separated tags in a cell, trimmed, empties dropped. Case is kept as
    written; matching (the filter) folds case. "masculine, irregular" → two tags. */
@@ -1439,23 +1448,28 @@ function tagsOf(cell){
 }
 
 /* ── Phase 2: one filter per DOMAIN ─────────────────────────────────────────
-   { L, CAT, SUBCAT, NOTE } — each null ("all") or a case-folded value. All four
+   { SEG, CAT, SUB, TAG } — each null ("all") or a case-folded value. All four
    null = no filter = the key is absent = today's behaviour. The filter lives on
    the browse side and in wd_filter_<DOMAIN>; the study side only feels it
    through buildDeck(). RS is never touched by a filter. */
 const FILTER_AXES = [
-  { key:"L",      label:"Level" },
+  { key:"SEG",    label:"Segment" },
   { key:"CAT",    label:"Category" },
-  { key:"SUBCAT", label:"Subcategory" },
-  { key:"NOTE",   label:"Note" }
+  { key:"SUB",    label:"Subcategory" },
+  { key:"TAG",    label:"Tag" }
 ];
 function filterKey(domain){ return "wd_filter_" + domain; }
-function emptyFilter(){ return { L:null, CAT:null, SUBCAT:null, NOTE:null }; }
+function emptyFilter(){ return { SEG:null, CAT:null, SUB:null, TAG:null }; }
 function filterIsEmpty(f){ return !f || FILTER_AXES.every(a => f[a.key] === null); }
 function getFilter(domain){
   try {
     const f = JSON.parse(localStorage.getItem(filterKey(domain)));
-    return (f && !filterIsEmpty(f)) ? { ...emptyFilter(), ...f } : null;
+    if (!f) return null;
+    const g = emptyFilter();                       // axes only: a stale key from an
+    for (const a of FILTER_AXES){                  // older column name never leaks in
+      if (f[a.key] !== undefined && f[a.key] !== null) g[a.key] = f[a.key];
+    }
+    return filterIsEmpty(g) ? null : g;
   } catch { return null; }
 }
 function setFilter(domain, f){
@@ -1465,12 +1479,12 @@ function setFilter(domain, f){
   } catch {}
 }
 function fold(v){ return String(v || "").trim().toLowerCase(); }
-/* The values a row offers per axis, case-folded. L and CAT are one value;
-   SUBCAT and NOTE are comma-separated tags. */
+/* The values a row offers per axis, case-folded. SEG and CAT are one value;
+   SUB and TAG are comma-separated tags. */
 function rowValues(row, key){
-  if (key === "L")   return [fold(row.L)].filter(Boolean);
+  if (key === "SEG") return [fold(row.SEG)].filter(Boolean);
   if (key === "CAT") return [fold(row.CAT)].filter(Boolean);
-  const cell = key === "SUBCAT" ? row.SUBCAT : (row._preserved && row._preserved.NOTE);
+  const cell = key === "SUB" ? row.SUB : (row._preserved && row._preserved.TAG);
   return tagsOf(cell).map(fold);
 }
 function rowMatches(row, f){
@@ -1479,7 +1493,7 @@ function rowMatches(row, f){
 }
 function filteredRows(rows, f){ return f ? rows.filter(r => rowMatches(r, f)) : rows; }
 /* Every row of every list in the domain. Lists overlap by ID (Full and a
-   teacher's copy carry the same words with different NOTEs), so counting must
+   teacher's copy carry the same words with different TAGs), so counting must
    see all rows and count IDs, not rows: a value's count = how many distinct
    cards in the domain carry it, in any list. */
 function domainRows(domain){
@@ -1516,13 +1530,13 @@ async function parseWordDockXlsx(file){
     return { ok: false, error: "Not a readable .xlsx file: " + e.message };
   }
 
-  // Find the first sheet whose A1 cell is "L" (WD26 final order)
+  // Find the first sheet whose A1 cell is "SEG" (WD26 final names)
   let dataSheet = null;
   let dataSheetName = null;
   for (const name of wb.SheetNames){
     const sheet = wb.Sheets[name];
     const a1 = sheet["A1"];
-    if (a1 && a1.v === "L"){
+    if (a1 && String(a1.v).trim() === "SEG"){
       dataSheet = sheet;
       dataSheetName = name;
       break;
@@ -1530,7 +1544,7 @@ async function parseWordDockXlsx(file){
   }
   if (!dataSheet){
     return { ok: false, error:
-      "No data sheet found. A WordDock file must have a sheet whose A1 cell is \"L\"." };
+      "No data sheet found. A WordDock file must have a sheet whose A1 cell is \"SEG\"." };
   }
 
   // Convert to row-of-arrays form, preserving the header row.
@@ -1549,7 +1563,7 @@ async function parseWordDockXlsx(file){
     if (header[i] !== COLUMNS[i]){
       return { ok: false, error:
         `Column ${i+1} should be "${COLUMNS[i]}" but is "${header[i] || "(empty)"}". ` +
-        `WordDock files use a fixed 26-column order: L, ID, ENTRY, CAT, SUBCAT, NOTE, Q1, A1 ... Q10, A10.` };
+        `WordDock files use a fixed 26-column order: SEG, ID, ENT, CAT, SUB, TAG, Q1, A1 ... Q10, A10.` };
     }
   }
   // Capture any extra columns beyond the canonical 26 (preserve through
@@ -1595,17 +1609,17 @@ async function parseWordDockXlsx(file){
     }
 
     // Build the row in the app's field names, which equal the WD26
-    // column names directly (ID, CAT, SUBCAT, L, ENTRY). RS is NOT in the
+    // column names directly (ID, CAT, SUB, SEG, ENT, TAG). RS is NOT in the
     // file — it lives only in localStorage, joined at runtime by (domain + ID).
     const row = {
       ID: idStr,
       CAT: arr[COL_INDEX.CAT]  ? String(arr[COL_INDEX.CAT])  : "",
-      SUBCAT: arr[COL_INDEX.SUBCAT] ? String(arr[COL_INDEX.SUBCAT]) : "",
+      SUB: arr[COL_INDEX.SUB] ? String(arr[COL_INDEX.SUB]) : "",
       pairs,
         _preserved: {
-        L: arr[COL_INDEX.L]     ?? null,
-        ENTRY: arr[COL_INDEX.ENTRY] ?? null,
-        NOTE: arr[COL_INDEX.NOTE] ?? null
+        SEG: arr[COL_INDEX.SEG] ?? null,
+        ENT: arr[COL_INDEX.ENT] ?? null,
+        TAG: arr[COL_INDEX.TAG] ?? null
       },
       // WD26 no-wipe: values beyond the canonical 26 are CARRIED, never
       // interpreted. null when the file has no extra columns.
@@ -1613,10 +1627,22 @@ async function parseWordDockXlsx(file){
         ? extraOffsets.map(i =>
             (arr[i] === undefined || arr[i] === null || arr[i] === "") ? null : arr[i])
         : null,
-      // Convenience: L is on the row for filtering.
-      get L(){ return this._preserved.L; }
+      // Convenience: SEG is on the row for filtering.
+      get SEG(){ return this._preserved.SEG; }
     };
     rows.push(row);
+  }
+
+  // v26.95: SEG has one shape — digit 1-9, then a letter (no I, no O). Anything
+  // else still imports; it is reported once, as a whole, never row by row.
+  {
+    const off = rows.filter(r => r.SEG !== null && r.SEG !== "" && !SEG_SHAPE.test(String(r.SEG).trim()));
+    if (off.length){
+      const ex = off[0];
+      warnings.push(`${off.length} row${off.length === 1 ? "" : "s"} carry a SEG value that is not ` +
+        `one digit 1-9 followed by one letter (no I or O) — e.g. ${ex.ID} has "${ex.SEG}". ` +
+        `They are imported as written; the Segment filter will show them as written too.`);
+    }
   }
 
   if (rows.length < MIN_VALID_ROWS){
@@ -1668,22 +1694,22 @@ function parseFilename(rawName){
 /* Serialize the active list back to a WordDock xlsx (Blob).
    Uses the row's current localStorage RS, not the value that came in from file. */
 function serializeToXlsx(list, exportName){
-  // v26.87: the six core columns (L, ID, ENTRY, CAT, SUBCAT, NOTE) always round-trip;
+  // v26.87: the six core columns (SEG, ID, ENT, CAT, SUB, TAG) always round-trip;
   // extras (beyond column 26) ride along uninterpreted.
   const extras = [...(list.extraColumns || [])];
-  // v26.80: NOTE is a core column; nothing is auto-appended. RS is NOT exported
+  // v26.80: TAG is a core column; nothing is auto-appended. RS is NOT exported
   // (decided 2026-09-12): the key is the RS channel, Excel carries content only.
   const headers = [...COLUMNS, ...extras];
   const aoa = [headers];
   for (const row of list.rows){
     const arr = new Array(headers.length).fill(null);
     const pres = row._preserved || {};
-    arr[COL_INDEX.ID]    = row.ID;
-    arr[COL_INDEX.ENTRY] = pres.ENTRY ?? null;
-    arr[COL_INDEX.CAT]   = row.CAT || null;
-    arr[COL_INDEX.SUBCAT] = row.SUBCAT || null;
-    arr[COL_INDEX.L]     = pres.L ?? null;
-    arr[COL_INDEX.NOTE]  = pres.NOTE ?? null;
+    arr[COL_INDEX.ID]  = row.ID;
+    arr[COL_INDEX.ENT] = pres.ENT ?? null;
+    arr[COL_INDEX.CAT] = row.CAT || null;
+    arr[COL_INDEX.SUB] = row.SUB || null;
+    arr[COL_INDEX.SEG] = pres.SEG ?? null;
+    arr[COL_INDEX.TAG] = pres.TAG ?? null;
     for (let i = 0; i < 10; i++){
       const p = row.pairs[i];
       arr[COL_INDEX["Q"+(i+1)]] = p ? p.q : null;
@@ -1700,6 +1726,13 @@ function serializeToXlsx(list, exportName){
     aoa.push(arr);
   }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // v26.95: every written cell is Text ("@"), so a later edit in Excel keeps
+  // 0001 as 0001 and a leading + or - as a character, not a formula. Empty
+  // cells cannot carry a format in this build; the whole-sheet rule stays in
+  // the curator's hands for those (Select all → Format Cells → Text).
+  for (const addr of Object.keys(ws)){
+    if (addr[0] !== "!") ws[addr].z = "@";
+  }
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "1");
 
@@ -1784,8 +1817,8 @@ function saveLists(){
                         ...(anyExtras ? { extras } : {}) };
     } else {
       out[l.listId] = { ...base, mode: "rows", rows: l.rows.map(r => ({
-        ID: r.ID, CAT: r.CAT, SUBCAT: r.SUBCAT,
-        L: r._preserved.L, ENTRY: r._preserved.ENTRY, NOTE: r._preserved.NOTE ?? null,
+        ID: r.ID, CAT: r.CAT, SUB: r.SUB,
+        SEG: r._preserved.SEG, ENT: r._preserved.ENT, TAG: r._preserved.TAG ?? null,
         pairs: r.pairs,
         _extras: r._extras || null
       })) };
@@ -1799,11 +1832,11 @@ function saveLists(){
    the engine must see one row shape everywhere, whatever the source). */
 function hydrateRow(r){
   return {
-    ID: r.ID, CAT: r.CAT || "", SUBCAT: r.SUBCAT || "",
+    ID: r.ID, CAT: r.CAT || "", SUB: r.SUB || "",
     pairs: r.pairs || [],
-    _preserved: { L: r.L ?? null, ENTRY: r.ENTRY ?? null, NOTE: r.NOTE ?? null },
+    _preserved: { SEG: r.SEG ?? null, ENT: r.ENT ?? null, TAG: r.TAG ?? null },
     _extras: r._extras ?? null,
-    get L(){ return this._preserved.L; }
+    get SEG(){ return this._preserved.SEG; }
   };
 }
 
@@ -1848,11 +1881,11 @@ function resolveIdLists(domain, fullRows){
       // not the word — the same word may carry different marks in different
       // lists, and the shared Full row must never be polluted.
       return {
-        ID: base.ID, CAT: base.CAT, SUBCAT: base.SUBCAT,
+        ID: base.ID, CAT: base.CAT, SUB: base.SUB,
         pairs: base.pairs,
         _preserved: base._preserved,
         _extras: ex[id],
-        get L(){ return this._preserved.L; }
+        get SEG(){ return this._preserved.SEG; }
       };
     }).filter(Boolean);
     if (rows.length){
@@ -2661,11 +2694,11 @@ function render(){
   $card.classList.remove("deck-done");
   const s     = cur();
   const field = s.row.pairs[s.fi];
-  // CAT · SUBCAT, or just CAT if no sub-category.
-  // CAT · SUBCAT, uppercase, as written (commas included). Order is fixed
+  // CAT · SUB, or just CAT if no sub-category.
+  // CAT · SUB, uppercase, as written (commas included). Order is fixed
   // on purpose: stability over the odd Dutch reading (decided 2026-09-13).
   const cat = (s.row.CAT || "").toUpperCase();
-  const tag = (s.row.SUBCAT || "").trim().toUpperCase();
+  const tag = (s.row.SUB || "").trim().toUpperCase();
   $cardTag.textContent = tag ? cat + " \u00B7 " + tag : cat;
   if (showingA){
     if (peeking){
@@ -3989,16 +4022,16 @@ function renderFilterPanel(){
     const counts = new Map();   // folded → { label, ids:Set }
     for (const r of rows){
       for (const v of rowValues(r, axis.key)){
-        const raw = axis.key === "L" ? r.L : axis.key === "CAT" ? r.CAT :
-                    axis.key === "SUBCAT" ? tagsOf(r.SUBCAT).find(t => fold(t) === v) :
-                    tagsOf(r._preserved && r._preserved.NOTE).find(t => fold(t) === v);
+        const raw = axis.key === "SEG" ? r.SEG : axis.key === "CAT" ? r.CAT :
+                    axis.key === "SUB" ? tagsOf(r.SUB).find(t => fold(t) === v) :
+                    tagsOf(r._preserved && r._preserved.TAG).find(t => fold(t) === v);
         const e = counts.get(v) || { label: String(raw || v).trim(), ids: new Set() };
         e.ids.add(r.ID); counts.set(v, e);
       }
     }
     if (!counts.size) continue;   // an axis nobody filled stays out of sight
     const values = [...counts.entries()].map(([v,e]) => [v, { label:e.label, n:e.ids.size }]);
-    if (axis.key === "L") values.sort((a,b) => a[0] < b[0] ? -1 : 1);
+    if (axis.key === "SEG") values.sort((a,b) => a[0] < b[0] ? -1 : 1);
     else values.sort((a,b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : 1));
 
     const line = document.createElement("div"); line.className = "filter-axis";
@@ -4282,8 +4315,8 @@ const aboutTopics = [
     'scores. For an import to be accepted it needs all of the following:</p>' +
     '<ol class="about-rules">' +
     '<li>A sheet whose <b>header row is exactly these 26 columns</b>, in order - ' +
-    'so cell A1 reads <code>L</code>: <code>L \u00B7 ID \u00B7 ENTRY \u00B7 CAT \u00B7 ' +
-    'SUBCAT \u00B7 NOTE \u00B7 Q1 \u00B7 A1 \u00B7 \u2026 \u00B7 Q10 \u00B7 A10</code>.</li>' +
+    'so cell A1 reads <code>SEG</code>: <code>SEG \u00B7 ID \u00B7 ENT \u00B7 CAT \u00B7 ' +
+    'SUB \u00B7 TAG \u00B7 Q1 \u00B7 A1 \u00B7 \u2026 \u00B7 Q10 \u00B7 A10</code>.</li>' +
     '<li>Rows with <code>ID</code>, <code>Q1</code> and <code>A1</code> filled - ' +
     'other rows are skipped.</li>' +
     '<li>A filename shaped <b><code>DOMAIN_name.xlsx</code></b> - the domain, ' +
@@ -4503,7 +4536,7 @@ function showBrowserPane(pane){
    own file must not collide with itself. And a matching ID with a matching
    word is not a clash - that's the same word, which is the whole point. */
 async function findIdClashes(incoming, domain){
-  const known = new Map();     // ID -> ENTRY, as the domain already understands it
+  const known = new Map();     // ID -> ENT, as the domain already understands it
 
   // The curated master defines the domain's vocabulary — load it if needed.
   if (isCurated(domain) && !LISTS["embedded_" + domain]){
@@ -4522,14 +4555,14 @@ async function findIdClashes(incoming, domain){
     if (l.domain !== domain) continue;
     if (l.listId === incoming.listId) continue;          // the one being replaced
     for (const r of l.rows){
-      const entry = r._preserved ? r._preserved.ENTRY : null;
+      const entry = r._preserved ? r._preserved.ENT : null;
       if (r.ID && entry && !known.has(r.ID)) known.set(r.ID, entry);
     }
   }
 
   let count = 0, example = "";
   for (const r of incoming.rows){
-    const entry = r._preserved ? r._preserved.ENTRY : null;
+    const entry = r._preserved ? r._preserved.ENT : null;
     const seen  = known.get(r.ID);
     if (seen && entry && seen !== entry){
       count++;
@@ -4867,8 +4900,8 @@ document.querySelector("#aboutbrowser .browser-head-rail").addEventListener("cli
 const FILE_RULES_HTML =
   "<ol class='dlg-rules'>" +
   "<li>A sheet whose <b>header row is exactly these 26 columns</b>, in order - " +
-  "so cell A1 reads <code>L</code>:<br>" +
-  "<code>L · ID · ENTRY · CAT · SUBCAT · NOTE · Q1 · A1 · … · Q10 · A10</code></li>" +
+  "so cell A1 reads <code>SEG</code>:<br>" +
+  "<code>SEG · ID · ENT · CAT · SUB · TAG · Q1 · A1 · … · Q10 · A10</code></li>" +
   "<li>Rows where <code>ID</code>, <code>Q1</code> and <code>A1</code> are all " +
   "filled - other rows are skipped.</li>" +
   "<li>A filename shaped <b><code>DOMAIN_name.xlsx</code></b> - domain first, " +
@@ -4918,15 +4951,15 @@ function normalizeEmbeddedRows(rawRows){
   return rawRows.map(r => ({
     ID:  r.ID,
     CAT: r.CAT || "",
-    SUBCAT: r.SUBCAT || "",
+    SUB: r.SUB || "",
     pairs:   r.pairs || [],
     _preserved: {
-      L: r.L || null,
-      ENTRY: r.ENTRY || null,
-      NOTE: r.NOTE || null      // v26.87: NOTE travels on every road (catalog JSON, storage, Excel)
+      SEG: r.SEG || null,
+      ENT: r.ENT || null,
+      TAG: r.TAG || null        // v26.87: TAG travels on every road (catalog JSON, storage, Excel)
     },
     _extras: null,
-    get L(){ return this._preserved.L; }
+    get SEG(){ return this._preserved.SEG; }
   }));
 }
 
