@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.95";
+const WORDDOCK_VERSION = "v26.96";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -948,6 +948,10 @@ body{
 .filter-axis{display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 10px;align-items:start;padding:5px 0}
 .filter-axis-name{font-size:12px;color:var(--tag);padding-top:5px}
 .filter-chips{display:flex;flex-wrap:wrap;gap:5px}
+/* v26.96: the Segment axis stacks two chip lines — digits, then the letters of
+   the chosen digit. Line 2 is inset and rule-bordered so it reads as "inside". */
+.filter-seg{display:flex;flex-direction:column;gap:6px}
+.filter-seg-sub{padding-left:9px;border-left:2px solid var(--menu-border)}
 .filter-chip{
   font-family:'Poppins',sans-serif;font-size:12px;padding:3px 9px;border-radius:8px;
   background:transparent;color:var(--tag);border:1px solid var(--menu-border);cursor:pointer;
@@ -1489,7 +1493,14 @@ function rowValues(row, key){
 }
 function rowMatches(row, f){
   if (!f) return true;
-  return FILTER_AXES.every(a => f[a.key] === null || rowValues(row, a.key).includes(f[a.key]));
+  return FILTER_AXES.every(a => {
+    if (f[a.key] === null) return true;
+    // SEG stores ONE field: a digit "2" (whole segment) or a digit+letter "2b"
+    // (exact). Either way it matches by prefix, so "2" catches every letter in
+    // segment 2 and "2b" catches only 2B. The other axes stay exact-membership.
+    if (a.key === "SEG") return rowValues(row, "SEG").some(v => v.startsWith(f.SEG));
+    return rowValues(row, a.key).includes(f[a.key]);
+  });
 }
 function filteredRows(rows, f){ return f ? rows.filter(r => rowMatches(r, f)) : rows; }
 /* Every row of every list in the domain. Lists overlap by ID (Full and a
@@ -1509,7 +1520,8 @@ function domainMatchCount(domain, f){
   return new Set(filteredRows(domainRows(domain), f).map(r => r.ID)).size;
 }
 function filterSummary(f){
-  return FILTER_AXES.map(a => f[a.key]).filter(Boolean).join(" \u00B7 ");
+  return FILTER_AXES.map(a => a.key === "SEG" && f.SEG ? f.SEG.toUpperCase() : f[a.key])
+                    .filter(Boolean).join(" \u00B7 ");
 }
 const MIN_VALID_ROWS = 10;
 
@@ -4018,7 +4030,52 @@ function renderFilterPanel(){
   const rows = domainRows(browserDomain);
   if (!filterDraft) filterDraft = getFilter(browserDomain) || emptyFilter();
   $filterPanel.innerHTML = "";
+  const bump = (map, k, id) => { let s = map.get(k); if (!s){ s = new Set(); map.set(k, s); } s.add(id); };
+  const segChip = (container, label, n, sel, isAll, onClick) => {
+    const b = document.createElement("button"); b.type = "button";
+    b.className = "filter-chip" + (sel ? " sel" : "") + (isAll ? " all" : "");
+    b.textContent = label;
+    if (n !== null){ const sp = document.createElement("span"); sp.className = "n"; sp.textContent = n; b.appendChild(sp); }
+    b.addEventListener("click", onClick);
+    container.appendChild(b);
+  };
   for (const axis of FILTER_AXES){
+    // v26.96: Segment is two zones inside one axis. Line 1 = the digits present
+    // (whole-segment). Choosing a digit reveals line 2 = its letters. The draft
+    // holds ONE field: null / "2" / "2b". Counts are distinct cards.
+    if (axis.key === "SEG"){
+      const digits = new Map(), letters = new Map();   // "2" → ids ; "2b" → ids
+      for (const r of rows){
+        const s = fold(r.SEG);
+        if (!s || !SEG_SHAPE.test(s)) continue;        // only well-formed segments feed the control
+        bump(digits, s[0], r.ID); bump(letters, s.slice(0, 2), r.ID);
+      }
+      if (!digits.size) continue;                      // no segments in this domain → axis stays hidden
+      const cur = filterDraft.SEG;                     // null | "2" | "2b"
+      const curDigit = cur ? cur[0] : null;
+      const line = document.createElement("div"); line.className = "filter-axis";
+      const name = document.createElement("div"); name.className = "filter-axis-name"; name.textContent = axis.label;
+      const zone = document.createElement("div"); zone.className = "filter-seg";
+
+      const l1 = document.createElement("div"); l1.className = "filter-chips";
+      segChip(l1, "all", null, cur === null, true, () => { filterDraft.SEG = null; renderFilterPanel(); });
+      for (const d of [...digits.keys()].sort())
+        segChip(l1, d, digits.get(d).size, curDigit === d, false,
+                () => { filterDraft.SEG = d; renderFilterPanel(); });   // digit = whole segment
+      zone.appendChild(l1);
+
+      if (curDigit){                                   // line 2: letters of the chosen digit
+        const l2 = document.createElement("div"); l2.className = "filter-chips filter-seg-sub";
+        segChip(l2, "all", null, cur === curDigit, true, () => { filterDraft.SEG = curDigit; renderFilterPanel(); });
+        for (const full of [...letters.keys()].filter(k => k[0] === curDigit).sort())
+          segChip(l2, full.slice(1).toUpperCase(), letters.get(full).size, cur === full, false,
+                  () => { filterDraft.SEG = full; renderFilterPanel(); });
+        zone.appendChild(l2);
+      }
+      line.appendChild(name); line.appendChild(zone);
+      $filterPanel.appendChild(line);
+      continue;
+    }
     const counts = new Map();   // folded → { label, ids:Set }
     for (const r of rows){
       for (const v of rowValues(r, axis.key)){
