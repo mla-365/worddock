@@ -1,12 +1,12 @@
 [
-  {"ID": "0001", "ENTRY": "la maison", "CAT": "zn", "CTAG": "v", "L": "A1", "pairs": [{"q": "het huis", "a": "la maison"}]},
-  {"ID": "0002", "ENTRY": "le chien", "CAT": "zn", "CTAG": "m", "L": "A1", "pairs": [{"q": "de hond", "a": "le chien"}]},
-  {"ID": "0003", "ENTRY": "manger", "CAT": "ww", "CTAG": "", "L": "A1", "pairs": [{"q": "eten", "a": "manger"}]},
-  {"ID": "0004", "ENTRY": "l'eau", "CAT": "zn", "CTAG": "v", "L": "A1", "pairs": [{"q": "het water", "a": "l'eau"}]},
-  {"ID": "0005", "ENTRY": "grand", "CAT": "adjectief", "CTAG": "", "L": "A1", "pairs": [{"q": "groot", "a": "grand"}]},
-  {"ID": "0006", "ENTRY": "le livre", "CAT": "zn", "CTAG": "m", "L": "A1", "pairs": [{"q": "het boek", "a": "le livre"}]},
-  {"ID": "0007", "ENTRY": "le jardin", "CAT": "zn", "CTAG": "m", "L": "A1", "pairs": [{"q": "de tuin", "a": "le jardin"}]},
-  {"ID": "0008", "ENTRY": "le crayon", "CAT": "zn", "CTAG": "m", "L": "A1", "pairs": [{"q": "het potlood", "a": "le crayon"}]},
-  {"ID": "0009", "ENTRY": "le ciel", "CAT": "zn", "CTAG": "m", "L": "A1", "pairs": [{"q": "de lucht", "a": "le ciel"}]},
-  {"ID": "0010", "ENTRY": "le moyen", "CAT": "zn", "CTAG": "m", "L": "A1", "pairs": [{"q": "het middel", "a": "le moyen"}]}
+  {"SEG": "1A", "ID": "0001", "ENT": "la maison", "CAT": "zn", "SUB": "v", "TAG": "", "pairs": [{"q": "het huis", "a": "la maison"}]},
+  {"SEG": "1A", "ID": "0002", "ENT": "le chien", "CAT": "zn", "SUB": "m", "TAG": "", "pairs": [{"q": "de hond", "a": "le chien"}]},
+  {"SEG": "1A", "ID": "0003", "ENT": "manger", "CAT": "ww", "SUB": "", "TAG": "", "pairs": [{"q": "eten", "a": "manger"}]},
+  {"SEG": "1A", "ID": "0004", "ENT": "l'eau", "CAT": "zn", "SUB": "v", "TAG": "", "pairs": [{"q": "het water", "a": "l'eau"}]},
+  {"SEG": "1A", "ID": "0005", "ENT": "grand", "CAT": "adjectief", "SUB": "", "TAG": "", "pairs": [{"q": "groot", "a": "grand"}]},
+  {"SEG": "1A", "ID": "0006", "ENT": "le livre", "CAT": "zn", "SUB": "m", "TAG": "", "pairs": [{"q": "het boek", "a": "le livre"}]},
+  {"SEG": "1A", "ID": "0007", "ENT": "le jardin", "CAT": "zn", "SUB": "m", "TAG": "", "pairs": [{"q": "de tuin", "a": "le jardin"}]},
+  {"SEG": "1A", "ID": "0008", "ENT": "le crayon", "CAT": "zn", "SUB": "m", "TAG": "", "pairs": [{"q": "het potlood", "a": "le crayon"}]},
+  {"SEG": "1A", "ID": "0009", "ENT": "le ciel", "CAT": "zn", "SUB": "m", "TAG": "", "pairs": [{"q": "de lucht", "a": "le ciel"}]},
+  {"SEG": "1A", "ID": "0010", "ENT": "le moyen", "CAT": "zn", "SUB": "m", "TAG": "", "pairs": [{"q": "het middel", "a": "le moyen"}]}
 ]

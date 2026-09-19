@@ -1,13 +1,13 @@
 [
-  {"ID": "0001", "ENTRY": "lupus", "CAT": "noun", "CTAG": "m", "L": "A1", "pairs": [{"q": "wolf", "a": "lupus"}]},
-  {"ID": "0002", "ENTRY": "domus", "CAT": "noun", "CTAG": "v", "L": "A1", "pairs": [{"q": "huis", "a": "domus"}]},
-  {"ID": "0003", "ENTRY": "aqua", "CAT": "noun", "CTAG": "v", "L": "A1", "pairs": [{"q": "water", "a": "aqua"}]},
-  {"ID": "0004", "ENTRY": "panis", "CAT": "noun", "CTAG": "m", "L": "A1", "pairs": [{"q": "brood", "a": "panis"}]},
-  {"ID": "0005", "ENTRY": "vita", "CAT": "noun", "CTAG": "v", "L": "A1", "pairs": [{"q": "leven", "a": "vita"}]},
-  {"ID": "0006", "ENTRY": "rosa", "CAT": "noun", "CTAG": "v", "L": "A1", "pairs": [{"q": "roos", "a": "rosa"}]},
-  {"ID": "0007", "ENTRY": "equus", "CAT": "noun", "CTAG": "m", "L": "A1", "pairs": [{"q": "paard", "a": "equus"}]},
-  {"ID": "0008", "ENTRY": "ancilla", "CAT": "noun", "CTAG": "v", "L": "A1", "pairs": [{"q": "dienstmeid", "a": "ancilla"}]},
-  {"ID": "0009", "ENTRY": "mater", "CAT": "noun", "CTAG": "v", "L": "A1", "pairs": [{"q": "moeder", "a": "mater"}]},
-  {"ID": "0010", "ENTRY": "deus", "CAT": "noun", "CTAG": "m", "L": "A1", "pairs": [{"q": "god", "a": "deus"}]},
- {"ID": "0011", "ENTRY": "pater", "CAT": "noun", "CTAG": "m", "L": "A1", "pairs": [{"q": "vader", "a": "pater"}]}
+  {"SEG": "1A", "ID": "0001", "ENT": "lupus", "CAT": "noun", "SUB": "m", "TAG": "", "pairs": [{"q": "wolf", "a": "lupus"}]},
+  {"SEG": "1A", "ID": "0002", "ENT": "domus", "CAT": "noun", "SUB": "v", "TAG": "", "pairs": [{"q": "huis", "a": "domus"}]},
+  {"SEG": "1A", "ID": "0003", "ENT": "aqua", "CAT": "noun", "SUB": "v", "TAG": "", "pairs": [{"q": "water", "a": "aqua"}]},
+  {"SEG": "1A", "ID": "0004", "ENT": "panis", "CAT": "noun", "SUB": "m", "TAG": "", "pairs": [{"q": "brood", "a": "panis"}]},
+  {"SEG": "1A", "ID": "0005", "ENT": "vita", "CAT": "noun", "SUB": "v", "TAG": "", "pairs": [{"q": "leven", "a": "vita"}]},
+  {"SEG": "1A", "ID": "0006", "ENT": "rosa", "CAT": "noun", "SUB": "v", "TAG": "", "pairs": [{"q": "roos", "a": "rosa"}]},
+  {"SEG": "1A", "ID": "0007", "ENT": "equus", "CAT": "noun", "SUB": "m", "TAG": "", "pairs": [{"q": "paard", "a": "equus"}]},
+  {"SEG": "1A", "ID": "0008", "ENT": "ancilla", "CAT": "noun", "SUB": "v", "TAG": "", "pairs": [{"q": "dienstmeid", "a": "ancilla"}]},
+  {"SEG": "1A", "ID": "0009", "ENT": "mater", "CAT": "noun", "SUB": "v", "TAG": "", "pairs": [{"q": "moeder", "a": "mater"}]},
+  {"SEG": "1A", "ID": "0010", "ENT": "deus", "CAT": "noun", "SUB": "m", "TAG": "", "pairs": [{"q": "god", "a": "deus"}]},
+  {"SEG": "1A", "ID": "0011", "ENT": "pater", "CAT": "noun", "SUB": "m", "TAG": "", "pairs": [{"q": "vader", "a": "pater"}]}
 ]
