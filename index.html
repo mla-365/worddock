@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.97";
+const WORDDOCK_VERSION = "v26.97.1";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -4935,36 +4935,43 @@ async function shareListAsLink(listId){
 
   const link = await wdBuildListLink(list);
 
-  let qrSvg = "", qrNote = "";
+  let qrSvg = "", note = "";
   try {
     const qr = qrcode(0, "L");            // lowest error-correction = most room for data
     qr.addData(link);
     qr.make();
     qrSvg = qr.createSvgTag({ cellSize: 4, margin: 0 });
-    if (qr.getModuleCount() > 57){        // roughly version 11+ : still valid, but dense
-      qrNote = "This QR is dense — if a phone struggles to scan it, send the link instead.";
+    if (qr.getModuleCount() > 57){        // roughly version 11+ : valid, but dense to scan
+      note = "This QR is dense - if a phone struggles to scan it, send the link instead.";
     }
   } catch {
     qrSvg = "";
-    qrNote = "This list is too big for a QR — send the link instead (it still opens when " +
-             "pasted). A shorter lesson makes a scannable QR.";
+    note = "This list is too big for a QR - send the link instead (it still opens when " +
+           "pasted). A shorter lesson makes a scannable QR.";
+  }
+  // The link has a ceiling too: some apps (chat, Smartschool) cut a very long URL
+  // short. Warn - never block - when a list is really master-sized.
+  if (link.length > 2000){
+    note = "This list is large - even the link may be cut short in some apps like chat or " +
+           "Smartschool. Link and QR sharing are for a single lesson (about 30 words), not a full list.";
   }
 
   const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  // The wd-dialog surface is always dark, so this content matches the app's own
+  // dialog fields (white-on-dark) and reuses its button class — never light vars.
   const html =
     "<p style='margin:0 0 10px'>Send this to your students. It carries the whole lesson " +
-    "inside it — no file, no account. Opening it imports the list.</p>" +
+    "inside it - no file, no account. Opening it imports the list.</p>" +
     (qrSvg ? "<div style='background:#fff;padding:8px;border-radius:8px;display:inline-block;" +
              "line-height:0;margin-bottom:10px'>" + qrSvg + "</div>" : "") +
-    (qrNote ? "<p style='margin:0 0 10px;color:var(--sec,#56554f);font-size:13px'>" + esc(qrNote) + "</p>" : "") +
+    (note ? "<p style='margin:0 0 10px;color:rgba(255,255,255,0.6);font-size:13px'>" + esc(note) + "</p>" : "") +
     "<textarea id='wdShareLink' readonly rows='3' style='width:100%;box-sizing:border-box;font-size:12px;" +
-      "font-family:ui-monospace,Menlo,monospace;padding:8px;border-radius:8px;border:0.5px solid " +
-      "var(--line2,#cfcdc4);background:var(--bg,#fff);color:inherit;resize:none'>" + esc(link) + "</textarea>" +
-    "<button id='wdShareCopy' type='button' style='margin-top:8px;height:34px;padding:0 14px;border-radius:8px;" +
-      "border:0.5px solid var(--line2,#cfcdc4);background:var(--card,#f6f5ef);color:inherit;cursor:pointer;" +
-      "font-size:13px'>Copy link</button>";
+      "font-family:ui-monospace,Menlo,monospace;padding:8px;border-radius:8px;border:1px solid " +
+      "rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);color:#fff;resize:none'>" + esc(link) + "</textarea>" +
+    "<button id='wdShareCopy' type='button' class='wd-dialog-btn wd-dialog-cancel' " +
+      "style='margin-top:10px'>Copy link</button>";
 
-  const p = wdConfirm("Share “" + list.domain + "_" + list.name + "”", html, "Done", null, true);
+  const p = wdConfirm("Share “" + list.domain + "_" + list.name + "”", html, "Close", null, true);
 
   // The dialog body is in the DOM now (wdConfirm's executor ran synchronously),
   // so wire the copy button before we await the close.
