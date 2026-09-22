@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.96";
+const WORDDOCK_VERSION = "v26.97";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -4232,6 +4232,17 @@ function renderBrowserLists(){
     dl.addEventListener("mouseleave", cueOff);
     dl.addEventListener("click", (e) => { e.stopPropagation(); exportList(list.listId); });
     actions.appendChild(dl);
+    // v26.97: share an imported list as a link/QR — the whole lesson rides
+    // inside the link, so students need no file and no account.
+    if (list.source === "imported"){
+      const sh = document.createElement("button");
+      sh.textContent = "↗";                    // ↗
+      sh.setAttribute("aria-label", "Share as link");
+      sh.addEventListener("mouseenter", cueOn("Share as link"));
+      sh.addEventListener("mouseleave", cueOff);
+      sh.addEventListener("click", (e) => { e.stopPropagation(); shareListAsLink(list.listId); });
+      actions.appendChild(sh);
+    }
     // Delete — only on the user's own imported lists. The curated Full
     // re-fetches on every boot, so "deleting" it would be theatre.
     if (list.source === "imported"){
@@ -4645,7 +4656,13 @@ $fileInput.addEventListener("change", async (e) => {
     return;
   }
 
-  const list = result.list;
+  await commitImportedList(result.list, result.warnings);
+});
+
+/* v26.97: the shared commit path. Everything past parsing is source-agnostic,
+   so a file import and a link import land through the SAME door — same domain
+   dialog, same ID-clash guard, same shelf. `warnings` come from the reader. */
+async function commitImportedList(list, warnings){
 
   // ── The filename IS the identity. There is no picker.
   //
@@ -4788,18 +4805,181 @@ $fileInput.addEventListener("change", async (e) => {
   let msg = "Imported \u201C" + list.name + "\u201D into " + domain +
     " - " + list.rows.length + " rows, saved in this browser. Click it to study.";
   setListMessage(msg, "success");
-  if (result.warnings && result.warnings.length){
-    console.warn("WordDock import warnings:", result.warnings);
+  if (warnings && warnings.length){
+    console.warn("WordDock import warnings:", warnings);
     // 10c: a curator must SEE this, not find it in a console. Imported anyway.
     const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
     const html = "<p style='margin:0 0 8px'>The list was imported, but check this:</p>" +
       "<ul style='margin:0;padding-left:18px'>" +
-      result.warnings.slice(0, 8).map(w => "<li>" + esc(w) + "</li>").join("") +
-      (result.warnings.length > 8 ? "<li>\u2026 and " + (result.warnings.length - 8) + " more (see console)</li>" : "") +
+      warnings.slice(0, 8).map(w => "<li>" + esc(w) + "</li>").join("") +
+      (warnings.length > 8 ? "<li>\u2026 and " + (warnings.length - 8) + " more (see console)</li>" : "") +
       "</ul>";
     wdConfirm("Import warnings", html, "OK", null, true);
   }
-});
+}
+
+/* ─── v26.97: the link is the list ──────────────────────────────────────────
+   A lesson rides INSIDE the URL fragment, so there is no host to fetch from and
+   no file to keep alive:  #l=<tag>.<base64url(deflate-raw(JSON))> . The tag sits
+   OUTSIDE the payload, so a future format is spotted before we try to unpack it;
+   the payload is {v,d,n,r} — version, domain, name, rows (rows in the same shape
+   the catalog JSON uses). A link is just one more PIPE into the ordinary
+   filename-based import: the domain token in `d` decides where it lands, and the
+   ID-clash guard on THIS device is the only gate. Full content only — a
+   pointer/slice link is a separate, later mechanism.
+
+   deflate-raw via the browser's own CompressionStream: no library to bundle, and
+   'raw' shaves the header bytes that keep a borderline lesson's QR scannable. */
+
+const WD_LINK_TAG  = "1";                       // format generation; frozen once shared
+const WD_LINK_BASE = "https://worddock.app/";   // a scanned code always opens production
+
+/* base64url <-> bytes (URL-safe, no padding — a fragment carries it cleanly). */
+function wdB64urlFromBytes(u8){
+  let bin = "";
+  for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function wdBytesFromB64url(s){
+  s = s.replace(/-/g, "+").replace(/_/g, "/");
+  while (s.length % 4) s += "=";
+  const bin = atob(s);
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return u8;
+}
+async function wdDeflateRawB64url(str){
+  const input = new TextEncoder().encode(str);
+  const cs = new CompressionStream("deflate-raw");
+  const buf = await new Response(new Blob([input]).stream().pipeThrough(cs)).arrayBuffer();
+  return wdB64urlFromBytes(new Uint8Array(buf));
+}
+async function wdInflateRawFromB64url(s){
+  const ds = new DecompressionStream("deflate-raw");
+  const buf = await new Response(new Blob([wdBytesFromB64url(s)]).stream().pipeThrough(ds)).arrayBuffer();
+  return new TextDecoder().decode(buf);
+}
+
+/* A list -> the {v,d,n,r} payload. RS never travels: the score is the receiver's
+   own, keyed by (domain + ID) on their device. */
+function wdListToPayload(list){
+  const rows = list.rows.map(r => {
+    const p = r._preserved || {};
+    return {
+      SEG: p.SEG ?? null, ID: r.ID, ENT: p.ENT ?? null,
+      CAT: r.CAT || "", SUB: r.SUB || "", TAG: p.TAG ?? null,
+      pairs: (r.pairs || []).map(x => ({ q: x.q, a: x.a }))
+    };
+  });
+  return { v: 1, d: list.domain, n: list.name, r: rows };
+}
+async function wdBuildListLink(list){
+  const packed = await wdDeflateRawB64url(JSON.stringify(wdListToPayload(list)));
+  return WD_LINK_BASE + "#l=" + WD_LINK_TAG + "." + packed;
+}
+
+/* A decoded payload -> the exact list shape parseWordDockXlsx returns, so it
+   flows through commitImportedList unchanged. */
+function wdPayloadToList(pl){
+  return {
+    listId: null,
+    name: pl.n || "Imported",
+    domain: pl.d ? String(pl.d).toUpperCase() : null,
+    rows: normalizeEmbeddedRows(pl.r || []),
+    extraColumns: [],
+    source: "imported"
+  };
+}
+
+/* On arrival with #l=... : take the payload out of the address at once (a
+   fragment in the bar is noise, and a refresh must not re-import), then hand it
+   to the ordinary import. Unknown tag -> say so plainly, never guess. */
+async function handleListLink(){
+  let raw = "";
+  try {
+    const m = (location.hash || "").match(/^#l=(.+)$/);
+    if (!m) return;
+    raw = m[1];
+    history.replaceState(null, "", location.pathname + (location.search || ""));
+  } catch { return; }
+
+  const dot  = raw.indexOf(".");
+  const tag  = dot > 0 ? raw.slice(0, dot) : "";
+  const body = dot > 0 ? raw.slice(dot + 1) : "";
+  if (tag !== WD_LINK_TAG){
+    await wdConfirm("This link was made by a newer WordDock",
+      "Reload the page to update, then open the link again.", "OK", null);
+    return;
+  }
+  let pl;
+  try { pl = JSON.parse(await wdInflateRawFromB64url(body)); }
+  catch {
+    await wdConfirm("This link could not be read",
+      "It may have been cut short when it was copied. Ask for the link again, or scan the QR.",
+      "OK", null);
+    return;
+  }
+  if (!pl || !Array.isArray(pl.r) || !pl.r.length){
+    await wdConfirm("This link has no list in it", "There is nothing to import.", "OK", null);
+    return;
+  }
+  await commitImportedList(wdPayloadToList(pl), []);
+}
+
+/* Share as link: build the link + a QR from an imported list. The QR is the
+   tight box — a short lesson fits, a fat list makes a working LINK (paste it)
+   but a QR too dense to scan. Warn, never block. */
+async function shareListAsLink(listId){
+  const list = LISTS[listId];
+  if (!list){ setListMessage("No list to share.", "error"); return; }
+
+  const link = await wdBuildListLink(list);
+
+  let qrSvg = "", qrNote = "";
+  try {
+    const qr = qrcode(0, "L");            // lowest error-correction = most room for data
+    qr.addData(link);
+    qr.make();
+    qrSvg = qr.createSvgTag({ cellSize: 4, margin: 0 });
+    if (qr.getModuleCount() > 57){        // roughly version 11+ : still valid, but dense
+      qrNote = "This QR is dense — if a phone struggles to scan it, send the link instead.";
+    }
+  } catch {
+    qrSvg = "";
+    qrNote = "This list is too big for a QR — send the link instead (it still opens when " +
+             "pasted). A shorter lesson makes a scannable QR.";
+  }
+
+  const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const html =
+    "<p style='margin:0 0 10px'>Send this to your students. It carries the whole lesson " +
+    "inside it — no file, no account. Opening it imports the list.</p>" +
+    (qrSvg ? "<div style='background:#fff;padding:8px;border-radius:8px;display:inline-block;" +
+             "line-height:0;margin-bottom:10px'>" + qrSvg + "</div>" : "") +
+    (qrNote ? "<p style='margin:0 0 10px;color:var(--sec,#56554f);font-size:13px'>" + esc(qrNote) + "</p>" : "") +
+    "<textarea id='wdShareLink' readonly rows='3' style='width:100%;box-sizing:border-box;font-size:12px;" +
+      "font-family:ui-monospace,Menlo,monospace;padding:8px;border-radius:8px;border:0.5px solid " +
+      "var(--line2,#cfcdc4);background:var(--bg,#fff);color:inherit;resize:none'>" + esc(link) + "</textarea>" +
+    "<button id='wdShareCopy' type='button' style='margin-top:8px;height:34px;padding:0 14px;border-radius:8px;" +
+      "border:0.5px solid var(--line2,#cfcdc4);background:var(--card,#f6f5ef);color:inherit;cursor:pointer;" +
+      "font-size:13px'>Copy link</button>";
+
+  const p = wdConfirm("Share “" + list.domain + "_" + list.name + "”", html, "Done", null, true);
+
+  // The dialog body is in the DOM now (wdConfirm's executor ran synchronously),
+  // so wire the copy button before we await the close.
+  const copyBtn = document.getElementById("wdShareCopy");
+  const field   = document.getElementById("wdShareLink");
+  if (copyBtn && field){
+    copyBtn.addEventListener("click", async () => {
+      let done = false;
+      try { await navigator.clipboard.writeText(link); done = true; }
+      catch { try { field.focus(); field.select(); done = document.execCommand("copy"); } catch {} }
+      copyBtn.textContent = done ? "Copied" : "Press Ctrl/Cmd-C";
+    });
+  }
+  await p;
+}
 
 async function exportList(listId){
   const list = LISTS[listId];
@@ -5111,6 +5291,10 @@ function readLastList(){
   // The stage was hidden pre-paint to avoid a flash; it's safe to reveal now —
   // either the browser is covering it, or there was nothing to restore.
   document.documentElement.classList.remove("restoring-view");
+
+  // v26.97: arrived with a whole list packed into the link? Import it now, over
+  // the painted app. Unawaited: its dialogs must not hold back the first paint.
+  handleListLink();
 
   // Pull after the app is up and usable, never before: sync is a convenience
   // layer and must not delay the first card by a single frame. If it fails,
