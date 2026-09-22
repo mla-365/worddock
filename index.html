@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.97.1";
+const WORDDOCK_VERSION = "v26.97.2";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -284,6 +284,15 @@ body{
   background:#0a7a0a; color:#ffffff; font-weight:500;
 }
 .wd-dialog-ok:hover{ background:#0a8f0a; }
+/* v26.97.2: a reusable top-right dismiss for utility dialogs (e.g. share),
+   matching the sync panel's close. Shown only when a dialog opts in. */
+.wd-dialog-x{
+  position:absolute; top:12px; right:14px;
+  background:none; border:none; cursor:pointer;
+  font-size:18px; line-height:1; color:rgba(255,255,255,0.45);
+  padding:4px 6px; border-radius:6px;
+}
+.wd-dialog-x:hover{ color:var(--ink); background:var(--menu-hover); }
 .logo:hover{background:var(--tab-hover-overlay)}
 .logo-badge{
   width:40px;
@@ -4968,10 +4977,29 @@ async function shareListAsLink(listId){
     "<textarea id='wdShareLink' readonly rows='3' style='width:100%;box-sizing:border-box;font-size:12px;" +
       "font-family:ui-monospace,Menlo,monospace;padding:8px;border-radius:8px;border:1px solid " +
       "rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);color:#fff;resize:none'>" + esc(link) + "</textarea>" +
-    "<button id='wdShareCopy' type='button' class='wd-dialog-btn wd-dialog-cancel' " +
+    "<button id='wdShareCopy' type='button' class='wd-dialog-btn wd-dialog-ok' " +
       "style='margin-top:10px'>Copy link</button>";
 
-  const p = wdConfirm("Share “" + list.domain + "_" + list.name + "”", html, "Close", null, true);
+  const p = wdConfirm("Share “" + list.domain + "_" + list.name + "”", html, "OK", null, true);
+
+  // v26.97.2: a share panel is a utility, not a decision - dismiss with a
+  // top-right cross (like the sync panel) and drop the bottom button entirely,
+  // so "Copy link" is the only real action. The shared shell is restored on close.
+  const dlg     = document.querySelector("#wdDialogBackdrop .wd-dialog");
+  const actions = document.querySelector("#wdDialogBackdrop .wd-dialog-actions");
+  const okBtn   = document.getElementById("wdDialogOk");
+  if (actions) actions.style.display = "none";
+  let xBtn = null;
+  if (dlg){
+    dlg.style.position = "relative";
+    xBtn = document.createElement("button");
+    xBtn.type = "button";
+    xBtn.className = "wd-dialog-x";
+    xBtn.setAttribute("aria-label", "Close");
+    xBtn.textContent = "×";
+    xBtn.addEventListener("click", () => { if (okBtn) okBtn.click(); });
+    dlg.appendChild(xBtn);
+  }
 
   // The dialog body is in the DOM now (wdConfirm's executor ran synchronously),
   // so wire the copy button before we await the close.
@@ -4986,6 +5014,10 @@ async function shareListAsLink(listId){
     });
   }
   await p;
+  // Restore the shared shell so the next dialog is unaffected.
+  if (actions) actions.style.display = "";
+  if (dlg) dlg.style.position = "";
+  if (xBtn) xBtn.remove();
 }
 
 async function exportList(listId){
