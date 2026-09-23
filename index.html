@@ -34,7 +34,7 @@
    was the one you read and the constant was the one the footer printed, so
    the moment they disagreed the app confidently reported the wrong version.
    Two things doing one job is one thing too many. */
-const WORDDOCK_VERSION = "v26.97.2";
+const WORDDOCK_VERSION = "v26.98";
 
 /* Runs before the body paints. If this boot is a refresh that happened while
    the user was in the browser, mark the document at once, so the study stage
@@ -1114,6 +1114,26 @@ body{
 }
 .list-message{font-size:12px;color:var(--tag);margin-top:10px;min-height:1em}
 
+/* v26.98: the make-a-list form. Fields match the app's dark panel; the rows
+   are a two-column grid (question | answer) with a quiet remove cross. */
+.make-form{padding:6px 0 0}
+.make-label{display:block;font-size:12px;color:var(--tag);margin:12px 0 5px;letter-spacing:.02em}
+.make-opt{opacity:.6}
+.make-input{
+  width:100%;box-sizing:border-box;padding:9px 11px;border-radius:9px;
+  border:1px solid var(--menu-border);background:rgba(255,255,255,0.05);color:var(--ink);
+  font-size:14px;font-family:inherit;outline:none;
+}
+.make-input:focus{border-color:rgba(255,255,255,0.38)}
+.make-rows-head{display:grid;grid-template-columns:1fr 1fr 28px;gap:8px;font-size:12px;color:var(--tag);margin:14px 0 4px}
+.make-row{display:grid;grid-template-columns:1fr 1fr 28px;gap:8px;margin-bottom:6px;align-items:center}
+.make-row .make-input{padding:8px 10px}
+.make-x{background:none;border:none;color:var(--tag);font-size:18px;line-height:1;cursor:pointer;padding:4px;border-radius:6px}
+.make-x:hover{color:var(--ink);background:rgba(255,255,255,0.08)}
+.make-add{margin-top:4px;background:none;border:1px dashed var(--menu-border);color:var(--tag);border-radius:9px;padding:8px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+.make-add:hover{color:var(--ink);border-color:#4c5868}
+.make-actions{margin-top:16px}
+
 /* Swappable detail views */
 .detail-view[hidden]{display:none}
 /* About WordDock content rendered inside the right pane */
@@ -1217,7 +1237,7 @@ body{
 <!-- ─── List browser (full-screen, Gmail-style two-pane) ─── -->
 <div class="infopage browser" id="listbrowser">
   <div class="browser-head">
-    <div class="browser-head-rail clickable" id="browserDomainsHeader">Domains</div>
+    <div class="browser-head-rail clickable" id="browserDomainsHeader">Docks</div>
     <div class="browser-head-detail">
       <span class="surface-title" id="browserPaneTitle">Lists</span>
       <button class="browser-back-link" id="browserBack" aria-label="Back to lists" hidden>← Lists</button>
@@ -1235,9 +1255,29 @@ body{
         <div class="detail-head" id="browserDetailHead"><span id="browserDetailTitle">Lists</span><button type="button" class="filter-door" id="filterDoor" hidden>Filter: all cards</button></div>
         <div id="filterPanel" class="filter-panel" hidden></div>
         <div id="browserLists" class="browser-lists"></div>
+        <!-- v26.98: the front door - make a list here, in a minute. Excel is the side door below. -->
+        <div class="upload-row" id="browserMake">+ Make a list</div>
         <div class="upload-row" id="browserUpload">+ Import a list (.xlsx)<button type="button" id="importRulesHelp" class="import-rules-help" aria-label="What a WordDock file needs"><span>?</span><span class="rules-word">What a file needs</span></button></div>
         <div id="listMessage" class="list-message"></div>
 
+      </div>
+      <!-- MAKE A LIST view (v26.98): the one-minute entry form. Create-only. It
+           emits the same list object a decoded link does and lands through
+           commitImportedList, so the dock, the ID-clash guard and the share
+           arrow are all the existing ones - a third pipe into the same door. -->
+      <div class="detail-view" id="viewMake" hidden>
+        <div class="detail-head">Make a list</div>
+        <div class="make-form">
+          <label class="make-label" for="makeName">List name</label>
+          <input type="text" id="makeName" class="make-input" placeholder="e.g. holiday words" autocomplete="off" spellcheck="false">
+          <div class="make-rows-head"><span>Question</span><span>Answer</span><span></span></div>
+          <div id="makeRows"></div>
+          <button type="button" id="makeAddRow" class="make-add">+ add a row</button>
+          <label class="make-label" for="makeTag">Tag <span class="make-opt">(optional)</span></label>
+          <input type="text" id="makeTag" class="make-input" placeholder="e.g. les 3" autocomplete="off">
+          <div class="make-actions"><button type="button" id="makeGo" class="wd-dialog-btn wd-dialog-ok">Make the list</button></div>
+          <div id="makeMessage" class="list-message"></div>
+        </div>
       </div>
       <!-- ABOUT WORDDOCK view (content injected from the about page source) -->
     </div>
@@ -1292,15 +1332,15 @@ body{
 <div class="infopage" id="domainpage">
   <div class="infopage-inner">
     <button class="info-close" id="domainBack" aria-label="Close">×</button>
-    <h2 class="settings-title">Domain</h2>
+    <h2 class="settings-title">Dock</h2>
 
     <div class="domain-current-label">Currently studying</div>
     <div class="domain-current" id="domainCurrent">—</div>
 
-    <div class="domain-universe-label">All domains</div>
+    <div class="domain-universe-label">All docks</div>
     <div class="domain-universe" id="domainUniverse"></div>
-    <p class="domain-note">WordDock maintains the WD domains. <strong>My domains</strong> holds your own - anything you import under a name of your own. Each domain keeps its own progress; bold means you've made progress there. Lists are yours to slice and annotate, WD lists included; only a domain is fixed.</p>
-    <p class="domain-note"><strong>One rule for your own lists:</strong> within a domain, every entry needs its own ID - never restart numbering in a new file. Progress is tracked per ID, so two files that both start at 0001 would share scores between different words. WordDock checks this when you import and warns you.</p>
+    <p class="domain-note">WordDock maintains the WD docks. <strong>My docks</strong> holds your own - anything you import under a name of your own. Each dock keeps its own progress; bold means you've made progress there. Lists are yours to slice and annotate, WD lists included; only a dock is fixed.</p>
+    <p class="domain-note"><strong>One rule for your own lists:</strong> within a dock, every entry needs its own ID - never restart numbering in a new file. Progress is tracked per ID, so two files that both start at 0001 would share scores between different words. WordDock checks this when you import and warns you.</p>
   </div>
 </div>
 
@@ -1532,7 +1572,9 @@ function filterSummary(f){
   return FILTER_AXES.map(a => a.key === "SEG" && f.SEG ? f.SEG.toUpperCase() : f[a.key])
                     .filter(Boolean).join(" \u00B7 ");
 }
-const MIN_VALID_ROWS = 10;
+// v26.98: no row floor. A short list works (the deck recycles its rows to fill
+// the 12-mark); only a file with NO usable row is refused - that is junk.
+const MIN_VALID_ROWS = 1;
 
 /* Parse a WordDock xlsx file (File or ArrayBuffer).
    Returns { ok: true, list } or { ok: false, error }. */
@@ -1668,7 +1710,7 @@ async function parseWordDockXlsx(file){
 
   if (rows.length < MIN_VALID_ROWS){
     return { ok: false, error:
-      `Only ${rows.length} valid rows found. A WordDock file requires at least ${MIN_VALID_ROWS} rows where ID, Q1, and A1 are all filled.` };
+      `No usable rows found. A WordDock file needs at least one row where ID, Q1, and A1 are all filled.` };
   }
 
   // ── Identity comes from the FILENAME, never from the hidden Metadata sheet.
@@ -2492,7 +2534,7 @@ function paintCounter(score, done){
    domain keeps its own identity and its own RS pool (wd_rs_<DOMAIN>), so an
    uncurated domain later added to the catalog simply graduates to ACTIVE with
    zero data migration. */
-const MY_ZONE_LABEL = "My domains";   // 6b: it gathers DOMAINS, not lists
+const MY_ZONE_LABEL = "My docks";   // 6b: it gathers DOMAINS, not lists
 
 // Is this domain part of the curated catalog?
 function isCurated(domain){
@@ -3317,8 +3359,8 @@ function renderBrowserRail(){
         const hint = document.createElement("div");
         hint.className = "rail-zone-empty";
         hint.innerHTML =
-          '<span class="rail-door">Import a list</span> under a domain that you create' +
-          '<span class="rail-door rail-why" title="How to name a domain of your own">?</span>';
+          '<span class="rail-door">Import a list</span> under a dock that you create' +
+          '<span class="rail-door rail-why" title="How to name a dock of your own">?</span>';
         hint.querySelector(".rail-door:not(.rail-why)").addEventListener("click", () => $fileInput.click());
         hint.querySelector(".rail-why").addEventListener("click", showMyDomainRules);
         b2.appendChild(hint);
@@ -4182,7 +4224,7 @@ function renderBrowserLists(){
   if (!lists.length){
     const empty = document.createElement("div");
     empty.className = "browser-empty";
-    empty.textContent = "No lists loaded in this domain yet.";
+    empty.textContent = "No lists loaded in this dock yet.";
     $browserLists.appendChild(empty);
     return;
   }
@@ -4368,20 +4410,20 @@ const aboutTopics = [
 
   { id:"progress", title:"Progress &amp; mastery", html:
     '<h2 class="section-title gz-first">Progress &amp; mastery</h2>' +
-    '<p class="setting-desc">Each domain and each list shows a <b>mastery ' +
+    '<p class="setting-desc">Each dock and each list shows a <b>mastery ' +
     'percentage</b> - how far you are toward knowing every word in it. A ' +
     'list\u2019s number climbs quickly (a small set, studied daily); a whole ' +
-    'domain\u2019s number is the slower, truer measure of how far through the ' +
+    'dock\u2019s number is the slower, truer measure of how far through the ' +
     'subject you\u2019ve come. A word counts as mastered once its score reaches ' +
     '<b>10</b>, about ten clean recalls; 100% means every word is at mastery or ' +
     'beyond.</p><a id="more-progress" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-progress</a>' },
 
-  { id:"domains", title:"Domains &amp; lists", html:
-    '<h2 class="section-title gz-first">Domains &amp; lists</h2>' +
-    '<p class="setting-desc">A <b>domain</b> is a subject - a language pair ' +
+  { id:"domains", title:"Docks &amp; lists", html:
+    '<h2 class="section-title gz-first">Docks &amp; lists</h2>' +
+    '<p class="setting-desc">A <b>dock</b> is a subject - a language pair ' +
     'like <code>NL-RU</code>, or a field. Within it, <b>Full</b> is the ' +
     'complete set WordDock provides; your own imported files sit alongside it. ' +
-    'Progress is shared across a whole domain, so studying any list in it builds ' +
+    'Progress is shared across a whole dock, so studying any list in it builds ' +
     'the same scores.</p><a id="more-domains" style="font-size:11px;color:var(--counter);opacity:0.45;display:block;margin-top:16px;user-select:all">#more-domains</a>' },
 
   { id:"ownlists", title:"Your own lists", html:
@@ -4396,10 +4438,10 @@ const aboutTopics = [
     'SUB \u00B7 TAG \u00B7 Q1 \u00B7 A1 \u00B7 \u2026 \u00B7 Q10 \u00B7 A10</code>.</li>' +
     '<li>Rows with <code>ID</code>, <code>Q1</code> and <code>A1</code> filled - ' +
     'other rows are skipped.</li>' +
-    '<li>A filename shaped <b><code>DOMAIN_name.xlsx</code></b> - the domain, ' +
+    '<li>A filename shaped <b><code>DOCK_name.xlsx</code></b> - the dock, ' +
     'an underscore, then your name (e.g. <code>NL-RU_holiday.xlsx</code>). The ' +
     'filename is the list\u2019s identity.</li>' +
-    '<li>Within a domain, <b>every entry needs its own ID</b> - never restart ' +
+    '<li>Within a dock, <b>every entry needs its own ID</b> - never restart ' +
     'numbering. Progress is tracked per ID, so two files both starting at ' +
     '<code>0001</code> would make different words share scores. WordDock warns you ' +
     'if it spots this.</li>' +
@@ -4426,8 +4468,8 @@ const aboutTopics = [
     'your progress is safe under your key, but a copy of the scores stays in that ' +
     'browser. A device left connected lets the next person change your scores, and ' +
     'WordDock cannot see that - hence the PIN rule above. Two people who share one ' +
-    'browser can also simply study in different domains: scores are kept per ' +
-    'domain, so they never touch.</p>' +
+    'browser can also simply study in different docks: scores are kept per ' +
+    'dock, so they never touch.</p>' +
     '<p class="setting-desc">WordDock\u2019s server is free and has a daily limit. If ' +
     'it is ever reached, syncing pauses until the next day and your scores stay ' +
     'safe in your browser.</p>' +
@@ -4445,7 +4487,7 @@ const aboutTopics = [
     '<li><a href="#more-idea">#more-idea</a> - The idea: weakest-first, RS mechanics, methodology</li>' +
     '<li><a href="#more-studying">#more-studying</a> - Studying: deck logic, grading rules, 12-pass contract</li>' +
     '<li><a href="#more-progress">#more-progress</a> - Progress: coverage metric, two-number principle</li>' +
-    '<li><a href="#more-domains">#more-domains</a> - Domains: shared scores, domain permanence</li>' +
+    '<li><a href="#more-domains">#more-domains</a> - Docks: shared scores, dock permanence</li>' +
     '<li><a href="#more-ownlists">#more-ownlists</a> - Your own lists: WD26 file rules, ID rule</li>' +
     '<li><a href="#more-devices">#more-devices</a> - Devices: sync protocol, privacy, key rotation policy</li>' +
     '</ul>' },
@@ -4509,6 +4551,11 @@ function renderListPanel(){ renderBrowser(); }
 
 /* ─── Browser pane switching: lists / info / settings ─── */
 const $viewLists    = document.getElementById("viewLists");
+const $viewMake     = document.getElementById("viewMake");     // v26.98: the entry form
+const $makeName     = document.getElementById("makeName");
+const $makeRows     = document.getElementById("makeRows");
+const $makeTag      = document.getElementById("makeTag");
+const $makeMsg      = document.getElementById("makeMessage");
 let browserPane = "lists";   // "lists" (the only browser pane now; About is a separate page)
 const $browserPaneTitle = document.getElementById("browserPaneTitle");
 
@@ -4589,11 +4636,15 @@ function showBrowserPane(pane){
   // you just did, not a permanent fixture.
   setListMessage("");
   $viewLists.hidden    = (pane !== "lists");
+  if ($viewMake){
+    $viewMake.hidden   = (pane !== "make");
+    if (pane === "make") makeFormOpen();          // v26.98: fresh rows, focus the name
+  }
 
-  // Back-to-lists link shows only in a sub-pane (info/scores)
+  // Back-to-lists link shows only in a sub-pane (info/scores/make)
   document.getElementById("browserBack").hidden = (pane === "lists");
   // The header title must follow the pane.
-  const titles = { lists: "Lists" };
+  const titles = { lists: "Lists", make: "Make a list" };
   const $t = document.getElementById("browserPaneTitle");
   if ($t) $t.textContent = titles[pane] || "Lists";
   // When showing a meta pane, no domain folder is the "browse" target
@@ -4671,7 +4722,10 @@ $fileInput.addEventListener("change", async (e) => {
 /* v26.97: the shared commit path. Everything past parsing is source-agnostic,
    so a file import and a link import land through the SAME door — same domain
    dialog, same ID-clash guard, same shelf. `warnings` come from the reader. */
-async function commitImportedList(list, warnings){
+/* opts (v26.98): { quiet, verb }. quiet = the caller already asked its own dock
+   question (the entry form), so the "Import into / new dock?" confirms are
+   skipped; the same-name Replace confirm and the ID-clash guard still run. */
+async function commitImportedList(list, warnings, opts = {}){
 
   // ── The filename IS the identity. There is no picker.
   //
@@ -4687,8 +4741,8 @@ async function commitImportedList(list, warnings){
   if (!domain){
     // No parseable domain token at all (e.g. "Copy of biology.xlsx").
     await wdConfirm(
-      "This file needs a name like DOMAIN_Listname.xlsx",
-      "A filename has three parts: a DOMAIN name, an underscore, and a List name. " +
+      "This file needs a name like DOCK_Listname.xlsx",
+      "A filename has three parts: a DOCK name, an underscore, and a List name. " +
       "Example: NL-RU_Holiday.xlsx or BIOLOGY_Chapter1.xlsx. " +
       "Rename the file and try again.",
       "OK", null
@@ -4724,6 +4778,8 @@ async function commitImportedList(list, warnings){
         : ""),
       "Replace", "Cancel"
     );
+  } else if (opts.quiet){
+    ok = true;                          // v26.98: the form already chose the dock
   } else if (isCurated(domain)){
     ok = await wdConfirm(
       "Import into " + domain + "?",
@@ -4737,7 +4793,7 @@ async function commitImportedList(list, warnings){
     ok = await wdConfirm(
       "Import into " + domain + "?",
       "\u201C" + list.name + "\u201D will be added to " + domain +
-      ", one of your domains, and will share progress with the lists already there.",
+      ", one of your docks, and will share progress with the lists already there.",
       "Import", "Cancel"
     );
   } else {
@@ -4745,11 +4801,11 @@ async function commitImportedList(list, warnings){
     // (BIOLOGY) from an accident (COPY, from "Copy_of_biology.xlsx") — only the
     // human knows. So state the consequence plainly and let them judge.
     ok = await wdConfirm(
-      domain + " isn't a WordDock domain",
-      "Your file will be imported under a new DOMAIN called \"" + domain + "\" with list name \"" + list.name + "\". " +
+      domain + " would be a new dock",
+      "Your file will be imported under a new dock called \"" + domain + "\" with list name \"" + list.name + "\". " +
       "Every file starting with " + domain + "_ will share the same progress. " +
       "If that isn't what you meant, cancel and rename the file.",
-      "Create DOMAIN and import", "Cancel"
+      "Create dock and import", "Cancel"
     );
   }
   if (!ok){ setListMessage("Import cancelled."); return; }
@@ -4767,7 +4823,7 @@ async function commitImportedList(list, warnings){
       clash.count + " ID" + (clash.count > 1 ? "s" : "") + " in this file belong to " +
       "different words in " + domain + ". WordDock tracks progress per ID, so these " +
       "lists would share scores wrongly - " + clash.example + ". " +
-      "Give every word in " + domain + " its own ID, or import this as a new domain.",
+      "Give every word in " + domain + " its own ID, or import this as a new dock.",
       "Import anyway", "Cancel"
     );
     if (!ok){ setListMessage("Import cancelled."); return; }
@@ -4811,8 +4867,12 @@ async function commitImportedList(list, warnings){
   showBrowserPane("lists");
   renderBrowser();
 
-  let msg = "Imported \u201C" + list.name + "\u201D into " + domain +
+  let msg = (opts.verb || "Imported") + " \u201C" + list.name + "\u201D into " + domain +
     " - " + list.rows.length + " rows, saved in this browser. Click it to study.";
+  // v26.98: no row floor any more - just an honest note for a short list.
+  if (list.rows.length < 10){
+    msg += " A deck runs on about 10 cards - a shorter list repeats to fill.";
+  }
   setListMessage(msg, "success");
   if (warnings && warnings.length){
     console.warn("WordDock import warnings:", warnings);
@@ -5180,10 +5240,10 @@ const FILE_RULES_HTML =
   "<code>SEG · ID · ENT · CAT · SUB · TAG · Q1 · A1 · … · Q10 · A10</code></li>" +
   "<li>Rows where <code>ID</code>, <code>Q1</code> and <code>A1</code> are all " +
   "filled - other rows are skipped.</li>" +
-  "<li>A filename shaped <b><code>DOMAIN_name.xlsx</code></b> - domain first, " +
+  "<li>A filename shaped <b><code>DOCK_name.xlsx</code></b> - dock first, " +
   "then an underscore, then your list name. Like <code>NL-RU_Holiday.xlsx</code>." +
   "</li>" +
-  "<li>Within one domain, <b>every entry needs its own ID</b> - never restart " +
+  "<li>Within one dock, <b>every entry needs its own ID</b> - never restart " +
   "numbering in a new file.</li>" +
   "</ol>";
 
@@ -5193,16 +5253,16 @@ function showFileRules(){
 
 /* 6b: a focused dialog for the My-domains ? — explains naming, not Excel structure */
 const MY_DOMAIN_RULES_HTML =
-  "<p style='margin:0 0 10px'>The filename part <b>before the underscore</b> is the name of the domain.</p>" +
+  "<p style='margin:0 0 10px'>The filename part <b>before the underscore</b> is the name of the dock.</p>" +
   "<p style='margin:0 0 6px;font-family:monospace;font-size:13px'>" +
-  "BIOLOGY_chapter1.xlsx &rarr; domain <b>BIOLOGY</b><br>" +
-  "NL-IT_holiday.xlsx &rarr; domain <b>NL-IT</b> <span style='opacity:.7'>(joins existing NL-IT progress)</span>" +
+  "BIOLOGY_chapter1.xlsx &rarr; dock <b>BIOLOGY</b><br>" +
+  "NL-IT_holiday.xlsx &rarr; dock <b>NL-IT</b> <span style='opacity:.7'>(joins existing NL-IT progress)</span>" +
   "</p>" +
-  "<p style='margin:10px 0 0'>Keep domain names short and consistent - every list with the same domain shares the same progress. " +
-  "Once you've created a domain, it stays in your browser until you remove it or wipe your browser data.</p>";
+  "<p style='margin:10px 0 0'>Keep dock names short and consistent - every list with the same dock shares the same progress. " +
+  "Once you've created a dock, it stays in your browser until you remove it or wipe your browser data.</p>";
 
 function showMyDomainRules(){
-  wdConfirm("Creating your own domain", MY_DOMAIN_RULES_HTML, "OK", null, true);
+  wdConfirm("Creating your own dock", MY_DOMAIN_RULES_HTML, "OK", null, true);
 }
 
 // The same rules, reachable BEFORE you fail — a curator wants them while making
@@ -5217,6 +5277,186 @@ document.getElementById("importRulesHelp").addEventListener("click", (e) => {
 // not which pane you clicked from. (The pane used to seed a picker's default;
 // the picker is gone, so the context signal has no job.)
 document.getElementById("browserUpload").addEventListener("click", () => $fileInput.click());
+
+/* ─── v26.98: Make a list - the one-minute entry form ─────────────────────
+   Create-only. It emits the same list object a decoded link does and lands
+   through commitImportedList, so the dock, the ID-clash guard and the share
+   arrow are the existing ones - a third pipe into the same door. The user
+   never sees or types an ID: the app stamps them, from 0001 in a dock of its
+   own, or carrying on from the highest ID when the list is put next to one of
+   the user's own lists.
+
+   "Your own lists" = source "imported": made here, or brought in from Excel.
+   Curated (cathedral) docks are never offered as "put next to" in v1 - a form
+   list stamping fresh IDs into a master would duplicate its words under
+   different IDs; joining the cathedral word-for-word is the slice's job. */
+
+const MAKE_START_ROWS = 5;
+
+function makeMsg(text, kind){
+  if (!$makeMsg) return;
+  $makeMsg.textContent = text || "";
+  $makeMsg.className = "list-message" + (kind ? " " + kind : "");
+}
+
+function makeAddRow(focus){
+  const row = document.createElement("div");
+  row.className = "make-row";
+  const q = document.createElement("input");
+  q.type = "text"; q.className = "make-input make-q"; q.autocomplete = "off"; q.spellcheck = false;
+  q.placeholder = "what you see";
+  const a = document.createElement("input");
+  a.type = "text"; a.className = "make-input make-a"; a.autocomplete = "off"; a.spellcheck = false;
+  a.placeholder = "what you must recall";
+  const x = document.createElement("button");
+  x.type = "button"; x.className = "make-x"; x.textContent = "×";
+  x.setAttribute("aria-label", "Remove this row");
+  x.addEventListener("click", () => {
+    row.remove();
+    if (!$makeRows.children.length) makeAddRow(true);     // never an empty form
+  });
+  // Enter walks forward: question -> answer -> next question; on the last
+  // answer it adds a row, so a whole lesson can be typed without the mouse.
+  q.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); a.focus(); } });
+  a.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const next = row.nextElementSibling;
+    if (next) next.querySelector(".make-q").focus(); else makeAddRow(true);
+  });
+  row.appendChild(q); row.appendChild(a); row.appendChild(x);
+  $makeRows.appendChild(row);
+  if (focus) q.focus();
+  return row;
+}
+
+/* Opening the pane keeps a draft that is already there; otherwise it lays out
+   a fresh form. The name gets focus so typing can start at once. */
+function makeFormOpen(){
+  if (!$makeRows) return;
+  if (!$makeRows.children.length){
+    for (let i = 0; i < MAKE_START_ROWS; i++) makeAddRow(false);
+  }
+  makeMsg("");
+  requestAnimationFrame(() => requestAnimationFrame(() => { if ($makeName) $makeName.focus(); }));
+}
+
+function makeFormClear(){
+  if ($makeName) $makeName.value = "";
+  if ($makeTag)  $makeTag.value  = "";
+  if ($makeRows) $makeRows.innerHTML = "";
+}
+
+/* A dock token of the list's own, derived from its name: letters, digits and
+   hyphens only (the shape parseFilename accepts), made unique so it can never
+   land in an existing dock by accident. */
+function makeOwnDockToken(name){
+  let base = String(name || "").toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  if (!base) base = "LIST";
+  const taken = new Set(Object.values(LISTS).map(l => l.domain));
+  for (const m of catalog.manifest()) taken.add(m.domain);
+  let token = base, n = 2;
+  while (taken.has(token)) token = base + "-" + (n++);
+  return token;
+}
+
+/* The docks a new list could be put next to: those holding the user's own
+   lists, never a curated one. Each is labelled by the lists it holds. */
+function makeCandidateDocks(){
+  const byDock = new Map();
+  for (const l of Object.values(LISTS)){
+    if (l.source !== "imported") continue;
+    if (isCurated(l.domain)) continue;
+    if (!byDock.has(l.domain)) byDock.set(l.domain, []);
+    byDock.get(l.domain).push(l.name);
+  }
+  return [...byDock.entries()].map(([domain, names]) => ({ domain, names }));
+}
+
+/* Highest numeric ID in a dock, across every list loaded there. */
+function makeMaxIdIn(domain){
+  let max = 0;
+  for (const l of Object.values(LISTS)){
+    if (l.domain !== domain) continue;
+    for (const r of l.rows){
+      const n = parseInt(r.ID, 10);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+  }
+  return max;
+}
+
+/* The dock question, in plain words, only when there is a choice to make.
+   Resolves to a dock token, "" for a dock of its own, or null on cancel. */
+async function makeAskDock(name, candidates){
+  const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  let html = "<p style='margin:0 0 10px'>What you learn will count across both.</p>" +
+    "<label style='display:block;margin:6px 0;cursor:pointer'>" +
+    "<input type='radio' name='wdDockPick' value='' checked> Its own dock</label>";
+  for (const c of candidates){
+    html += "<label style='display:block;margin:6px 0;cursor:pointer'>" +
+      "<input type='radio' name='wdDockPick' value='" + esc(c.domain) + "'> Next to " +
+      esc(c.names.map(n => "“" + n + "”").join(", ")) + "</label>";
+  }
+  const ok = await wdConfirm("Put “" + name + "” next to one of your lists?", html,
+                             "Make the list", "Cancel", true);
+  if (!ok) return null;
+  const picked = document.querySelector("input[name='wdDockPick']:checked");
+  return (picked && picked.value) ? picked.value : "";
+}
+
+async function makeListFromForm(){
+  const name = ($makeName.value || "").trim();
+  if (!name){ makeMsg("Give the list a name first.", "error"); $makeName.focus(); return; }
+  const pairs = [];
+  for (const row of $makeRows.children){
+    const q = (row.querySelector(".make-q").value || "").trim();
+    const a = (row.querySelector(".make-a").value || "").trim();
+    if (q && a) pairs.push({ q, a });        // a row counts only when both sides are filled
+  }
+  if (!pairs.length){ makeMsg("Add at least one question with its answer.", "error"); return; }
+  const tag = ($makeTag.value || "").trim();
+
+  // The dock: its own by default; next to one of the user's own lists by choice.
+  let domain = "", joined = false;
+  const candidates = makeCandidateDocks();
+  if (candidates.length){
+    const pick = await makeAskDock(name, candidates);
+    if (pick === null){ makeMsg("Not made."); return; }
+    if (pick){ domain = pick; joined = true; }
+  }
+  if (!domain) domain = makeOwnDockToken(name);
+
+  // Stamp the IDs: from 0001 in a dock of its own, carrying on in a joined one.
+  let next = joined ? makeMaxIdIn(domain) + 1 : 1;
+  const rows = pairs.map(p => ({
+    SEG: null, ID: String(next++).padStart(4, "0"), ENT: p.a,
+    CAT: "", SUB: "", TAG: tag || null, pairs: [{ q: p.q, a: p.a }]
+  }));
+
+  const list = {
+    listId: null, name, domain,
+    rows: normalizeEmbeddedRows(rows),
+    extraColumns: [], source: "imported"
+  };
+  await commitImportedList(list, [], { quiet: true, verb: "Made" });
+
+  // Landed? (commitImportedList registers this very object; a cancelled
+  // Replace or a refused ID clash leaves it out.) Then say it plainly and
+  // clear the form for the next one.
+  if (list.listId && LISTS[list.listId] === list){
+    let msg = "Made “" + name + "” - " + rows.length + (rows.length === 1 ? " word" : " words") +
+      (joined ? ", next to your other list" : ", in a dock of its own") +
+      ". Click it to study, or ↗ to share.";
+    if (rows.length < 10) msg += " A deck runs on about 10 cards - a shorter list repeats to fill.";
+    setListMessage(msg, "success");
+    makeFormClear();
+  }
+}
+
+document.getElementById("browserMake").addEventListener("click", () => showBrowserPane("make"));
+document.getElementById("makeAddRow").addEventListener("click", () => makeAddRow(true));
+document.getElementById("makeGo").addEventListener("click", () => { makeListFromForm(); });
 
 /* ─── Boot ─── */
 
