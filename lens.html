@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WordDock lens</title>
+<style>
+/* ── WordDock lens — preview v0.2 ─────────────────────────────────────────
+   A second file next to index.html. It reads the same lists/<DOCK>.json and
+   the same wd_rs_<DOCK> pools, and writes RS exactly as the app does (at deck
+   completion only). It touches nothing else in localStorage except
+   wd_last_list (so the app resumes where the lens was) and wd_sync_dirty
+   (so the next natural push carries the new scores).
+   Levels: catalog > dock > list > deck. Up = the title. Down = a chip, a row,
+   the green Study button. Top zone says where you are; bottom zone is what
+   you do. Engine ported unchanged from v26.98 (lowest ten, 12-mark). */
+:root{
+  --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
+  --card:#f6f5ef;--accent:#185fa5;--green:#006600;--green2:#0a7a0a;--q:#6b6a64;
+  --again:#b44a4a;--again-ink:#6e1010;--good:#3f8a4f;--good-ink:#0a5a0a;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--top:56px;--bottom:76px}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.5;-webkit-font-smoothing:antialiased;padding:var(--top) 0 var(--bottom)}
+button{font-family:inherit}
+
+/* ── top zone: where you are ── */
+.top{position:fixed;top:0;left:0;right:0;height:var(--top);z-index:40;background:var(--bg);
+  border-bottom:.5px solid var(--line2);display:flex;align-items:center;gap:14px;padding:0 16px}
+.mark{display:flex;align-items:center;gap:6px;flex-shrink:0;user-select:none}
+.badge{width:28px;height:28px;border-radius:8px;background:var(--green);color:#fff;display:flex;align-items:center;
+  justify-content:center;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:18px}
+.word{font-size:16px;font-weight:600}
+.crumbs{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;white-space:nowrap;font-size:14px}
+.crumb{background:none;border:none;padding:4px 7px;border-radius:6px;color:var(--sec);cursor:pointer;font-size:14px}
+.crumb:hover{background:var(--card);color:var(--fg)}
+.crumb.here{color:var(--fg);font-weight:600;cursor:default}
+.crumb.here:hover{background:none}
+.sep{color:var(--muted)}
+.meta{color:var(--muted);font-size:13px;margin-left:2px}
+.toptag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* ── table surface ── */
+.wrap{max-width:960px;margin:0 auto;padding:18px 16px 24px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+input[type=search]{flex:1;min-width:170px;height:36px;padding:0 12px;border:.5px solid var(--line2);border-radius:8px;
+  background:var(--bg);color:var(--fg);font-size:14px;outline:none}
+input[type=search]:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.depth{display:flex;border:.5px solid var(--line2);border-radius:8px;overflow:hidden;height:36px}
+.depth button{background:var(--bg);border:none;padding:0 12px;font-size:13px;color:var(--sec);cursor:pointer}
+.depth button+button{border-left:.5px solid var(--line2)}
+.depth button.on{background:var(--card);color:var(--fg);font-weight:500}
+.count{color:var(--muted);font-size:13px;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 8px;align-items:center}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;border:.5px solid var(--line2);background:var(--bg);color:var(--sec);border-radius:999px;
+  padding:3px 10px;font-size:12px;cursor:pointer;white-space:nowrap}
+.chip .n{color:var(--muted);margin-left:4px}
+.chip.on{background:var(--fg);color:#fff;border-color:var(--fg)}
+.chip.on .n{color:rgba(255,255,255,.7)}
+.chip:hover:not(.on){background:var(--card)}
+.chips .gap{color:var(--muted);font-size:12px;padding:0 4px;flex-shrink:0}
+.scroll.wide{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+table.wide{min-width:2300px}
+thead th{text-align:left;font-weight:500;color:var(--sec);font-size:12px;letter-spacing:.04em;text-transform:uppercase;
+  padding:8px 10px;border-bottom:.5px solid var(--line2);position:sticky;top:var(--top);background:var(--bg);
+  cursor:pointer;user-select:none;white-space:nowrap}
+.wide thead th{position:static}
+thead th:hover{color:var(--fg)}
+thead th.plain{cursor:default}
+thead th .arr{color:var(--muted);font-size:10px;margin-left:3px}
+td{padding:8px 10px;border-bottom:.5px solid var(--line);vertical-align:top}
+tbody tr.row{cursor:pointer}
+tbody tr.row:hover{background:var(--card)}
+tbody tr.open{background:var(--card)}
+.mono{font-family:var(--mono);font-size:12px;color:var(--sec);white-space:nowrap}
+.b{font-weight:500}.ru{font-size:15px}
+.dim{color:var(--muted)}
+.c{text-align:center}
+.tag{font-size:12px;background:var(--card);padding:2px 8px;border-radius:8px;color:var(--sec);white-space:nowrap}
+td.dot::before{content:"\2022";color:var(--green2);margin-right:6px}
+tr.detail td{background:var(--card);padding:10px 14px 12px 28px;border-bottom:.5px solid var(--line2)}
+.pairs{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px 14px;font-size:13px}
+.pairs .k{font-family:var(--mono);font-size:11px;color:var(--muted);padding-top:3px}
+.pairs .a{font-weight:500;font-size:14px}
+.empty{display:none;padding:2rem;text-align:center;color:var(--muted);font-size:14px}
+.rows-simple td{padding:12px 10px}
+.rows-simple .name{font-weight:500;font-size:15px}
+.now{font-size:12px;color:var(--green2);white-space:nowrap}
+.note{color:var(--muted);font-size:13px;padding:14px 0}
+
+/* ── study: the card over a faint table ── */
+.study{position:fixed;left:0;right:0;top:var(--top);bottom:var(--bottom);z-index:20;display:flex;align-items:center;
+  justify-content:center;padding:20px 16px;background:rgba(255,255,255,.94);opacity:0;pointer-events:none;transition:opacity .2s}
+body.studying .study{opacity:1;pointer-events:auto}
+.card{width:100%;max-width:680px;min-height:220px;background:#fff;border:1px solid var(--line);border-radius:18px;
+  box-shadow:0 10px 36px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:center;
+  padding:44px 40px 36px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;
+  transition:background-color .2s,border-color .2s;user-select:none}
+.card-tag{position:absolute;top:14px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.card-text{font-size:28px;text-align:center;white-space:pre-line;word-break:break-word;max-height:60vh;overflow-y:auto}
+.card-text.q{color:var(--q)}.card-text.a{color:var(--fg)}
+.card.done{background:#f1f8f1;border-color:#b9dcbc}
+.card.done .card-text{color:var(--good-ink)}
+
+/* ── bottom zone: what you do ── */
+.bottom{position:fixed;left:0;right:0;bottom:0;height:var(--bottom);z-index:40;background:var(--bg);
+  border-top:.5px solid var(--line2);display:flex;align-items:center;justify-content:center;gap:10px;padding:0 16px}
+.bottom > div{display:flex;gap:10px;align-items:center}
+.bottom > div[hidden]{display:none}
+.study-btn{height:44px;padding:0 22px;border-radius:10px;border:none;background:var(--green);color:#fff;font-size:15px;
+  font-weight:600;cursor:pointer;white-space:nowrap}
+.study-btn:hover{background:var(--green2)}
+.study-btn[disabled]{opacity:.45;cursor:default}
+.btn{width:130px;height:44px;border-radius:10px;background:#fff;font-size:15px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btn:focus{outline:none}
+.btn-again{border:1px solid color-mix(in srgb,var(--again) 55%,#fff);color:var(--again-ink)}
+.btn-good{border:1px solid color-mix(in srgb,var(--good) 55%,#fff);color:var(--good-ink)}
+.btn-again:hover{background:#fbf2f2}.btn-good:hover{background:#f1f8f1}
+.hint{position:absolute;right:16px;color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* ── dialog ── */
+.dlg-back{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;padding:24px}
+.dlg-back[hidden]{display:none}
+.dlg{background:#fff;border:1px solid var(--line);border-radius:14px;max-width:400px;width:100%;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+.dlg h3{margin:0 0 8px;font-size:16px}
+.dlg p{margin:0 0 18px;color:var(--sec);font-size:14px}
+.dlg-actions{display:flex;justify-content:flex-end;gap:8px}
+.dlg-actions button{height:36px;padding:0 14px;border-radius:8px;font-size:14px;cursor:pointer}
+.dlg-cancel{background:#fff;border:.5px solid var(--line2);color:var(--sec)}
+.dlg-ok{background:var(--green);border:none;color:#fff;font-weight:500}
+
+@media (max-width:600px){
+  .wrap{padding:12px 12px 20px}
+  .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .scroll{overflow-x:auto}
+  thead th{position:static}
+  .word,.toptag,.hint{display:none}
+  .card-text{font-size:24px}
+  .card{padding:40px 22px 30px;min-height:190px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="mark"><span class="badge">W</span><span class="word">WordDock</span></div>
+  <nav class="crumbs" id="crumbs"></nav>
+  <div class="toptag" id="topTag">lens preview v0.2</div>
+</header>
+
+<main id="tableSurface">
+  <div class="wrap">
+    <div class="controls" id="controls">
+      <input type="search" id="q" placeholder="Search this list" aria-label="Search this list" autocomplete="off" spellcheck="false">
+      <div class="depth" id="depth" aria-label="Depth">
+        <button data-d="list" class="on">List</button><button data-d="structure">Structure</button><button data-d="creator">Creator</button>
+      </div>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="chips" id="chipsCat"></div>
+    <div class="chips" id="chipsSeg" style="display:none"></div>
+    <div class="scroll" id="scroll">
+      <table id="table"><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+      <div class="empty" id="empty">No matches.</div>
+    </div>
+  </div>
+</main>
+
+<section class="study" id="study" aria-hidden="true">
+  <div class="card" id="card"><div class="card-tag" id="cardTag"></div><div class="card-text q" id="cardText">…</div></div>
+</section>
+
+<footer class="bottom">
+  <div id="bottomTable"><button class="study-btn" id="btnStudy">Study</button></div>
+  <div id="bottomStudy" hidden>
+    <button class="btn btn-again" id="btnAgain">Again</button>
+    <button class="btn btn-good" id="btnGood">Good</button>
+    <span class="hint">space · reveal / good &nbsp;←&nbsp; again &nbsp;esc&nbsp; list</span>
+  </div>
+</footer>
+
+<div class="dlg-back" id="dlgBack" hidden>
+  <div class="dlg" role="dialog" aria-modal="true">
+    <h3 id="dlgTitle"></h3><p id="dlgBody"></p>
+    <div class="dlg-actions"><button class="dlg-cancel" id="dlgCancel">Cancel</button><button class="dlg-ok" id="dlgOk">OK</button></div>
+  </div>
+</div>
+
+<script>
+/* ── Catalog, as in v26.98 ── */
+const CATALOG = [
+  { domain:"NL-RU", display:"Dutch to Russian" },
+  { domain:"NL-IT", display:"Dutch to Italian" },
+  { domain:"NL-FR", display:"Dutch to French" },
+  { domain:"NL-LA", display:"Dutch to Latin" }
+];
+const LISTS_DIR = "lists/";
+const FULL = "Full";
+const isCurated = d => CATALOG.some(x => x.domain === d);
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const fold = v => String(v || "").trim().toLowerCase();
+
+/* ── Sample rows (WD26 shape), only when lists/NL-RU.json cannot be fetched,
+      e.g. opened from disk. SEG varied so the two-zone chips show. ── */
+const SAMPLE = [
+  ["1A","0001","в","voorzetsel","","",[["in","в"],["in de klas","в кла́ссе"]]],
+  ["1A","0002","и","voegwoord","","",[["en","и"]]],
+  ["1A","0003","не","partikel","","",[["niet","не"],["ik weet niet","я не зна́ю"]]],
+  ["1A","0004","я","voornaamwoord","pers","",[["ik","я"]]],
+  ["1A","0005","ты","voornaamwoord","pers","",[["jij","ты"]]],
+  ["1A","0006","дом","zelfst. nw","m","wonen",[["huis","дом"],["thuis","до́ма"],["naar huis","домо́й"]]],
+  ["1A","0007","мама","zelfst. nw","v","familie",[["mama","ма́ма"]]],
+  ["1A","0008","хлеб","zelfst. nw","m","eten",[["brood","хлеб"]]],
+  ["1A","0009","вода","zelfst. nw","v","eten",[["water","вода́"]]],
+  ["1A","0010","большой","bijv. nw","","",[["groot","большо́й"],["een groot huis","большо́й дом"]]],
+  ["1B","0011","хороший","bijv. nw","","",[["goed","хоро́ший"]]],
+  ["1B","0012","ходить","werkwoord","beweging","mv",[["gaan (te voet)","ходи́ть"],["vervoeging","хожу́ — хо́дишь — хо́дят"],["ik ga naar school","я хожу́ в шко́лу"]]],
+  ["1B","0013","читать","werkwoord","","",[["lezen","чита́ть"],["vervoeging","чита́ю — чита́ешь — чита́ют"]]],
+  ["1B","0014","говорить","werkwoord","","",[["spreken","говори́ть"]]],
+  ["1B","0015","да","bijwoord","","",[["ja","да"]]],
+  ["1B","0016","нет","bijwoord","","",[["nee","нет"]]],
+  ["2A","0017","спасибо","tussenw.","","beleefd",[["dank je","спаси́бо"]]],
+  ["2A","0018","кто","voornaamwoord","vraag","",[["wie","кто"]]],
+  ["2A","0019","что","voornaamwoord","vraag","",[["wat","что"]]],
+  ["2A","0020","один","telwoord","","",[["één","оди́н"]]]
+];
+const sampleRows = () => SAMPLE.map(([SEG,ID,ENT,CAT,SUB,TAG,pairs]) =>
+  ({ SEG, ID, ENT, CAT, SUB, TAG, pairs: pairs.map(([q,a]) => ({ q, a })) }));
+
+/* One row shape everywhere: the six atoms plus the filled pairs. */
+function normalizeRows(raw){
+  return (raw || []).map(r => ({
+    ID: String(r.ID || "").trim(), SEG: r.SEG || "", ENT: r.ENT || "",
+    CAT: r.CAT || "", SUB: r.SUB || "", TAG: r.TAG || "",
+    pairs: (r.pairs || []).filter(p => p && p.q && p.a).map(p => ({ q: String(p.q), a: String(p.a) }))
+  })).filter(r => r.ID && r.pairs.length);
+}
+
+/* ── Lists in RAM: Full per dock (fetched) + the user's own lists (wd_lists, read only) ── */
+const LISTS = {};
+const PENDING = [];               // ids-mode lists waiting for their dock's Full
+let usingSample = false;
+
+function loadImported(){
+  let raw; try { raw = JSON.parse(localStorage.getItem("wd_lists")) || {}; } catch { return; }
+  for (const s of Object.values(raw)){
+    if (!s || !s.listId) continue;
+    if (s.mode === "ids" && Array.isArray(s.ids)) PENDING.push(s);
+    else if (Array.isArray(s.rows))
+      LISTS[s.listId] = { listId: s.listId, name: s.name, domain: s.domain, source: "imported", rows: normalizeRows(s.rows) };
+  }
+}
+function resolvePending(domain, fullRows){
+  const byId = new Map(fullRows.map(r => [r.ID, r]));
+  for (let i = PENDING.length - 1; i >= 0; i--){
+    const s = PENDING[i]; if (s.domain !== domain) continue;
+    const rows = s.ids.map(id => byId.get(id)).filter(Boolean);
+    if (rows.length) LISTS[s.listId] = { listId: s.listId, name: s.name, domain: s.domain, source: "imported", rows };
+    PENDING.splice(i, 1);
+  }
+}
+async function ensureFull(domain){
+  const id = "embedded_" + domain;
+  if (LISTS[id]) return LISTS[id];
+  let rows = null;
+  try {
+    const resp = await fetch(LISTS_DIR + domain + ".json", { cache: "no-cache" });
+    if (resp.ok) rows = normalizeRows(await resp.json());
+  } catch {}
+  if (!rows && domain === "NL-RU"){ rows = sampleRows(); usingSample = true; }
+  if (!rows) return null;
+  LISTS[id] = { listId: id, name: FULL, domain, source: "embedded", rows };
+  resolvePending(domain, rows);
+  return LISTS[id];
+}
+const listsIn = d => Object.values(LISTS).filter(l => l.domain === d)
+  .sort((a,b) => a.source === "embedded" ? -1 : b.source === "embedded" ? 1 : a.name.localeCompare(b.name));
+function importedDomains(){
+  const s = new Set();
+  for (const l of Object.values(LISTS)) if (l.source === "imported" && !isCurated(l.domain)) s.add(l.domain);
+  return [...s].sort();
+}
+function knownCount(d){
+  const l = LISTS["embedded_" + d]; if (l) return l.rows.length;
+  try { const n = parseInt(localStorage.getItem("wd_rowcount_" + d), 10); return Number.isInteger(n) && n > 0 ? n : null; }
+  catch { return null; }
+}
+
+/* ── RS: the real pool of a dock, read as the app reads it ── */
+const poolKey = d => "wd_rs_" + d;
+function readPool(d){ try { return JSON.parse(localStorage.getItem(poolKey(d))) || {}; } catch { return {}; } }
+
+/* ── State ── */
+let level = "list";                       // catalog | dock | list | study
+let viewDomain = "NL-RU", viewListId = null;   // what the table shows
+let activeListId = null, activeDomain = null;  // what the deck is built from
+let depth = "list";
+let filter = { CAT: null, SEG: null };
+let query = "";
+let sortKey = null, sortDir = 1;
+const expanded = new Set();
+const viewList = () => viewListId ? LISTS[viewListId] : null;
+
+function rowVisible(r){
+  if (filter.CAT !== null && fold(r.CAT) !== filter.CAT) return false;
+  if (filter.SEG !== null && !fold(r.SEG).startsWith(filter.SEG)) return false;
+  if (query){
+    const hay = [r.ID, r.SEG, r.ENT, r.CAT, r.SUB, r.TAG, ...r.pairs.flatMap(p => [p.q, p.a])].join(" ").toLowerCase();
+    if (!hay.includes(query)) return false;
+  }
+  return true;
+}
+function visibleRows(){ const l = viewList(); return l ? l.rows.filter(rowVisible) : []; }
+
+/* ── Columns per depth ── */
+const COLS = {
+  list: [ { k:"A1", label:"Word", cls:"b ru" }, { k:"Q1", label:"Meaning" }, { k:"CATSUB", label:"Category" }, { k:"TAG", label:"Tag" } ],
+  structure: [ { k:"SEG", label:"SEG", cls:"mono" }, { k:"ID", label:"ID", cls:"mono" }, { k:"ENT", label:"ENT", cls:"b ru" },
+               { k:"CAT", label:"CAT" }, { k:"SUB", label:"SUB" }, { k:"TAG", label:"TAG" }, { k:"RS", label:"RS", cls:"mono c", th:"c" } ]
+};
+function cols(){
+  if (depth !== "creator") return COLS[depth];
+  const c = [...COLS.structure];
+  for (let i = 1; i <= 10; i++){ c.push({ k:"Q"+i, label:"Q"+i }); c.push({ k:"A"+i, label:"A"+i, cls:"ru" }); }
+  return c;
+}
+function cell(r, k, pool){
+  if (k === "A1") return r.pairs[0] ? r.pairs[0].a : "";
+  if (k === "Q1") return r.pairs[0] ? r.pairs[0].q : "";
+  if (k === "CATSUB") return r.SUB ? r.CAT + " \u00B7 " + r.SUB : r.CAT;
+  if (k === "RS") return pool[r.ID];
+  const m = /^([QA])(\d+)$/.exec(k);
+  if (m){ const p = r.pairs[+m[2] - 1]; return p ? (m[1] === "Q" ? p.q : p.a) : ""; }
+  return r[k] || "";
+}
+
+/* ── Top zone: the breadcrumb is the way up ── */
+function renderCrumbs(){
+  const c = $("crumbs"); c.innerHTML = "";
+  const add = (label, here, onClick, meta) => {
+    const b = document.createElement("button"); b.className = "crumb" + (here ? " here" : ""); b.textContent = label;
+    if (!here) b.addEventListener("click", onClick);
+    c.appendChild(b);
+    if (meta){ const m = document.createElement("span"); m.className = "meta"; m.textContent = meta; c.appendChild(m); }
+  };
+  const sep = () => { const s = document.createElement("span"); s.className = "sep"; s.textContent = "/"; c.appendChild(s); };
+  const l = viewList();
+  add("Docks", level === "catalog", goCatalog);
+  if (level === "catalog") return;
+  sep();
+  const d = CATALOG.find(x => x.domain === viewDomain);
+  add(viewDomain, level === "dock", () => goDock(viewDomain), level === "dock" ? (d ? d.display : "my dock") : null);
+  if (level === "dock") return;
+  sep(); add(l ? l.name : "\u2026", level === "list", () => goList(viewListId), (level === "list" && l) ? l.rows.length + " words" : null);
+  if (level !== "study") return;
+  sep(); const m = document.createElement("span"); m.className = "crumb here"; m.id = "deckCount"; c.appendChild(m);
+  paintCounter();
+}
+function paintCounter(){ const el = $("deckCount"); if (el) el.textContent = deckScore + "/12" + (deckDone ? " \u2713" : ""); }
+
+/* ── The table ── */
+function simpleHead(thead, labels){
+  const tr = document.createElement("tr");
+  labels.forEach(t => { const th = document.createElement("th"); th.className = "plain"; th.textContent = t; tr.appendChild(th); });
+  thead.appendChild(tr);
+}
+function renderTable(){
+  const thead = $("thead"), tbody = $("tbody"), tbl = $("table"), empty = $("empty");
+  thead.innerHTML = ""; tbody.innerHTML = ""; empty.style.display = "none";
+  const wide = level === "list" && depth === "creator";
+  tbl.classList.toggle("wide", wide); $("scroll").classList.toggle("wide", wide);
+  const atList = level === "list" || level === "study";
+  $("controls").style.display = atList ? "" : "none";
+  $("chipsCat").style.display = atList ? "" : "none";
+  if (!atList) $("chipsSeg").style.display = "none";
+  tbody.className = atList ? "" : "rows-simple";
+
+  if (level === "catalog"){
+    simpleHead(thead, ["Dock", "", "Words", ""]);
+    const rows = [...CATALOG.map(d => ({ domain: d.domain, display: d.display })),
+                  ...importedDomains().map(d => ({ domain: d, display: "my dock" }))];
+    for (const d of rows){
+      const tr = document.createElement("tr"); tr.className = "row";
+      const n = knownCount(d.domain);
+      tr.innerHTML = '<td class="name">' + esc(d.domain) + '</td><td class="dim">' + esc(d.display) + '</td>' +
+        '<td class="mono">' + (n === null ? "\u00B7" : n) + '</td><td class="now">' + (d.domain === activeDomain ? "studying now" : "") + '</td>';
+      tr.addEventListener("click", () => goDock(d.domain));
+      tbody.appendChild(tr);
+    }
+    renderBottom(); return;
+  }
+  if (level === "dock"){
+    simpleHead(thead, ["List", "Words", ""]);
+    const lists = listsIn(viewDomain);
+    if (!lists.length){
+      const tr = document.createElement("tr");
+      tr.innerHTML = '<td colspan="3" class="note">' + (isCurated(viewDomain) ? "Loading\u2026 (or not available offline)" : "Nothing in this dock.") + '</td>';
+      tbody.appendChild(tr);
+    }
+    for (const l of lists){
+      const tr = document.createElement("tr"); tr.className = "row";
+      tr.innerHTML = '<td class="name">' + esc(l.name) + '</td><td class="mono">' + l.rows.length + '</td>' +
+        '<td class="now">' + (l.listId === activeListId ? "studying now" : "") + '</td>';
+      tr.addEventListener("click", () => goList(l.listId));
+      tbody.appendChild(tr);
+    }
+    renderBottom(); return;
+  }
+
+  /* list level (also painted faintly under the card in study) */
+  const l = viewList(); if (!l){ renderBottom(); return; }
+  renderChips(l);
+  const pool = readPool(viewDomain);
+  const deckIds = new Set(viewListId === activeListId ? pipe.map(s => s.row.ID) : []);
+  const C = cols();
+  const trh = document.createElement("tr");
+  for (const col of C){
+    const th = document.createElement("th"); if (col.th) th.className = col.th; th.textContent = col.label;
+    if (sortKey === col.k){ const s = document.createElement("span"); s.className = "arr"; s.textContent = sortDir > 0 ? "\u25B2" : "\u25BC"; th.appendChild(s); }
+    th.addEventListener("click", () => { sortDir = sortKey === col.k ? -sortDir : 1; sortKey = col.k; renderTable(); });
+    trh.appendChild(th);
+  }
+  thead.appendChild(trh);
+  let rows = visibleRows();
+  const val = (r, k) => k === "RS" ? (pool[r.ID] || 0) : cell(r, k, pool);
+  if (sortKey) rows = [...rows].sort((x, y) => {
+    const a = val(x, sortKey), b = val(y, sortKey);
+    return (typeof a === "number" ? a - b : String(a).localeCompare(String(b))) * sortDir;
+  });
+  const total = l.rows.length;
+  $("count").textContent = rows.length === total ? total + " words" : rows.length + " of " + total;
+  if (!rows.length) empty.style.display = "block";
+  for (const r of rows){
+    const tr = document.createElement("tr"); tr.className = "row" + (expanded.has(r.ID) ? " open" : "");
+    C.forEach((col, i) => {
+      const td = document.createElement("td"); if (col.cls) td.className = col.cls;
+      if (i === 0 && deckIds.has(r.ID)) td.classList.add("dot");
+      const v = cell(r, col.k, pool);
+      if (col.k === "CATSUB" || col.k === "CAT"){
+        if (v){ const s = document.createElement("span"); s.className = "tag"; s.textContent = v; td.appendChild(s); }
+        else { td.textContent = "\u00B7"; td.classList.add("dim"); }
+      } else if (col.k === "RS"){
+        td.textContent = v === undefined ? "\u00B7" : v; if (v === undefined) td.classList.add("dim");
+      } else {
+        td.textContent = v || "\u00B7"; if (!v) td.classList.add("dim");
+      }
+      tr.appendChild(td);
+    });
+    if (!wide) tr.addEventListener("click", () => { if (expanded.has(r.ID)) expanded.delete(r.ID); else expanded.add(r.ID); renderTable(); });
+    tbody.appendChild(tr);
+    if (!wide && expanded.has(r.ID)){
+      const d = document.createElement("tr"); d.className = "detail";
+      const td = document.createElement("td"); td.colSpan = C.length;
+      const g = document.createElement("div"); g.className = "pairs";
+      r.pairs.forEach((p, i) => {
+        const k = document.createElement("span"); k.className = "k"; k.textContent = "Q" + (i + 1);
+        const q = document.createElement("span"); q.textContent = p.q;
+        const a = document.createElement("span"); a.className = "a ru"; a.textContent = p.a;
+        g.append(k, q, a);
+      });
+      td.appendChild(g); d.appendChild(td); tbody.appendChild(d);
+    }
+  }
+  renderBottom();
+}
+
+/* Chips: counts over the whole list, as the app's filter panel counts. */
+function renderChips(l){
+  const cat = $("chipsCat"), seg = $("chipsSeg");
+  cat.innerHTML = ""; seg.innerHTML = ""; seg.style.display = "none";
+  const rows = l.rows;
+  const mk = (box, label, n, on, onClick) => {
+    const b = document.createElement("button"); b.className = "chip" + (on ? " on" : ""); b.textContent = label;
+    if (n !== null){ const s = document.createElement("span"); s.className = "n"; s.textContent = n; b.appendChild(s); }
+    b.addEventListener("click", onClick); box.appendChild(b);
+  };
+  const counts = new Map();
+  for (const r of rows){ const k = fold(r.CAT); if (!k) continue; const e = counts.get(k) || { label: r.CAT.trim(), n: 0 }; e.n++; counts.set(k, e); }
+  mk(cat, "All", rows.length, filter.CAT === null, () => { filter.CAT = null; renderTable(); });
+  [...counts.entries()].sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0]))
+    .forEach(([k, e]) => mk(cat, e.label, e.n, filter.CAT === k, () => { filter.CAT = filter.CAT === k ? null : k; renderTable(); }));
+
+  /* Segment, two zones in one row: digits, then the letters of the chosen digit. */
+  const digits = new Map(), letters = new Map();
+  for (const r of rows){
+    const s = fold(r.SEG); if (!/^[1-9][a-hj-np-z]$/.test(s)) continue;
+    digits.set(s[0], (digits.get(s[0]) || 0) + 1); letters.set(s, (letters.get(s) || 0) + 1);
+  }
+  if (letters.size <= 1) return;
+  seg.style.display = "";
+  const cur = filter.SEG, curDigit = cur ? cur[0] : null;
+  mk(seg, "All segments", null, cur === null, () => { filter.SEG = null; renderTable(); });
+  [...digits.keys()].sort().forEach(d => mk(seg, d, digits.get(d), curDigit === d, () => { filter.SEG = curDigit === d ? null : d; renderTable(); }));
+  if (curDigit){
+    const gap = document.createElement("span"); gap.className = "gap"; gap.textContent = "\u203A"; seg.appendChild(gap);
+    [...letters.keys()].filter(k => k[0] === curDigit).sort()
+      .forEach(full => mk(seg, full[1].toUpperCase(), letters.get(full), cur === full, () => { filter.SEG = cur === full ? curDigit : full; renderTable(); }));
+  }
+}
+
+/* ── Bottom zone ── */
+function renderBottom(){
+  const b = $("btnStudy");
+  if (level === "catalog" || level === "dock"){
+    const a = LISTS[activeListId];
+    if (a){ b.disabled = false; b.textContent = (deckScore > 0 && !deckDone) ? "Resume \u00B7 " + a.name + " \u00B7 " + deckScore + "/12" : "Study \u00B7 " + a.name; }
+    else { b.disabled = true; b.textContent = "Study"; }
+    return;
+  }
+  const l = viewList();
+  if (!l){ b.disabled = true; b.textContent = "Study"; return; }
+  b.disabled = false;
+  const vis = visibleRows(), src = vis.length ? vis : l.rows, total = l.rows.length;
+  if (viewListId === activeListId && deckScore > 0 && !deckDone && sigOf(src) === deckSig) b.textContent = "Resume \u00B7 " + deckScore + "/12";
+  else b.textContent = "Study " + (vis.length && vis.length !== total ? vis.length + " of " + total : "all " + total);
+}
+
+/* ── Navigation ── */
+function renderAll(){ renderCrumbs(); renderTable(); }
+function leaveStudy(){
+  document.body.classList.remove("studying"); $("study").setAttribute("aria-hidden", "true");
+  $("bottomTable").hidden = false; $("bottomStudy").hidden = true;
+}
+function goCatalog(){ if (level === "study") leaveStudy(); level = "catalog"; renderAll(); }
+function goDock(d){
+  if (level === "study") leaveStudy();
+  level = "dock"; viewDomain = d; renderAll();
+  if (isCurated(d) && !LISTS["embedded_" + d]) ensureFull(d).then(() => { if (level === "dock" && viewDomain === d) renderAll(); });
+}
+function goList(id){
+  const l = LISTS[id]; if (!l) return;
+  if (level === "study") leaveStudy();
+  level = "list"; viewDomain = l.domain;
+  if (viewListId !== id){ viewListId = id; filter = { CAT: null, SEG: null }; query = ""; $("q").value = ""; sortKey = null; expanded.clear(); }
+  renderAll();
+}
+function enterStudy(){
+  level = "study"; viewDomain = activeDomain; viewListId = activeListId;
+  document.body.classList.add("studying"); $("study").setAttribute("aria-hidden", "false");
+  $("bottomTable").hidden = true; $("bottomStudy").hidden = false;
+  renderAll(); renderCard();
+}
+
+/* ── Engine, ported unchanged from v26.98 ── */
+let pipe = [], deckScore = 0, deckDone = false, showingA = false, peeking = false, deckSig = "", deckRows = [];
+const sigOf = rows => rows.map(r => r.ID).join(",");
+function buildDeck(rows, domain){
+  const pool = readPool(domain);
+  const sorted = [...rows].sort((a, b) => {
+    const ra = pool[a.ID] || 0, rb = pool[b.ID] || 0;
+    if (ra !== rb) return ra - rb;
+    return a.ID < b.ID ? -1 : 1;
+  });
+  return sorted.slice(0, Math.min(10, sorted.length)).map(row => ({ row, fi: 0, passDirty: false, needsRedemption: false, timesDirty: 0 }));
+}
+function initDeck(rows){
+  deckRows = rows; deckSig = sigOf(rows);
+  pipe = buildDeck(rows, activeDomain);
+  deckScore = 0; deckDone = false; showingA = false; peeking = false;
+  renderCard();
+}
+const cur = () => pipe[0];
+function moveTo(i){ const s = pipe.shift(); pipe.splice(Math.min(i, pipe.length), 0, s); }
+function reveal(){ if (deckDone || showingA) return; showingA = true; renderCard(); }
+function gradeAgain(){
+  if (!showingA || deckDone) return;
+  showingA = false; peeking = false;
+  const s = cur(); if (!s.passDirty){ s.passDirty = true; s.timesDirty++; }
+  renderCard();
+}
+function gradeGood(){
+  if (!showingA || deckDone) return;
+  showingA = false; peeking = false;
+  const s = cur(); s.fi++;
+  if (s.fi >= s.row.pairs.length){
+    s.fi = 0;
+    if (s.passDirty){ s.passDirty = false; s.needsRedemption = true; renderCard(); return; }
+    if (s.needsRedemption){ s.needsRedemption = false; moveTo(3); }
+    else { deckScore++; moveTo(9); }
+    if (deckScore >= 12 && !pipe.some(x => x.passDirty) && !pipe.some(x => x.needsRedemption)){
+      deckDone = true;
+      /* RS write: re-read the live pool, apply this deck's deltas only, write back. */
+      const key = poolKey(activeDomain);
+      let pool; try { pool = JSON.parse(localStorage.getItem(key)) || {}; } catch { pool = {}; }
+      pipe.forEach(x => {
+        const id = x.row.ID, base = (id in pool) ? pool[id] : 0;
+        pool[id] = x.timesDirty === 0 ? base + 1 : x.timesDirty === 1 ? base - 1 : base - 2;
+      });
+      try { localStorage.setItem(key, JSON.stringify(pool)); localStorage.setItem("wd_sync_dirty", "1"); } catch {}
+      renderTable();                       // the RS column behind the card follows
+    }
+  }
+  renderCard();
+}
+function renderCard(){
+  paintCounter();
+  const card = $("card"), text = $("cardText"), tag = $("cardTag");
+  if (deckDone){ card.classList.add("done"); tag.textContent = ""; text.textContent = "Another WordDeck Done!"; text.className = "card-text a"; return; }
+  card.classList.remove("done");
+  if (!pipe.length){ tag.textContent = ""; text.textContent = "\u2026"; return; }
+  const s = cur(), f = s.row.pairs[s.fi];
+  const c = (s.row.CAT || "").toUpperCase(), sub = (s.row.SUB || "").trim().toUpperCase();
+  tag.textContent = sub ? c + " \u00B7 " + sub : c;
+  const showQ = !showingA || peeking;
+  text.textContent = showQ ? f.q : f.a; text.className = "card-text " + (showQ ? "q" : "a");
+}
+
+/* ── The green button: looking is free, studying asks ── */
+async function onStudy(){
+  if (level !== "list"){ if (LISTS[activeListId]) enterStudy(); return; }
+  const l = viewList(); if (!l) return;
+  const vis = visibleRows(), src = vis.length ? vis : l.rows;
+  const midDeck = deckScore > 0 && !deckDone;
+  if (viewListId !== activeListId){
+    const leavingDomain = l.domain !== activeDomain, from = LISTS[activeListId];
+    const ok = await confirmDlg(
+      leavingDomain ? "Switch to studying " + l.domain + "?" : "Switch to \u201C" + l.name + "\u201D?",
+      (leavingDomain ? "You're leaving " + activeDomain + "." : "You're leaving \u201C" + (from ? from.name : "") + "\u201D.") + (midDeck ? " Unfinished decks lose progress." : ""),
+      leavingDomain ? "Study " + l.domain : "Switch list", "Keep studying");
+    if (!ok) return;
+    activeListId = viewListId; activeDomain = l.domain;
+    try { localStorage.setItem("wd_last_list", activeListId); } catch {}
+    initDeck(src); enterStudy(); return;
+  }
+  if (sigOf(src) !== deckSig){
+    if (midDeck){
+      const ok = await confirmDlg("Restart the deck?", "Your current deck restarts with the " + src.length + " words shown.", "Restart", "Keep deck");
+      if (!ok){ enterStudy(); return; }
+    }
+    initDeck(src);
+  }
+  enterStudy();
+}
+
+/* ── Dialog ── */
+function confirmDlg(title, body, okLabel, cancelLabel){
+  return new Promise(res => {
+    const back = $("dlgBack"), ok = $("dlgOk"), cancel = $("dlgCancel");
+    $("dlgTitle").textContent = title; $("dlgBody").textContent = body;
+    ok.textContent = okLabel; cancel.textContent = cancelLabel; back.hidden = false;
+    const done = v => { back.hidden = true; ok.removeEventListener("click", onOk); cancel.removeEventListener("click", onCancel);
+      back.removeEventListener("click", onBack); document.removeEventListener("keydown", onKey, true); res(v); };
+    const onOk = () => done(true), onCancel = () => done(false), onBack = e => { if (e.target === back) done(false); };
+    const onKey = e => { if (e.key === "Escape"){ e.stopPropagation(); done(false); } if (e.key === "Enter"){ e.stopPropagation(); done(true); } };
+    ok.addEventListener("click", onOk); cancel.addEventListener("click", onCancel);
+    back.addEventListener("click", onBack); document.addEventListener("keydown", onKey, true);
+    ok.focus();
+  });
+}
+
+/* ── Input ── */
+$("btnStudy").addEventListener("click", onStudy);
+$("card").addEventListener("click", () => {
+  if (deckDone){ initDeck(deckRows); renderTable(); return; }
+  if (showingA){ peeking = !peeking; renderCard(); return; }
+  reveal();
+});
+$("btnGood").addEventListener("click", e => { gradeGood(); e.currentTarget.blur(); });
+$("btnAgain").addEventListener("click", e => { gradeAgain(); e.currentTarget.blur(); });
+$("q").addEventListener("input", e => { query = fold(e.target.value); renderTable(); });
+$("depth").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  depth = b.dataset.d; expanded.clear();
+  [...$("depth").children].forEach(x => x.classList.toggle("on", x === b));
+  renderTable();
+});
+document.addEventListener("keydown", e => {
+  if (!$("dlgBack").hidden) return;
+  if (level !== "study"){ if (e.key === "/" && document.activeElement !== $("q")){ e.preventDefault(); $("q").focus(); } return; }
+  if (e.key === " " || e.key === "Enter"){ e.preventDefault(); if (deckDone){ initDeck(deckRows); renderTable(); } else if (!showingA) reveal(); else gradeGood(); }
+  if ((e.key === "ArrowLeft" || e.key === "p" || e.key === "P") && showingA && !deckDone){ e.preventDefault(); gradeAgain(); }
+  if (e.key === "Escape") goList(activeListId);
+});
+
+/* ── Boot: land in study, like the app ── */
+(async () => {
+  loadImported();
+  let wanted = null; try { wanted = localStorage.getItem("wd_last_list"); } catch {}
+  let bootDomain = "NL-RU";
+  if (wanted){
+    if (LISTS[wanted]) bootDomain = LISTS[wanted].domain;
+    else if (wanted.startsWith("embedded_")) bootDomain = wanted.slice(9);
+    else { const p = PENDING.find(s => s.listId === wanted); if (p) bootDomain = p.domain; }
+  }
+  const fetchDomain = isCurated(bootDomain) ? bootDomain : "NL-RU";
+  const full = await ensureFull(fetchDomain);
+  $("topTag").textContent = "lens preview v0.2" + (usingSample ? " \u00B7 sample data" : "");
+  if (!full){ level = "catalog"; renderAll(); return; }
+  if (wanted && LISTS[wanted]){ activeListId = wanted; activeDomain = LISTS[wanted].domain; }
+  else { activeListId = "embedded_" + fetchDomain; activeDomain = fetchDomain; }
+  viewDomain = activeDomain; viewListId = activeListId;
+  initDeck(LISTS[activeListId].rows);
+  enterStudy();
+})();
+</script>
+</body>
+</html>
