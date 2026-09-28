@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WordDock lens</title>
+<style>
+/* ── WordDock lens — preview v0.4 ────────────────────────────────────────
+   Look: the mockup (v0.1). Structure:
+   · top line   = navigation only (path, up)
+   · list head  = title, then the action row: search · filter · count · Study
+   · table      = 10 rows at most, never a scrollbar; pages instead
+   · bottom     = position inside: ‹ 1 / 68 › in the list, 0/12 in study
+   · study      = the list fully hidden; card, Again / Good under it
+   Engine ported unchanged from v26.98 (lowest ten, 12-mark). Reads the real
+   lists/<DOCK>.json and wd_rs_<DOCK>; writes RS only at deck completion. */
+:root{
+  --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
+  --card:#f6f5ef;--accent:#185fa5;--green:#006600;--green2:#0a7a0a;--q:#6b6a64;
+  --again:#b44a4a;--again-ink:#6e1010;--good:#3f8a4f;--good-ink:#0a5a0a;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.5;-webkit-font-smoothing:antialiased}
+button,select,input{font-family:inherit}
+
+/* ── top line: navigation only ── */
+.top{position:relative;height:52px}
+.top-in{position:absolute;left:45%;top:14px;display:flex;align-items:center;gap:10px;max-width:53%}
+.badge{width:24px;height:24px;border-radius:7px;background:var(--green);color:#fff;display:flex;align-items:center;
+  justify-content:center;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:15px;flex-shrink:0;user-select:none}
+.crumbs{display:flex;align-items:center;gap:2px;min-width:0;overflow:hidden;white-space:nowrap;font-size:13px}
+.crumb{background:none;border:none;padding:3px 6px;border-radius:6px;color:var(--sec);cursor:pointer;font-size:13px}
+.crumb:hover{background:var(--card);color:var(--fg)}
+.crumb.here{color:var(--fg);cursor:default}
+.crumb.here:hover{background:none}
+.sep{color:var(--muted);font-size:13px}
+.toptag{position:absolute;right:16px;top:18px;font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* ── list surface (the mockup) ── */
+.wrap{max-width:920px;margin:0 auto;padding:.5rem 1.25rem 1.5rem}
+h1{font-size:20px;font-weight:600;margin:0 0 4px}
+.sub{color:var(--sec);font-size:13px;margin:0}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:1rem 0 .75rem}
+input[type=search]{flex:1;min-width:170px;height:36px;padding:0 12px;border:.5px solid var(--line2);border-radius:8px;
+  background:var(--bg);color:var(--fg);font-size:14px;outline:none}
+input[type=search]:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+select{height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;background:var(--bg);color:var(--fg);font-size:14px;max-width:190px}
+select.on{border-color:var(--fg)}
+.count{color:var(--muted);font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pager{display:flex;align-items:center;gap:2px}
+.pager button{background:none;border:none;color:var(--sec);font-size:17px;line-height:1;cursor:pointer;padding:4px 8px;border-radius:7px}
+.pager button:hover:not([disabled]){background:var(--card);color:var(--fg)}
+.pager button[disabled]{color:var(--line2);cursor:default}
+.pager button[hidden]{display:none}
+.study-btn{height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:14px;
+  font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto}
+.study-btn:hover{background:var(--green2)}
+.study-btn[disabled]{opacity:.4;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
+td,th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+tbody tr{height:38px}
+thead th{text-align:left;font-weight:500;color:var(--sec);font-size:13px;padding:8px 10px;border-bottom:.5px solid var(--line2);
+  cursor:pointer;user-select:none;white-space:nowrap}
+thead th:hover{color:var(--fg)}
+thead th.plain{cursor:default}
+thead th .arr{color:var(--muted);font-size:11px;margin-left:3px}
+td{padding:8px 10px;border-bottom:.5px solid var(--line);vertical-align:middle}
+tbody tr:hover{background:var(--card)}
+tbody tr.link{cursor:pointer}
+.id{font-family:var(--mono);font-size:12px;color:var(--sec);white-space:nowrap}
+.b{font-weight:500}.ru{font-size:15px}
+.c{text-align:center;color:var(--sec)} th.c{text-align:center}
+.tag{font-size:12px;background:var(--card);padding:2px 8px;border-radius:8px;color:var(--sec);white-space:nowrap}
+.rs{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center}
+.dim{color:var(--muted)}
+.now{font-size:12px;color:var(--green2);white-space:nowrap;text-align:right}
+.empty{padding:2rem;text-align:center;color:var(--muted);font-size:14px}
+
+/* ── study: the list is gone; card + Again / Good ── */
+.study{position:fixed;inset:0;z-index:20;background:var(--bg);display:none;flex-direction:column;
+  align-items:center;justify-content:center;padding:64px 16px 64px}
+body.studying .study{display:flex}
+body.studying .wrap{display:none}
+body.studying .top{position:relative;z-index:30}
+.card{width:100%;max-width:680px;height:220px;background:#fff;border:1px solid var(--line);border-radius:18px;
+  box-shadow:0 10px 36px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:center;
+  padding:28px 40px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;
+  transition:background-color .2s,border-color .2s;user-select:none}
+.card-tag{position:absolute;top:16px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.card-text{font-size:28px;text-align:center;white-space:pre-line;word-break:break-word;max-height:100%;overflow-y:auto}
+.card-text.q{color:var(--q)}.card-text.a{color:var(--fg)}
+.card.done{background:#f1f8f1;border-color:#b9dcbc}
+.card.done .card-text{color:var(--good-ink)}
+.actions{display:flex;gap:10px;margin-top:14px}
+.btn{width:120px;height:42px;border-radius:10px;background:#fff;font-size:15px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btn:focus{outline:none}
+.btn-again{border:1px solid color-mix(in srgb,var(--again) 55%,#fff);color:var(--again-ink)}
+.btn-good{border:1px solid color-mix(in srgb,var(--good) 55%,#fff);color:var(--good-ink)}
+.btn-again:hover{background:#fbf2f2}.btn-good:hover{background:#f1f8f1}
+
+/* ── bottom line: position inside what you are doing ── */
+.pos{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;align-items:center;gap:6px;
+  padding:10px 0 16px;font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--bg);pointer-events:none}
+.pos > *{pointer-events:auto}
+.pos button{background:none;border:none;font-family:var(--mono);font-size:13px;color:var(--sec);cursor:pointer;
+  padding:4px 10px;border-radius:7px}
+.pos button:hover:not([disabled]){background:var(--card);color:var(--fg)}
+.pos button[disabled]{color:var(--line2);cursor:default}
+.pos .n{min-width:5ch;text-align:center}
+
+/* ── dialog ── */
+.dlg-back{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;padding:24px}
+.dlg-back[hidden]{display:none}
+.dlg{background:#fff;border:1px solid var(--line);border-radius:14px;max-width:400px;width:100%;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.16)}
+.dlg h3{margin:0 0 8px;font-size:16px}
+.dlg p{margin:0 0 18px;color:var(--sec);font-size:14px}
+.dlg-actions{display:flex;justify-content:flex-end;gap:8px}
+.dlg-actions button{height:36px;padding:0 14px;border-radius:8px;font-size:14px;cursor:pointer}
+.dlg-cancel{background:#fff;border:.5px solid var(--line2);color:var(--sec)}
+.dlg-ok{background:var(--green);border:none;color:#fff;font-weight:500}
+
+@media (max-width:640px){
+  .top{padding:12px 12px 0}
+  .wrap{padding:.5rem 12px 1.5rem}
+  .toptag{display:none}
+  .top-in{left:max(12px, calc(45% - 60px));max-width:calc(100% - 24px)}
+  .hide-s{display:none}
+  select{max-width:48%}
+  .study-btn{margin-left:0;flex:1}
+  .card{height:200px;padding:24px 22px}
+  .card-text{font-size:24px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in"><span class="badge">W</span><nav class="crumbs" id="crumbs"></nav></div>
+  <span class="toptag" id="topTag">lens v0.4</span>
+</header>
+
+<main class="wrap" id="listSurface">
+  <h1 id="title"></h1>
+  <p class="sub" id="sub"></p>
+  <div class="controls" id="controls">
+    <input type="search" id="q" placeholder="Search" aria-label="Search" autocomplete="off" spellcheck="false">
+    <select id="fCol" aria-label="Filter by column"></select>
+    <select id="fVal" aria-label="Filter value" hidden></select>
+    <span class="pager"><button id="pgPrev" aria-label="Previous page">&#8249;</button><span class="count" id="count"></span><button id="pgNext" aria-label="Next page">&#8250;</button></span>
+    <button class="study-btn" id="btnStudy">Study</button>
+  </div>
+  <table id="table"><colgroup id="cols"></colgroup><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+  <div class="empty" id="empty" hidden>No matches.</div>
+</main>
+
+<section class="study" id="study" aria-hidden="true">
+  <div class="card" id="card"><div class="card-tag" id="cardTag"></div><div class="card-text q" id="cardText">…</div></div>
+  <div class="actions">
+    <button class="btn btn-again" id="btnAgain">Again</button>
+    <button class="btn btn-good" id="btnGood">Good</button>
+  </div>
+</section>
+
+<footer class="pos" id="pos"></footer>
+
+<div class="dlg-back" id="dlgBack" hidden>
+  <div class="dlg" role="dialog" aria-modal="true">
+    <h3 id="dlgTitle"></h3><p id="dlgBody"></p>
+    <div class="dlg-actions"><button class="dlg-cancel" id="dlgCancel">Cancel</button><button class="dlg-ok" id="dlgOk">OK</button></div>
+  </div>
+</div>
+
+<script>
+/* ── Catalog, as in v26.98 ── */
+const CATALOG = [
+  { domain:"NL-RU", display:"Dutch to Russian" },
+  { domain:"NL-IT", display:"Dutch to Italian" },
+  { domain:"NL-FR", display:"Dutch to French" },
+  { domain:"NL-LA", display:"Dutch to Latin" }
+];
+const LISTS_DIR = "lists/", FULL = "Full", ROW_H = 38;
+let PAGE = 10;
+/* Rows per page follow the screen height: as many as fit under the header,
+   never a scrollbar. About 20 on a laptop, about 9 on a phone. */
+function fitPage(){
+  const tb = $("tbody"); if (!tb || level === "study") return false;
+  const first = tb.querySelector("tr");
+  const rowH = first ? first.getBoundingClientRect().height : ROW_H;   /* measured, not assumed */
+  const top = tb.getBoundingClientRect().top + window.scrollY;
+  const n = Math.floor((window.innerHeight - top - 24) / rowH);
+  const next = Math.max(5, Math.min(20, n));
+  if (next !== PAGE){ const f = page * PAGE; PAGE = next; page = Math.floor(f / PAGE); return true; }
+  return false;
+}
+const isCurated = d => CATALOG.some(x => x.domain === d);
+const $ = id => document.getElementById(id);
+const fold = v => String(v || "").trim().toLowerCase();
+
+/* Sample rows (WD26 shape), used only when lists/NL-RU.json can't be fetched. */
+const SAMPLE = [
+  ["1A","0001","в","voorzetsel","","",[["in","в"],["in de klas","в кла́ссе"]]],
+  ["1A","0002","и","voegwoord","","",[["en","и"]]],
+  ["1A","0003","не","partikel","","",[["niet","не"],["ik weet niet","я не зна́ю"]]],
+  ["1A","0004","я","voornaamwoord","pers","",[["ik","я"]]],
+  ["1A","0005","ты","voornaamwoord","pers","",[["jij","ты"]]],
+  ["1A","0006","дом","zelfst. nw","m","wonen",[["huis","дом"],["thuis","до́ма"],["naar huis","домо́й"]]],
+  ["1A","0007","мама","zelfst. nw","v","familie",[["mama","ма́ма"]]],
+  ["1A","0008","хлеб","zelfst. nw","m","eten",[["brood","хлеб"]]],
+  ["1A","0009","вода","zelfst. nw","v","eten",[["water","вода́"]]],
+  ["1A","0010","большой","bijv. nw","","",[["groot","большо́й"],["een groot huis","большо́й дом"]]],
+  ["1B","0011","хороший","bijv. nw","","",[["goed","хоро́ший"]]],
+  ["1B","0012","ходить","werkwoord","beweging","mv",[["gaan (te voet)","ходи́ть"],["vervoeging","хожу́ — хо́дишь — хо́дят"],["ik ga naar school","я хожу́ в шко́лу"]]],
+  ["1B","0013","читать","werkwoord","","",[["lezen","чита́ть"],["vervoeging","чита́ю — чита́ешь — чита́ют"]]],
+  ["1B","0014","говорить","werkwoord","","",[["spreken","говори́ть"]]],
+  ["1B","0015","да","bijwoord","","",[["ja","да"]]],
+  ["1B","0016","нет","bijwoord","","",[["nee","нет"]]],
+  ["2A","0017","спасибо","tussenw.","","beleefd",[["dank je","спаси́бо"]]],
+  ["2A","0018","кто","voornaamwoord","vraag","",[["wie","кто"]]],
+  ["2A","0019","что","voornaamwoord","vraag","",[["wat","что"]]],
+  ["2A","0020","один","telwoord","","",[["één","оди́н"]]]
+];
+const sampleRows = () => SAMPLE.map(([SEG,ID,ENT,CAT,SUB,TAG,p]) => ({ SEG, ID, ENT, CAT, SUB, TAG, pairs: p.map(([q,a]) => ({ q, a })) }));
+function normalizeRows(raw){
+  return (raw || []).map(r => ({
+    ID: String(r.ID || "").trim(), SEG: r.SEG || "", ENT: r.ENT || "", CAT: r.CAT || "", SUB: r.SUB || "", TAG: r.TAG || "",
+    pairs: (r.pairs || []).filter(p => p && p.q && p.a).map(p => ({ q: String(p.q), a: String(p.a) }))
+  })).filter(r => r.ID && r.pairs.length);
+}
+
+/* ── Lists: Full per dock (fetched) + the user's own lists (read only) ── */
+const LISTS = {}, PENDING = [];
+let usingSample = false;
+function loadImported(){
+  let raw; try { raw = JSON.parse(localStorage.getItem("wd_lists")) || {}; } catch { return; }
+  for (const s of Object.values(raw)){
+    if (!s || !s.listId) continue;
+    if (s.mode === "ids" && Array.isArray(s.ids)) PENDING.push(s);
+    else if (Array.isArray(s.rows)) LISTS[s.listId] = { listId: s.listId, name: s.name, domain: s.domain, source: "imported", rows: normalizeRows(s.rows) };
+  }
+}
+function resolvePending(domain, fullRows){
+  const byId = new Map(fullRows.map(r => [r.ID, r]));
+  for (let i = PENDING.length - 1; i >= 0; i--){
+    const s = PENDING[i]; if (s.domain !== domain) continue;
+    const rows = s.ids.map(id => byId.get(id)).filter(Boolean);
+    if (rows.length) LISTS[s.listId] = { listId: s.listId, name: s.name, domain: s.domain, source: "imported", rows };
+    PENDING.splice(i, 1);
+  }
+}
+async function ensureFull(domain){
+  const id = "embedded_" + domain;
+  if (LISTS[id]) return LISTS[id];
+  let rows = null;
+  try { const r = await fetch(LISTS_DIR + domain + ".json", { cache: "no-cache" }); if (r.ok) rows = normalizeRows(await r.json()); } catch {}
+  if (!rows && domain === "NL-RU"){ rows = sampleRows(); usingSample = true; }
+  if (!rows) return null;
+  LISTS[id] = { listId: id, name: FULL, domain, source: "embedded", rows };
+  resolvePending(domain, rows);
+  return LISTS[id];
+}
+const listsIn = d => Object.values(LISTS).filter(l => l.domain === d)
+  .sort((a,b) => a.source === "embedded" ? -1 : b.source === "embedded" ? 1 : a.name.localeCompare(b.name));
+function ownDomains(){ const s = new Set(); for (const l of Object.values(LISTS)) if (l.source === "imported" && !isCurated(l.domain)) s.add(l.domain); return [...s].sort(); }
+function knownCount(d){
+  const l = LISTS["embedded_" + d]; if (l) return l.rows.length;
+  try { const n = parseInt(localStorage.getItem("wd_rowcount_" + d), 10); return n > 0 ? n : null; } catch { return null; }
+}
+const readPool = d => { try { return JSON.parse(localStorage.getItem("wd_rs_" + d)) || {}; } catch { return {}; } };
+
+/* ── State ── */
+let level = "list";                              // catalog | dock | list | study
+let viewDomain = "NL-RU", viewListId = null;
+let activeListId = null, activeDomain = null;
+let query = "", fCol = "", fVal = "", page = 0, sortKey = null, sortDir = 1;
+const viewList = () => viewListId ? LISTS[viewListId] : null;
+
+/* ── Columns (placeholder: the mockup's set, on WD26 atoms) ── */
+const COLS = [
+  { k:"ID",  label:"ID",       cls:"id hide-s", th:"hide-s", w:"9%" },
+  { k:"CAT", label:"Category", tag:true, w:"19%", ws:"34%" },
+  { k:"ENT", label:"Entry",    cls:"b hide-s", th:"hide-s", w:"16%" },
+  { k:"Q1",  label:"Question", w:"21%", ws:"33%" },
+  { k:"A1",  label:"Answer",   cls:"b ru", w:"21%", ws:"33%" },
+  { k:"SEG", label:"Level",    cls:"c hide-s", th:"c hide-s", w:"8%" },
+  { k:"RS",  label:"RS",       cls:"rs hide-s", th:"c hide-s", w:"6%" }
+];
+const isSmall = () => window.matchMedia("(max-width:640px)").matches;
+function setCols(ws){
+  const cg = $("cols"); cg.innerHTML = "";
+  for (const w of ws){ const c = document.createElement("col"); if (w) c.style.width = w; cg.appendChild(c); }
+}
+/* The one filter selector: first the column, then its value. */
+const FILTER_COLS = [ { k:"CAT", label:"Category" }, { k:"SUB", label:"Subcategory" }, { k:"SEG", label:"Level" }, { k:"TAG", label:"Tag" } ];
+const tokens = (r, k) => (k === "SUB" || k === "TAG") ? String(r[k] || "").split(",").map(fold).filter(Boolean) : [fold(r[k])].filter(Boolean);
+
+function val(r, k, pool){
+  if (k === "Q1") return r.pairs[0] ? r.pairs[0].q : "";
+  if (k === "A1") return r.pairs[0] ? r.pairs[0].a : "";
+  if (k === "RS") return pool[r.ID];
+  return r[k] || "";
+}
+function rowVisible(r){
+  if (fCol && fVal){
+    const t = tokens(r, fCol);
+    if (fCol === "SEG" ? !t.some(v => v.startsWith(fVal)) : !t.includes(fVal)) return false;
+  }
+  if (query){
+    const hay = [r.ID, r.SEG, r.ENT, r.CAT, r.SUB, r.TAG, ...r.pairs.flatMap(p => [p.q, p.a])].join(" ").toLowerCase();
+    if (!hay.includes(query)) return false;
+  }
+  return true;
+}
+const visibleRows = () => { const l = viewList(); return l ? l.rows.filter(rowVisible) : []; };
+
+/* ── Top line: the path, the only way up ── */
+function renderCrumbs(){
+  const c = $("crumbs"); c.innerHTML = "";
+  const add = (label, here, fn) => {
+    const b = document.createElement("button"); b.className = "crumb" + (here ? " here" : ""); b.textContent = label;
+    if (!here) b.addEventListener("click", fn); c.appendChild(b);
+  };
+  const sep = () => { const s = document.createElement("span"); s.className = "sep"; s.textContent = "/"; c.appendChild(s); };
+  add("Docks", level === "catalog", goCatalog);
+  if (level === "catalog") return;
+  sep(); add(viewDomain, level === "dock", () => goDock(viewDomain));
+  if (level === "dock") return;
+  const l = viewList();
+  sep(); add(l ? l.name : "…", level === "list", () => goList(viewListId));
+}
+
+/* ── The list surface ── */
+function renderFilter(l){
+  const col = $("fCol"), v = $("fVal");
+  col.innerHTML = '<option value="">Filter…</option>' +
+    FILTER_COLS.filter(f => l.rows.some(r => tokens(r, f.k).length)).map(f => '<option value="' + f.k + '">' + f.label + '</option>').join("");
+  col.value = fCol; col.classList.toggle("on", !!fVal);
+  if (!fCol){ v.hidden = true; return; }
+  const counts = new Map();
+  for (const r of l.rows) for (const t of tokens(r, fCol)){
+    const k = fCol === "SEG" ? t : t;
+    counts.set(k, (counts.get(k) || 0) + 1);
+    if (fCol === "SEG" && /^[1-9][a-z]$/.test(t)) counts.set(t[0], (counts.get(t[0]) || 0) + 1);
+  }
+  let keys = [...counts.keys()];
+  keys = fCol === "SEG" ? keys.sort() : keys.sort((a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b));
+  v.innerHTML = '<option value="">all</option>' +
+    keys.map(k => '<option value="' + k.replace(/"/g, "&quot;") + '">' + (fCol === "SEG" ? k.toUpperCase() + (k.length === 1 ? " (all)" : "") : k) + " · " + counts.get(k) + "</option>").join("");
+  v.value = fVal; v.hidden = false; v.classList.toggle("on", !!fVal);
+}
+function head(labels){
+  const tr = document.createElement("tr");
+  labels.forEach(t => { const th = document.createElement("th"); th.className = "plain"; th.textContent = t; tr.appendChild(th); });
+  $("thead").appendChild(tr);
+}
+function paged(rows){
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  if (page >= pages) page = pages - 1;
+  return { slice: rows.slice(page * PAGE, page * PAGE + PAGE), pages, total: rows.length };
+}
+function renderList(){
+  const tbody = $("tbody"); $("thead").innerHTML = ""; tbody.innerHTML = ""; $("empty").hidden = true;
+  const showSearch = level === "list";
+  $("q").hidden = !showSearch; $("fCol").hidden = !showSearch; if (!showSearch) $("fVal").hidden = true;
+  let pages = 1;
+
+  let total = 0;
+  if (level === "catalog"){
+    setCols(["22%","", "14%","22%"]);
+    $("title").textContent = "Docks"; $("sub").textContent = "Every dock on this device";
+    head(["Dock", "", "Words", ""]);
+    const all = [...CATALOG, ...ownDomains().map(d => ({ domain: d, display: "my dock" }))];
+    const p = paged(all); pages = p.pages; total = p.total;
+    for (const d of p.slice){
+      const tr = document.createElement("tr"); tr.className = "link"; const n = knownCount(d.domain);
+      tr.innerHTML = '<td class="b">' + d.domain + '</td><td class="dim">' + d.display + '</td><td class="id">' + (n ?? "·") +
+        '</td><td class="now">' + (d.domain === activeDomain ? "studying now" : "") + "</td>";
+      tr.addEventListener("click", () => goDock(d.domain)); tbody.appendChild(tr);
+    }
+  } else if (level === "dock"){
+    const d = CATALOG.find(x => x.domain === viewDomain);
+    $("title").textContent = viewDomain; $("sub").textContent = d ? d.display : "my dock";
+    const lists = listsIn(viewDomain);
+    setCols(["", "18%", "24%"]);
+    head(["List", "Words", ""]);
+    if (!lists.length){ $("empty").textContent = isCurated(viewDomain) ? "Loading…" : "Nothing in this dock."; $("empty").hidden = false; }
+    const p = paged(lists); pages = p.pages; total = p.total;
+    for (const l of p.slice){
+      const tr = document.createElement("tr"); tr.className = "link";
+      tr.innerHTML = '<td class="b">' + l.name + '</td><td class="id">' + l.rows.length + '</td><td class="now">' + (l.listId === activeListId ? "studying now" : "") + "</td>";
+      tr.addEventListener("click", () => goList(l.listId)); tbody.appendChild(tr);
+    }
+  } else {
+    const l = viewList(); if (!l) return;
+    const d = CATALOG.find(x => x.domain === l.domain);
+    $("title").textContent = l.domain + " · " + l.name;
+    $("sub").textContent = (d ? d.display : "my dock") + " · " + l.rows.length + " words";
+    renderFilter(l);
+    const small = isSmall();
+    setCols(COLS.filter(c => !small || c.ws).map(c => small ? c.ws : c.w));
+    const pool = readPool(l.domain);
+    const trh = document.createElement("tr");
+    for (const c of COLS){
+      const th = document.createElement("th"); if (c.th) th.className = c.th; th.textContent = c.label;
+      if (sortKey === c.k){ const s = document.createElement("span"); s.className = "arr"; s.textContent = sortDir > 0 ? "▲" : "▼"; th.appendChild(s); }
+      th.addEventListener("click", () => { sortDir = sortKey === c.k ? -sortDir : 1; sortKey = c.k; page = 0; renderList(); });
+      trh.appendChild(th);
+    }
+    $("thead").appendChild(trh);
+    let rows = visibleRows();
+    if (sortKey) rows = [...rows].sort((x, y) => {
+      const a = sortKey === "RS" ? (pool[x.ID] || 0) : val(x, sortKey, pool), b = sortKey === "RS" ? (pool[y.ID] || 0) : val(y, sortKey, pool);
+      return (typeof a === "number" ? a - b : String(a).localeCompare(String(b))) * sortDir;
+    });
+    if (!rows.length){ $("empty").textContent = "No matches."; $("empty").hidden = false; }
+    const p = paged(rows); pages = p.pages; total = p.total;
+    for (const r of p.slice){
+      const tr = document.createElement("tr");
+      for (const c of COLS){
+        const td = document.createElement("td"); if (c.cls) td.className = c.cls;
+        const v = val(r, c.k, pool);
+        if (c.tag && v){ const s = document.createElement("span"); s.className = "tag"; s.textContent = v; td.appendChild(s); }
+        else td.textContent = (v === undefined || v === "") ? "\u00B7" : v;
+        if (v) td.title = v;
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+  }
+  renderStudyBtn();
+  renderPager(pages, total);
+  renderPos();
+  if (fitPage()) renderList();
+}
+/* The pager lives in the action row: which rows you see, and the arrows. */
+function renderPager(pages, total){
+  const first = total ? page * PAGE + 1 : 0, last = Math.min(total, (page + 1) * PAGE);
+  const whole = level === "list" && viewList() ? viewList().rows.length : total;
+  let txt = pages > 1 ? first + "\u2013" + last + " / " + total : String(total);
+  if (level === "list" && total !== whole) txt += " of " + whole;
+  if (level !== "list") txt = pages > 1 ? first + "\u2013" + last + " / " + total : "";
+  $("count").textContent = txt;
+  $("pgPrev").hidden = $("pgNext").hidden = pages <= 1;
+  $("pgPrev").disabled = page === 0; $("pgNext").disabled = page >= pages - 1;
+}
+
+/* ── Bottom line ── */
+function renderPos(){
+  const pos = $("pos"); pos.innerHTML = "";
+  if (level === "study"){ const s = document.createElement("span"); s.id = "deckCount"; pos.appendChild(s); paintCounter(); }
+}
+function paintCounter(){ const el = $("deckCount"); if (el) el.textContent = deckScore + "/12" + (deckDone ? " ✓" : ""); }
+
+/* ── The Study action ── */
+function renderStudyBtn(){
+  const b = $("btnStudy");
+  if (level !== "list"){
+    const a = LISTS[activeListId];
+    b.disabled = !a; b.textContent = a ? ((deckScore > 0 && !deckDone ? "Resume " : "Study ") + a.domain + " · " + a.name) : "Study";
+    return;
+  }
+  const l = viewList(); if (!l){ b.disabled = true; return; }
+  b.disabled = false;
+  const vis = visibleRows(), src = vis.length ? vis : l.rows;
+  if (viewListId === activeListId && deckScore > 0 && !deckDone && sigOf(src) === deckSig) b.textContent = "Resume · " + deckScore + "/12";
+  else b.textContent = (vis.length && vis.length !== l.rows.length) ? "Study these " + vis.length : "Study";
+}
+async function onStudy(){
+  if (level !== "list"){ if (LISTS[activeListId]) enterStudy(); return; }
+  const l = viewList(); if (!l) return;
+  const vis = visibleRows(), src = vis.length ? vis : l.rows, midDeck = deckScore > 0 && !deckDone;
+  if (viewListId !== activeListId){
+    const leaving = l.domain !== activeDomain, from = LISTS[activeListId];
+    const ok = await confirmDlg(leaving ? "Switch to studying " + l.domain + "?" : "Switch to “" + l.name + "”?",
+      (leaving ? "You're leaving " + activeDomain + "." : "You're leaving “" + (from ? from.name : "") + "”.") + (midDeck ? " Unfinished decks lose progress." : ""),
+      leaving ? "Study " + l.domain : "Switch list", "Keep studying");
+    if (!ok) return;
+    activeListId = viewListId; activeDomain = l.domain;
+    try { localStorage.setItem("wd_last_list", activeListId); } catch {}
+    initDeck(src); enterStudy(); return;
+  }
+  if (sigOf(src) !== deckSig){
+    if (midDeck && !(await confirmDlg("Restart the deck?", "Your deck restarts with the " + src.length + " words shown.", "Restart", "Keep deck"))){ enterStudy(); return; }
+    initDeck(src);
+  }
+  enterStudy();
+}
+
+/* ── Navigation ── */
+function show(){ renderCrumbs(); if (level === "study") renderPos(); else renderList(); }
+function leaveStudy(){ document.body.classList.remove("studying"); $("study").setAttribute("aria-hidden", "true"); }
+function goCatalog(){ leaveStudy(); level = "catalog"; page = 0; show(); }
+function goDock(d){
+  leaveStudy(); level = "dock"; viewDomain = d; page = 0; show();
+  if (isCurated(d) && !LISTS["embedded_" + d]) ensureFull(d).then(() => { if (level === "dock" && viewDomain === d) show(); });
+}
+function goList(id){
+  const l = LISTS[id]; if (!l) return;
+  const same = viewListId === id && level === "study";
+  leaveStudy(); level = "list"; viewDomain = l.domain;
+  if (viewListId !== id){ viewListId = id; query = ""; $("q").value = ""; fCol = ""; fVal = ""; sortKey = null; page = 0; }
+  else if (!same) page = 0;
+  show();
+}
+function enterStudy(){
+  level = "study"; viewDomain = activeDomain; viewListId = activeListId;
+  document.body.classList.add("studying"); $("study").setAttribute("aria-hidden", "false");
+  document.activeElement && document.activeElement.blur();
+  show(); renderCard();
+}
+
+/* ── Engine, ported unchanged from v26.98 ── */
+let pipe = [], deckScore = 0, deckDone = false, showingA = false, peeking = false, deckSig = "", deckRows = [];
+const sigOf = rows => rows.map(r => r.ID).join(",");
+function buildDeck(rows, domain){
+  const pool = readPool(domain);
+  return [...rows].sort((a, b) => ((pool[a.ID] || 0) - (pool[b.ID] || 0)) || (a.ID < b.ID ? -1 : 1))
+    .slice(0, Math.min(10, rows.length)).map(row => ({ row, fi: 0, passDirty: false, needsRedemption: false, timesDirty: 0 }));
+}
+function initDeck(rows){ deckRows = rows; deckSig = sigOf(rows); pipe = buildDeck(rows, activeDomain); deckScore = 0; deckDone = false; showingA = false; peeking = false; renderCard(); }
+const cur = () => pipe[0];
+function moveTo(i){ const s = pipe.shift(); pipe.splice(Math.min(i, pipe.length), 0, s); }
+function reveal(){ if (deckDone || showingA) return; showingA = true; renderCard(); }
+function gradeAgain(){
+  if (!showingA || deckDone) return;
+  showingA = false; peeking = false;
+  const s = cur(); if (!s.passDirty){ s.passDirty = true; s.timesDirty++; }
+  renderCard();
+}
+function gradeGood(){
+  if (!showingA || deckDone) return;
+  showingA = false; peeking = false;
+  const s = cur(); s.fi++;
+  if (s.fi >= s.row.pairs.length){
+    s.fi = 0;
+    if (s.passDirty){ s.passDirty = false; s.needsRedemption = true; renderCard(); return; }
+    if (s.needsRedemption){ s.needsRedemption = false; moveTo(3); }
+    else { deckScore++; moveTo(9); }
+    if (deckScore >= 12 && !pipe.some(x => x.passDirty) && !pipe.some(x => x.needsRedemption)){
+      deckDone = true;
+      const key = "wd_rs_" + activeDomain;
+      let pool; try { pool = JSON.parse(localStorage.getItem(key)) || {}; } catch { pool = {}; }
+      pipe.forEach(x => { const id = x.row.ID, base = (id in pool) ? pool[id] : 0;
+        pool[id] = x.timesDirty === 0 ? base + 1 : x.timesDirty === 1 ? base - 1 : base - 2; });
+      try { localStorage.setItem(key, JSON.stringify(pool)); localStorage.setItem("wd_sync_dirty", "1"); } catch {}
+    }
+  }
+  renderCard();
+}
+function renderCard(){
+  paintCounter();
+  const card = $("card"), text = $("cardText"), tag = $("cardTag");
+  if (deckDone){ card.classList.add("done"); tag.textContent = ""; text.textContent = "Another WordDeck Done!"; text.className = "card-text a"; return; }
+  card.classList.remove("done");
+  if (!pipe.length){ tag.textContent = ""; text.textContent = "…"; return; }
+  const s = cur(), f = s.row.pairs[s.fi], c = (s.row.CAT || "").toUpperCase(), sub = (s.row.SUB || "").trim().toUpperCase();
+  tag.textContent = sub ? c + " · " + sub : c;
+  const showQ = !showingA || peeking;
+  text.textContent = showQ ? f.q : f.a; text.className = "card-text " + (showQ ? "q" : "a");
+}
+
+/* ── Dialog ── */
+function confirmDlg(title, body, okLabel, cancelLabel){
+  return new Promise(res => {
+    const back = $("dlgBack"), ok = $("dlgOk"), cancel = $("dlgCancel");
+    $("dlgTitle").textContent = title; $("dlgBody").textContent = body; ok.textContent = okLabel; cancel.textContent = cancelLabel; back.hidden = false;
+    const done = v => { back.hidden = true; ok.onclick = cancel.onclick = back.onclick = null; document.removeEventListener("keydown", onKey, true); res(v); };
+    const onKey = e => { if (e.key === "Escape"){ e.stopPropagation(); done(false); } if (e.key === "Enter"){ e.stopPropagation(); e.preventDefault(); done(true); } };
+    ok.onclick = () => done(true); cancel.onclick = () => done(false); back.onclick = e => { if (e.target === back) done(false); };
+    document.addEventListener("keydown", onKey, true); ok.focus();
+  });
+}
+
+/* ── Input ── */
+$("btnStudy").addEventListener("click", onStudy);
+$("pgPrev").addEventListener("click", () => { if (page > 0){ page--; renderList(); } });
+$("pgNext").addEventListener("click", () => { page++; renderList(); });
+let rsz = null;
+window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if (level !== "study") renderList(); }, 120); });
+$("q").addEventListener("input", e => { query = fold(e.target.value); page = 0; renderList(); });
+$("fCol").addEventListener("change", e => { fCol = e.target.value; fVal = ""; page = 0; renderList(); });
+$("fVal").addEventListener("change", e => { fVal = e.target.value; page = 0; renderList(); });
+$("card").addEventListener("click", () => {
+  if (deckDone){ initDeck(deckRows); return; }
+  if (showingA){ peeking = !peeking; renderCard(); return; }
+  reveal();
+});
+$("btnGood").addEventListener("click", e => { gradeGood(); e.currentTarget.blur(); });
+$("btnAgain").addEventListener("click", e => { gradeAgain(); e.currentTarget.blur(); });
+document.addEventListener("keydown", e => {
+  if (!$("dlgBack").hidden) return;
+  if (level !== "study"){
+    if (document.activeElement && ["INPUT","SELECT"].includes(document.activeElement.tagName)) return;
+    if (e.key === "ArrowRight" && !$("pgNext").hidden && !$("pgNext").disabled) $("pgNext").click();
+    if (e.key === "ArrowLeft" && !$("pgPrev").hidden && !$("pgPrev").disabled) $("pgPrev").click();
+    if (e.key === "/"){ e.preventDefault(); $("q").focus(); }
+    return;
+  }
+  if (e.key === " " || e.key === "Enter"){ e.preventDefault(); if (deckDone) initDeck(deckRows); else if (!showingA) reveal(); else gradeGood(); }
+  if ((e.key === "ArrowLeft" || e.key === "p" || e.key === "P") && showingA && !deckDone){ e.preventDefault(); gradeAgain(); }
+  if (e.key === "Escape") goList(activeListId);
+});
+
+/* ── Boot: land in study, like the app ── */
+(async () => {
+  loadImported();
+  let wanted = null; try { wanted = localStorage.getItem("wd_last_list"); } catch {}
+  let bootDomain = "NL-RU";
+  if (wanted){
+    if (LISTS[wanted]) bootDomain = LISTS[wanted].domain;
+    else if (wanted.startsWith("embedded_")) bootDomain = wanted.slice(9);
+    else { const p = PENDING.find(s => s.listId === wanted); if (p) bootDomain = p.domain; }
+  }
+  const fetchDomain = isCurated(bootDomain) ? bootDomain : "NL-RU";
+  const full = await ensureFull(fetchDomain);
+  $("topTag").textContent = "lens v0.4" + (usingSample ? " · sample data" : "");
+  if (!full){ level = "catalog"; show(); return; }
+  if (wanted && LISTS[wanted]){ activeListId = wanted; activeDomain = LISTS[wanted].domain; }
+  else { activeListId = "embedded_" + fetchDomain; activeDomain = fetchDomain; }
+  viewDomain = activeDomain; viewListId = activeListId;
+  initDeck(LISTS[activeListId].rows);
+  enterStudy();
+})();
+</script>
+</body>
+</html>
