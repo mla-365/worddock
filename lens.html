@@ -6,7 +6,7 @@
 <title>WordDock</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock lens — preview v0.14 ────────────────────────────────────────
+/* ── WordDock lens — preview v0.14.2 ────────────────────────────────────────
    Decisions: WD_v27_columns.md (block 1), lens block 2 of 3 Oct.
    · a dock is a table: one Full + one pool, no lists inside a dock
    · top line  = the W; in study also the dock name, the door into the list
@@ -204,12 +204,19 @@ body.studying .top{position:relative;z-index:30}
 
 <script>
 /* ── Docks published on this site: one line. A new dock = one JSON file + its name here. ── */
-const DOCK_NAMES = ["NL-RU", "NL-IT", "NL-FR", "NL-LA", "NL-LA-PHOENIX"];
+const DOCK_NAMES = ["NL-RU", "NL-IT", "NL-FR", "NL-LA"];
 const LANG = { nl:"Dutch", ru:"Russian", it:"Italian", fr:"French", la:"Latin", en:"English", de:"German", es:"Spanish",
   pt:"Portuguese", el:"Greek", pl:"Polish", tr:"Turkish", ar:"Arabic", zh:"Chinese", ja:"Japanese", sv:"Swedish", da:"Danish",
   no:"Norwegian", fi:"Finnish", hu:"Hungarian", cs:"Czech", uk:"Ukrainian", he:"Hebrew", hi:"Hindi", ko:"Korean", gr:"Greek" };
 /* A dock's name is XX-YY, two language codes, with an optional suffix: NL-LA, NL-LA-2.
    The codes give the two column labels; the display name comes from the table above. */
+/* One rule for dock names, here and in convert.html: all capitals —
+   nl-la-Lieve → NL-LA-LIEVE — so the file on the site and the name on the
+   DOCK_NAMES line can never disagree on case. */
+function canonName(n){
+  const m = String(n || "").trim().match(/^([A-Za-z]{2})-([A-Za-z]{2})(?:-([A-Za-z0-9]+))?$/);
+  return m ? (m[1] + "-" + m[2] + (m[3] ? "-" + m[3] : "")).toUpperCase() : String(n || "").trim();
+}
 function dockInfo(name){
   const m = String(name).match(/^([A-Za-z]{2})-([A-Za-z]{2})(?:-(.+))?$/);
   if (!m) return { name, q: "Q", a: "A", display: name };
@@ -290,9 +297,9 @@ const hayOf = r => r._hay || (r._hay = strip([r.ID, r.LVL, r.ENT, r.CAT, r.SUB, 
 /* ── Docks: one Full + one pool each ── */
 const DOCKS = {};
 let usingSample = false;
-const dock = name => DOCKS[name] || (DOCKS[name] = { ...dockInfo(name), rows: null, loaded: false });
-async function ensureDock(name){
-  const d = dock(name);
+const dock = raw => { const name = canonName(raw); return DOCKS[name] || (DOCKS[name] = { ...dockInfo(name), rows: null, loaded: false }); };
+async function ensureDock(raw){
+  const name = canonName(raw), d = dock(name);
   if (d.loaded) return d;
   let rows = null;
   try { const r = await fetch(LISTS_DIR + name + ".json", { cache: "no-cache" }); if (r.ok) rows = normalizeRows(await r.json()); } catch {}
@@ -397,10 +404,10 @@ function renderCrumbs(){
 }
 
 /* ── The list surface ── */
-const dockNames = () => [...new Set([...DOCK_NAMES, ...Object.keys(DOCKS)])];
+const dockNames = () => [...new Set([...DOCK_NAMES.map(canonName), ...Object.keys(DOCKS)])];
 function renderHeading(){
   const h = $("h"); h.innerHTML = "";
-  if (level === "catalog"){ h.textContent = "Docks"; return; }
+  if (level === "catalog"){ h.textContent = "DOCKS"; return; }
   if (dockNames().length > 1){
     const b = document.createElement("button"); b.title = "Other docks";
     b.appendChild(document.createTextNode(viewDock));
@@ -605,7 +612,8 @@ function pushNav(fromPop){
 function show(){ renderCrumbs(); if (level === "study") renderPos(); else renderList(); }
 function leaveStudy(){ document.body.classList.remove("studying"); $("study").setAttribute("aria-hidden", "true"); }
 function goCatalog(fromPop){ leaveStudy(); level = "catalog"; page = 0; show(); pushNav(fromPop); }
-function goList(name, fromPop){
+function goList(raw, fromPop){
+  const name = canonName(raw);
   const same = viewDock === name && level === "study";
   leaveStudy(); level = "list";
   if (viewDock !== name){ viewDock = name; loadView(name); sortKey = null; page = 0; openId = null; }
@@ -699,7 +707,7 @@ function restoreDeck(rows){
 function renderCard(){
   paintCounter();
   const card = $("card"), text = $("cardText"), tag = $("cardTag");
-  if (deckDone){ card.classList.add("done"); tag.textContent = ""; text.textContent = "Another WordDeck Done!"; text.className = "card-text a"; return; }
+  if (deckDone){ card.classList.add("done"); tag.textContent = ""; text.textContent = "One More WordDeck Done!"; text.className = "card-text a"; return; }
   card.classList.remove("done");
   if (!pipe.length){ tag.textContent = ""; text.textContent = "…"; return; }
   const s = cur(), f = s.row.pairs[s.fi], c = (s.row.CAT || "").toUpperCase(), sub = (s.row.SUB || "").trim().toUpperCase();
@@ -757,12 +765,13 @@ document.addEventListener("keydown", e => {
 /* ── Boot: land in study, like the app; the list sits one step back ── */
 (async () => {
   let wanted = null; try { wanted = localStorage.getItem(DOCK_KEY); } catch {}
-  if (!wanted) wanted = DOCK_NAMES[0];
+  wanted = canonName(wanted || DOCK_NAMES[0]);
   let d = await ensureDock(wanted);
-  if (!d.rows && wanted !== DOCK_NAMES[0]){ wanted = DOCK_NAMES[0]; d = await ensureDock(wanted); }
+  if (!d.rows && wanted !== canonName(DOCK_NAMES[0])){ wanted = canonName(DOCK_NAMES[0]); d = await ensureDock(wanted); }
   if (usingSample) document.title += " · sample data";
   if (!d.rows){ viewDock = wanted; level = "list"; show(); try { history.replaceState(navState(), ""); } catch {} return; }
   activeDock = wanted; viewDock = wanted;
+  try { localStorage.setItem(DOCK_KEY, activeDock); } catch {}
   loadView(activeDock);
   let src = visibleRows();
   if (!src.length){ qText = query = lvlText = ""; $("q").value = $("lvl").value = ""; saveView(); src = d.rows; }

@@ -6,7 +6,7 @@
 <title>WordDock · publish a dock</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock · publish a dock — v1 (3 Oct 2026) ──────────────────────────
+/* ── WordDock · publish a dock — v1.2 (3 Oct 2026) ──────────────────────────
    The publisher's tool: a curator's sheet → lists/<dock>.json.
    · reads headers by name (any order): LVL ENT CAT SUB TAG Q1 A1 … Q10 A10
    · required per row: Q1 and A1; the rest optional; ENT empty → A1
@@ -26,14 +26,17 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,Bli
 h1{font-size:22px;font-weight:600;margin:.5rem 0 0}
 .sub{color:var(--sec);font-size:13px;margin:2px 0 1rem}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:.6rem 0}
-label.file{display:inline-flex;align-items:center;height:36px;padding:0 14px;border:.5px solid var(--line2);border-radius:8px;cursor:pointer;font-size:14px;background:var(--bg)}
-label.file:hover{background:var(--card)}
+label.file{display:inline-flex;align-items:center;height:36px;padding:0 16px;border-radius:8px;cursor:pointer;font-size:14px}
+/* The next thing to do is green; the other one is quiet. First the sheet, then the download. */
+.go{background:var(--green);color:#fff;border:none;font-weight:600}
+.go:hover{background:var(--green2)}
+.quiet{background:var(--bg);color:var(--fg);border:.5px solid var(--line2);font-weight:400}
+.quiet:hover:not([disabled]){background:var(--card)}
 label.file input{display:none}
 .name{display:flex;align-items:center;gap:6px;height:36px;padding:0 4px 0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:13px;color:var(--muted)}
 .name input{width:110px;border:none;outline:none;font-size:14px;color:var(--fg);background:transparent;font-family:var(--mono)}
 .fname{color:var(--sec);font-size:13px}
-.btn{height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-left:auto}
-.btn:hover{background:var(--green2)}
+.btn{height:36px;padding:0 16px;border-radius:8px;font-size:14px;cursor:pointer;margin-left:auto}
 .btn[disabled]{opacity:.4;cursor:default}
 .box{border:.5px solid var(--line2);border-radius:10px;padding:12px 14px;margin:.8rem 0;font-size:14px}
 .box.stop{background:var(--red-bg);border-color:var(--red)}
@@ -58,10 +61,10 @@ th{font-weight:500;color:var(--sec);font-size:12px;border-bottom:.5px solid var(
   <p class="sub">A curator's sheet becomes <span class="k">lists/&lt;dock&gt;.json</span>. Nothing leaves this page except the file you download.</p>
 
   <div class="row">
-    <label class="file">Choose the sheet (.xlsx)<input type="file" id="file" accept=".xlsx,.xlsm,.xls,.csv"></label>
+    <label class="file go" id="pick">Choose the sheet (.xlsx)<input type="file" id="file" accept=".xlsx,.xlsm,.xls,.csv"></label>
     <span class="name">Dock<input id="dock" placeholder="NL-LA" autocomplete="off" spellcheck="false"></span>
     <span class="fname" id="fname"></span>
-    <button class="btn" id="dl" disabled>Download JSON</button>
+    <button class="btn quiet" id="dl" disabled>Download JSON</button>
   </div>
 
   <div id="out"></div>
@@ -96,10 +99,16 @@ function toLevel(v){
   if (m){ const i = "ABCDEFGHJKLMNPQRSTUVWXYZ".indexOf(m[2]); return i < 0 ? null : parseInt(m[1], 10) * 100 + i + 1; }
   return null;
 }
+/* One rule for dock names, here and in the lens: all capitals —
+   nl-la-Lieve → NL-LA-LIEVE — so the file name and the lens can never disagree on case. */
+function canonName(n){
+  const m = String(n || "").trim().match(/^([A-Za-z]{2})-([A-Za-z]{2})(?:-([A-Za-z0-9]+))?$/);
+  return m ? (m[1] + "-" + m[2] + (m[3] ? "-" + m[3] : "")).toUpperCase() : String(n || "").trim();
+}
 function dockFromFilename(n){
   const base = (n || "").replace(/\.[^.]+$/, "");
   const m = base.match(/^([A-Za-z]{2}-[A-Za-z]{2}(?:-[A-Za-z0-9]+)?)(?:[_ ].*)?$/);
-  return m ? m[1].toUpperCase() : "";
+  return m ? canonName(m[1]) : "";
 }
 
 let result = null;   /* { rows, skipped, fallbacks, span } */
@@ -194,12 +203,15 @@ function render(dock, src, res, ledger){
   }
   t += "</table>" + (n > 15 ? "<p class='muted' style='font-size:12px'>first 15 of " + n + "</p>" : "");
   pv.innerHTML = t;
-  $("dl").disabled = !!stops.length || !dock;
-  $("dl").textContent = "Download " + (dock || "…") + ".json";
+  const ready = !stops.length && !!dock;
+  $("dl").disabled = !ready;
+  $("dl").textContent = "Download " + (dock || "\u2026") + ".json";
+  $("dl").classList.toggle("go", ready); $("dl").classList.toggle("quiet", !ready);
+  $("pick").classList.toggle("go", !ready); $("pick").classList.toggle("quiet", ready);
 }
 async function run(){
   const f = $("file").files[0]; if (!f || !result) return;
-  const dock = $("dock").value.trim().toUpperCase();
+  const dock = canonName($("dock").value);
   const ledger = await fetchPrev(dock);
   prev = ledger;
   render(dock, result.src, result.res, ledger);
@@ -215,10 +227,10 @@ $("file").addEventListener("change", async () => {
   result = { src, res: buildRows(src) };
   run();
 });
-$("dock").addEventListener("change", run);
+$("dock").addEventListener("change", () => { $("dock").value = canonName($("dock").value); run(); });
 $("dl").addEventListener("click", () => {
   if (!result) return;
-  const dock = $("dock").value.trim().toUpperCase();
+  const dock = canonName($("dock").value);
   const text = "[\n" + result.res.rows.map(r => JSON.stringify(r)).join(",\n") + "\n]\n";
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
