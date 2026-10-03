@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WordDock · publish a dock</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
+<style>
+/* ── WordDock · publish a dock — v1 (3 Oct 2026) ──────────────────────────
+   The publisher's tool: a curator's sheet → lists/<dock>.json.
+   · reads headers by name (any order): LVL ENT CAT SUB TAG Q1 A1 … Q10 A10
+   · required per row: Q1 and A1; the rest optional; ENT empty → A1
+   · IDs stamped from the row's place among the published rows (0001 …)
+   · publish = freeze: the previous JSON on this site is the ledger — a
+     published row that moved or changed word·class stops the publish
+   Columns: WD_v27_columns.md. */
+:root{--bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;--card:#f6f5ef;
+  --green:#006600;--green2:#0a7a0a;--red:#b44a4a;--red-bg:#fbf2f2;--ok-bg:#f1f8f1;--ok-ink:#0a5a0a;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5}
+.top{position:relative;height:52px}
+.mark{position:absolute;left:16px;top:14px;width:24px;height:24px;border-radius:7px;background:var(--green);color:#fff;display:flex;align-items:center;
+  justify-content:center;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:15px}
+.wrap{max-width:920px;margin:0 auto;padding:.25rem 1.25rem 3rem}
+h1{font-size:22px;font-weight:600;margin:.5rem 0 0}
+.sub{color:var(--sec);font-size:13px;margin:2px 0 1rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:.6rem 0}
+label.file{display:inline-flex;align-items:center;height:36px;padding:0 14px;border:.5px solid var(--line2);border-radius:8px;cursor:pointer;font-size:14px;background:var(--bg)}
+label.file:hover{background:var(--card)}
+label.file input{display:none}
+.name{display:flex;align-items:center;gap:6px;height:36px;padding:0 4px 0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:13px;color:var(--muted)}
+.name input{width:110px;border:none;outline:none;font-size:14px;color:var(--fg);background:transparent;font-family:var(--mono)}
+.fname{color:var(--sec);font-size:13px}
+.btn{height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-left:auto}
+.btn:hover{background:var(--green2)}
+.btn[disabled]{opacity:.4;cursor:default}
+.box{border:.5px solid var(--line2);border-radius:10px;padding:12px 14px;margin:.8rem 0;font-size:14px}
+.box.stop{background:var(--red-bg);border-color:var(--red)}
+.box.ok{background:var(--ok-bg);border-color:#b9dcbc}
+.box h3{margin:0 0 4px;font-size:14px}
+.box ul{margin:4px 0 0;padding-left:18px}
+.box li{margin:1px 0}
+.k{font-family:var(--mono);font-size:12px;color:var(--sec)}
+.muted{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;margin-top:.5rem}
+th,td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:6px 8px;border-bottom:.5px solid var(--line);text-align:left}
+th{font-weight:500;color:var(--sec);font-size:12px;border-bottom:.5px solid var(--line2)}
+.mono{font-family:var(--mono);font-size:12px;color:var(--sec)}
+.help{font-size:13px;color:var(--sec);margin-top:2rem;border-top:.5px solid var(--line);padding-top:1rem}
+.help code{font-family:var(--mono);font-size:12px;background:var(--card);padding:1px 5px;border-radius:5px}
+</style>
+</head>
+<body>
+<header class="top"><span class="mark" aria-hidden="true">W</span></header>
+<main class="wrap">
+  <h1>Publish a dock</h1>
+  <p class="sub">A curator's sheet becomes <span class="k">lists/&lt;dock&gt;.json</span>. Nothing leaves this page except the file you download.</p>
+
+  <div class="row">
+    <label class="file">Choose the sheet (.xlsx)<input type="file" id="file" accept=".xlsx,.xlsm,.xls,.csv"></label>
+    <span class="name">Dock<input id="dock" placeholder="NL-LA" autocomplete="off" spellcheck="false"></span>
+    <span class="fname" id="fname"></span>
+    <button class="btn" id="dl" disabled>Download JSON</button>
+  </div>
+
+  <div id="out"></div>
+  <div id="preview"></div>
+
+  <div class="help">
+    <p><b>How a sheet is read.</b> The first sheet whose header row has <code>Q1</code> and <code>A1</code>. Columns are found by name, in any order:
+    <code>LVL</code> (or LEVEL, SEG) · <code>ENT</code> · <code>CAT</code> · <code>SUB</code> · <code>TAG</code> (or TAGS) · <code>Q1 A1 … Q10 A10</code>.
+    A row is published when it has Q1 and A1; the rest is optional. An empty ENT takes A1.</p>
+    <p><b>IDs.</b> Stamped here from the row's place among the published rows: the first is <code>0001</code>. Publish = freeze: when this site already has a <code>lists/&lt;dock&gt;.json</code>, every row in it must still be at its place with the same word and class. New rows go after the last published one. If something moved, the download stops and says where.</p>
+    <p><b>Then.</b> Put the file at <code>lists/&lt;dock&gt;.json</code> in the repository and commit. If the dock is new, add its name to the <code>DOCK_NAMES</code> line near the top of the script in <code>lens.html</code>.</p>
+  </div>
+</main>
+
+<script src="xlsx.full.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const strip = v => String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+const txt = v => (v === null || v === undefined) ? "" : String(v).trim();
+const ALIAS = { LVL:"LVL", LEVEL:"LVL", SEG:"LVL", ENT:"ENT", ENTRY:"ENT", CAT:"CAT", CATEGORY:"CAT", SUB:"SUB", TAG:"TAG", TAGS:"TAG" };
+function canon(h){
+  const u = txt(h).toUpperCase().replace(/\s+/g, "");
+  if (ALIAS[u]) return ALIAS[u];
+  const m = u.match(/^([QA])(10|[1-9])$/); return m ? m[1] + m[2] : null;
+}
+function toLevel(v){
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "number") return Number.isFinite(v) ? Math.round(v) : null;
+  const s = String(v).trim().toUpperCase();
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  const m = s.match(/^([1-9])([A-Z])$/);                        /* old SEG 1A → 101 */
+  if (m){ const i = "ABCDEFGHJKLMNPQRSTUVWXYZ".indexOf(m[2]); return i < 0 ? null : parseInt(m[1], 10) * 100 + i + 1; }
+  return null;
+}
+function dockFromFilename(n){
+  const base = (n || "").replace(/\.[^.]+$/, "");
+  const m = base.match(/^([A-Za-z]{2}-[A-Za-z]{2}(?:-[A-Za-z0-9]+)?)(?:[_ ].*)?$/);
+  return m ? m[1].toUpperCase() : "";
+}
+
+let result = null;   /* { rows, skipped, fallbacks, span } */
+let prev = null;     /* previous publish on this site, or null */
+
+function readWorkbook(buf){
+  const wb = XLSX.read(buf, { type: "array" });
+  for (const name of wb.SheetNames){
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: null, raw: true });
+    for (let h = 0; h < Math.min(aoa.length, 10); h++){           /* the header row may not be row 1 */
+      const map = {};
+      (aoa[h] || []).forEach((cell, i) => { const c = canon(cell); if (c && !(c in map)) map[c] = i; });
+      if ("Q1" in map && "A1" in map) return { sheet: name, headerRow: h, map, aoa };
+    }
+  }
+  return null;
+}
+function buildRows(src){
+  const { map, aoa, headerRow } = src;
+  const rows = [], skipped = [];
+  let fallbacks = 0;
+  const get = (arr, k) => (k in map) ? txt(arr[map[k]]) : "";
+  for (let r = headerRow + 1; r < aoa.length; r++){
+    const arr = aoa[r] || [];
+    if (arr.every(v => v === null || v === undefined || String(v).trim() === "")) continue;
+    const pairs = [];
+    for (let i = 1; i <= 10; i++){ const q = get(arr, "Q" + i), a = get(arr, "A" + i); if (q && a) pairs.push({ q, a }); }
+    if (!get(arr, "Q1") || !get(arr, "A1")){ skipped.push(r + 1); continue; }
+    const row = { ID: String(rows.length + 1).padStart(4, "0") };
+    const lvl = ("LVL" in map) ? toLevel(arr[map.LVL]) : null;
+    if (lvl !== null) row.LVL = lvl;
+    let ent = get(arr, "ENT"); if (!ent){ ent = pairs[0].a; fallbacks++; }
+    row.ENT = ent;
+    const cat = get(arr, "CAT"), sub = get(arr, "SUB"), tag = get(arr, "TAG");
+    if (cat) row.CAT = cat; if (sub) row.SUB = sub; if (tag) row.TAG = tag;
+    row.pairs = pairs;
+    rows.push(row);
+  }
+  let lo = Infinity, hi = -Infinity;
+  for (const r of rows) if (r.LVL !== undefined){ if (r.LVL < lo) lo = r.LVL; if (r.LVL > hi) hi = r.LVL; }
+  return { rows, skipped, fallbacks, span: lo === Infinity ? null : { lo, hi } };
+}
+const keyOf = r => strip(r.ENT) + "·" + strip(r.CAT);
+/* The ledger: the JSON already published under this name on this site. */
+async function fetchPrev(dock){
+  if (!dock || location.protocol === "file:") return { rows: null, reason: location.protocol === "file:" ? "opened from disk, so the site's ledger is not reachable" : "" };
+  try {
+    const r = await fetch("lists/" + dock + ".json", { cache: "no-cache" });
+    if (r.status === 404) return { rows: null, reason: "" };
+    if (!r.ok) return { rows: null, reason: "the site answered " + r.status };
+    const j = await r.json();
+    return { rows: Array.isArray(j) ? j : null, reason: Array.isArray(j) ? "" : "the published file is not a list of rows" };
+  } catch (e) { return { rows: null, reason: "could not read it (" + e.message + ")" }; }
+}
+function check(rows, prevRows){
+  const stops = [];
+  if (!prevRows) return stops;
+  if (rows.length < prevRows.length) stops.push("The sheet has " + rows.length + " published rows, the site has " + prevRows.length + ". Published rows may not disappear.");
+  const n = Math.min(rows.length, prevRows.length);
+  for (let i = 0; i < n; i++){
+    const p = prevRows[i], q = rows[i];
+    if (String(p.ID) !== q.ID) stops.push("Row " + q.ID + ": the published file has ID " + p.ID + " at this place.");
+    else if (keyOf(p) !== keyOf(q)) stops.push("Row " + q.ID + ": was “" + (p.ENT || "") + " · " + (p.CAT || "") + "”, now “" + q.ENT + " · " + (q.CAT || "") + "”.");
+    if (stops.length >= 12){ stops.push("…"); break; }
+  }
+  return stops;
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
+function render(dock, src, res, ledger){
+  const out = $("out"), pv = $("preview");
+  const stops = check(res.rows, ledger.rows);
+  const n = res.rows.length, newFrom = ledger.rows ? ledger.rows.length : 0;
+  let html = "";
+  const facts = [
+    "<b>" + n + "</b> rows published from sheet “" + esc(src.sheet) + "”" + (src.headerRow ? " (header in row " + (src.headerRow + 1) + ")" : ""),
+    res.span ? "levels <b>" + res.span.lo + "–" + res.span.hi + "</b>" : "no levels",
+    res.skipped.length ? "<b>" + res.skipped.length + "</b> skipped, no Q1 + A1: rows " + res.skipped.slice(0, 15).join(", ") + (res.skipped.length > 15 ? " …" : "") : "nothing skipped",
+    res.fallbacks ? res.fallbacks + " ENT taken from A1" : "every ENT typed",
+    ledger.rows ? "ledger: <b>" + ledger.rows.length + "</b> rows already published" + (n > newFrom ? ", <b>" + (n - newFrom) + "</b> new (" + res.rows[newFrom].ID + " – " + res.rows[n - 1].ID + ")" : ", nothing new")
+               : "no previous publish on this site" + (ledger.reason ? " — " + esc(ledger.reason) : "") + "; IDs start at 0001"
+  ];
+  html += '<div class="box ' + (stops.length ? "stop" : "ok") + '"><h3>' + (stops.length ? "Stopped — published rows changed" : "Ready — " + dock + ".json") + "</h3><ul>" +
+    facts.map(f => "<li>" + f + "</li>").join("") + "</ul>" +
+    (stops.length ? "<ul style='margin-top:8px'>" + stops.map(s => "<li>" + esc(s) + "</li>").join("") + "</ul><p class='muted' style='margin:8px 0 0'>Publish = freeze: put the rows back in their place, or publish under a new dock name.</p>" : "") + "</div>";
+  out.innerHTML = html;
+  const cols = ["ID", "LVL", "ENT", "CAT", "SUB", "TAG", "Q1", "A1", "pairs"];
+  let t = "<table><colgroup><col style='width:7%'><col style='width:6%'><col style='width:13%'><col style='width:10%'><col style='width:10%'><col style='width:10%'><col><col><col style='width:7%'></colgroup><tr>" +
+    cols.map(c => "<th>" + c + "</th>").join("") + "</tr>";
+  for (const r of res.rows.slice(0, 15)){
+    t += "<tr><td class='mono'>" + r.ID + "</td><td class='mono'>" + (r.LVL ?? "·") + "</td><td>" + esc(r.ENT) + "</td><td>" + esc(r.CAT || "·") + "</td><td>" + esc(r.SUB || "·") +
+      "</td><td>" + esc(r.TAG || "·") + "</td><td>" + esc(r.pairs[0].q) + "</td><td>" + esc(r.pairs[0].a) + "</td><td class='mono'>" + r.pairs.length + "</td></tr>";
+  }
+  t += "</table>" + (n > 15 ? "<p class='muted' style='font-size:12px'>first 15 of " + n + "</p>" : "");
+  pv.innerHTML = t;
+  $("dl").disabled = !!stops.length || !dock;
+  $("dl").textContent = "Download " + (dock || "…") + ".json";
+}
+async function run(){
+  const f = $("file").files[0]; if (!f || !result) return;
+  const dock = $("dock").value.trim().toUpperCase();
+  const ledger = await fetchPrev(dock);
+  prev = ledger;
+  render(dock, result.src, result.res, ledger);
+}
+$("file").addEventListener("change", async () => {
+  const f = $("file").files[0]; if (!f) return;
+  $("fname").textContent = f.name;
+  if (!$("dock").value) $("dock").value = dockFromFilename(f.name);
+  let src;
+  try { src = readWorkbook(await f.arrayBuffer()); }
+  catch (e) { $("out").innerHTML = '<div class="box stop"><h3>Not a readable sheet</h3>' + esc(e.message) + "</div>"; return; }
+  if (!src){ $("out").innerHTML = '<div class="box stop"><h3>No header row with Q1 and A1 found</h3>Give the columns their names in the first row: LVL, ENT, CAT, SUB, TAG, Q1, A1 …</div>'; $("preview").innerHTML = ""; $("dl").disabled = true; return; }
+  result = { src, res: buildRows(src) };
+  run();
+});
+$("dock").addEventListener("change", run);
+$("dl").addEventListener("click", () => {
+  if (!result) return;
+  const dock = $("dock").value.trim().toUpperCase();
+  const text = "[\n" + result.res.rows.map(r => JSON.stringify(r)).join(",\n") + "\n]\n";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  a.download = dock + ".json"; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+</script>
+</body>
+</html>
