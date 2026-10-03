@@ -1,0 +1,11 @@
+[
+{"ID":"0001","LVL":1,"ENT":"dictum","CAT":"zn","SUB":"o","pairs":[{"q":"woord; gezegde","a":"dictum"}]},
+{"ID":"0002","LVL":1,"ENT":"a(b)","CAT":"vz","SUB":"met abl.","pairs":[{"q":"van; door","a":"a(b)"}]},
+{"ID":"0003","LVL":1,"ENT":"cum","CAT":"vz","SUB":"met abl.","pairs":[{"q":"(samen) met","a":"cum"}]},
+{"ID":"0004","LVL":1,"ENT":"de","CAT":"vz","SUB":"met abl.","pairs":[{"q":"van; over; wegens","a":"de"}]},
+{"ID":"0005","LVL":1,"ENT":"e(x)","CAT":"vz","SUB":"met abl.","pairs":[{"q":"uit; vanaf","a":"e(x)"}]},
+{"ID":"0006","LVL":1,"ENT":"in","CAT":"vz","SUB":"met abl.","pairs":[{"q":"in; op","a":"in"}]},
+{"ID":"0007","LVL":1,"ENT":"pro","CAT":"vz","SUB":"met abl.","pairs":[{"q":"voor; in de plaats van; overneenkomstig","a":"pro"}]},
+{"ID":"0008","LVL":1,"ENT":"sine","CAT":"vz","SUB":"met abl.","pairs":[{"q":"zonder","a":"sine"}]},
+{"ID":"0009","LVL":1,"ENT":"sub","CAT":"vz","SUB":"met abl.","pairs":[{"q":"onder; omstreeks","a":"sub"}]}
+]
