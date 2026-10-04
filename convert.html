@@ -6,7 +6,7 @@
 <title>WordDock · publish a dock</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock · publish a dock — v1.3 (4 Oct 2026) ──────────────────────────
+/* ── WordDock · publish a dock — v1.4 (4 Oct 2026) ──────────────────────────
    The publisher's tool: a curator's sheet → lists/<dock>.json.
    · reads headers by name (any order): LVL ENT CAT SUB TAG Q1 A1 … Q10 A10
    · required per row: Q1 and A1; the rest optional; ENT empty → A1
@@ -34,7 +34,8 @@ label.file{display:inline-flex;align-items:center;height:36px;padding:0 16px;bor
 .quiet:hover:not([disabled]){background:var(--card)}
 label.file input{display:none}
 .name{display:flex;align-items:center;gap:6px;height:36px;padding:0 4px 0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:13px;color:var(--muted)}
-.name input{width:110px;border:none;outline:none;font-size:14px;color:var(--fg);background:transparent;font-family:var(--mono)}
+.name input{width:150px;border:none;outline:none;font-size:14px;color:var(--fg);background:transparent;font-family:var(--mono)}
+.name.need{border-color:var(--red);color:var(--red)}
 .fname{color:var(--sec);font-size:13px}
 .btn{height:36px;padding:0 16px;border-radius:8px;font-size:14px;cursor:pointer;margin-left:auto}
 .btn[disabled]{opacity:.4;cursor:default}
@@ -99,16 +100,13 @@ function toLevel(v){
   if (m){ const i = "ABCDEFGHJKLMNPQRSTUVWXYZ".indexOf(m[2]); return i < 0 ? null : parseInt(m[1], 10) * 100 + i + 1; }
   return null;
 }
-/* One rule for dock names, here and in the lens: all capitals —
-   nl-la-Lieve → NL-LA-LIEVE — so the file name and the lens can never disagree on case. */
-function canonName(n){
-  const m = String(n || "").trim().match(/^([A-Za-z]{2})-([A-Za-z]{2})(?:-([A-Za-z0-9]+))?$/);
-  return m ? (m[1] + "-" + m[2] + (m[3] ? "-" + m[3] : "")).toUpperCase() : String(n || "").trim();
-}
+/* One rule for dock names, here and in the lens: the file name is the dock name, in capitals —
+   NL-LA-Lieve.xlsx → NL-LA-LIEVE, Biology.xlsx → BIOLOGY. Letters, digits and hyphens. */
+const canonName = n => String(n || "").trim().toUpperCase();
+const validName = n => /^[A-Z0-9][A-Z0-9-]*$/.test(n);
 function dockFromFilename(n){
-  const base = (n || "").replace(/\.[^.]+$/, "");
-  const m = base.match(/^([A-Za-z]{2}-[A-Za-z]{2}(?:-[A-Za-z0-9]+)?)(?:[_ ].*)?$/);
-  return m ? canonName(m[1]) : "";
+  const base = canonName((n || "").replace(/\.[^.]+$/, ""));
+  return validName(base) ? base : base.replace(/[^A-Z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
 let result = null;   /* { rows, skipped, fallbacks, span } */
@@ -179,7 +177,9 @@ function check(rows, prevRows){
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
 function render(dock, src, res, ledger){
   const out = $("out"), pv = $("preview");
-  const stops = check(res.rows, ledger.rows);
+  const named = validName(dock);
+  $("dock").parentElement.classList.toggle("need", !named);
+  const stops = named ? check(res.rows, ledger.rows) : [];
   const n = res.rows.length, newFrom = ledger.rows ? ledger.rows.length : 0;
   let html = "";
   const facts = [
@@ -190,7 +190,8 @@ function render(dock, src, res, ledger){
     ledger.rows ? "ledger: <b>" + ledger.rows.length + "</b> rows already published" + (n > newFrom ? ", <b>" + (n - newFrom) + "</b> new (" + res.rows[newFrom].ID + " – " + res.rows[n - 1].ID + ")" : ", nothing new")
                : "no previous publish on this site" + (ledger.reason ? " — " + esc(ledger.reason) : "") + "; IDs start at 0001"
   ];
-  html += '<div class="box ' + (stops.length ? "stop" : "ok") + '"><h3>' + (stops.length ? "Stopped — published rows changed" : "Ready — " + dock + ".json") + "</h3><ul>" +
+  if (!named) html += '<div class="box stop"><h3>Give the dock a NAME</h3>The file name is taken when it can be a name; this one can\u2019t. Type one in the Dock field: capitals, digits and hyphens \u2014 NL-LA-LIEVE, BIOLOGY.</div>';
+  html += '<div class="box ' + (stops.length ? "stop" : "ok") + '"><h3>' + (stops.length ? "Stopped \u2014 published rows changed" : named ? "Ready \u2014 " + dock + ".json" : "Read") + "</h3><ul>" +
     facts.map(f => "<li>" + f + "</li>").join("") + "</ul>" +
     (stops.length ? "<ul style='margin-top:8px'>" + stops.map(s => "<li>" + esc(s) + "</li>").join("") + "</ul><p class='muted' style='margin:8px 0 0'>Publish = freeze: put the rows back in their place, or publish under a new dock name.</p>" : "") + "</div>";
   out.innerHTML = html;
@@ -203,23 +204,23 @@ function render(dock, src, res, ledger){
   }
   t += "</table>" + (n > 15 ? "<p class='muted' style='font-size:12px'>first 15 of " + n + "</p>" : "");
   pv.innerHTML = t;
-  const ready = !stops.length && !!dock;
+  const ready = !stops.length && named;
   $("dl").disabled = !ready;
-  $("dl").textContent = "Download " + (dock || "\u2026") + ".json";
+  $("dl").textContent = named ? "Download " + dock + ".json" : "Download \u2014 name needed";
   $("dl").classList.toggle("go", ready); $("dl").classList.toggle("quiet", !ready);
   $("pick").classList.toggle("go", !ready); $("pick").classList.toggle("quiet", ready);
 }
 async function run(){
   const f = $("file").files[0]; if (!f || !result) return;
   const dock = canonName($("dock").value);
-  const ledger = await fetchPrev(dock);
+  const ledger = validName(dock) ? await fetchPrev(dock) : { rows: null, reason: "" };
   prev = ledger;
   render(dock, result.src, result.res, ledger);
 }
 $("file").addEventListener("change", async () => {
   const f = $("file").files[0]; if (!f) return;
   $("fname").textContent = f.name;
-  if (!$("dock").value) $("dock").value = dockFromFilename(f.name);
+  $("dock").value = dockFromFilename(f.name);        /* every new file brings its own name; edit it if you like */
   let src;
   try { src = readWorkbook(await f.arrayBuffer()); }
   catch (e) { $("out").innerHTML = '<div class="box stop"><h3>Not a readable sheet</h3>' + esc(e.message) + "</div>"; return; }
@@ -228,6 +229,7 @@ $("file").addEventListener("change", async () => {
   run();
 });
 $("dock").addEventListener("change", () => { $("dock").value = canonName($("dock").value); run(); });
+$("dock").addEventListener("input", () => { if (result) render(canonName($("dock").value), result.src, result.res, prev || { rows: null, reason: "" }); });
 $("dl").addEventListener("click", () => {
   if (!result) return;
   const dock = canonName($("dock").value);
