@@ -6,13 +6,15 @@
 <title>WordDock</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock lens — preview v0.14.2 ────────────────────────────────────────
+/* ── WordDock lens — preview v0.15 ────────────────────────────────────────
    Decisions: WD_v27_columns.md (block 1), lens block 2 of 3 Oct.
    · a dock is a table: one Full + one pool, no lists inside a dock
    · top line  = the W; in study also the dock name, the door into the list
    · list      = big heading (dock name, ▾ when there is a choice), sub line,
                  then search · Level field · pager · Study, then the table
-   · catalog   = a table of docks with the same head; opened from the ▾
+   · catalog   = DOCKS, a table of docks with the same head; opened from the ▾;
+                 ↓ on every row (the sheet), × on own rows, a last row adds a
+                 dock from an Excel sheet on this device
    · columns   = LVL | NL | LA | CAT | SUB | TAG | RS; click a row to unfold
    · study     = studies what the table shows; deck of ten, counter to ten
    Engine from v26.98 except the finish line: all ten cards clean.
@@ -92,6 +94,16 @@ tbody tr.link{cursor:pointer}
 .dim{color:var(--muted)}
 .now{font-size:12px;color:var(--green2);white-space:nowrap;text-align:right}
 .empty{padding:2rem;text-align:center;color:var(--muted);font-size:14px}
+/* DOCKS: the sheet out (↓) on every row, the way out (×) on own rows, the door in at the bottom. */
+td.act{text-align:right;white-space:nowrap}
+.ib{background:none;border:none;color:var(--sec);font-size:16px;line-height:1;cursor:pointer;padding:3px 7px;border-radius:7px}
+.ib:hover{background:var(--line);color:var(--fg)}
+.ib.x{font-size:15px;color:var(--muted)}
+tr.add td{color:var(--green2);font-weight:500}
+tr.add:hover td{background:var(--card)}
+.own{font-size:11px;color:var(--muted);margin-left:8px;font-weight:400}
+.dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px;font-family:var(--mono)}
+.dlg input:focus{outline:none;border-color:var(--accent)}
 /* Values you can tap: they land in the search box. */
 .tap{cursor:pointer;border-radius:6px}
 span.tap:not(.tag):hover{color:var(--fg);text-decoration:underline;text-underline-offset:2px}
@@ -194,10 +206,11 @@ body.studying .top{position:relative;z-index:30}
 </section>
 
 <footer class="pos" id="pos"></footer>
+<input type="file" id="fileIn" accept=".xlsx,.xlsm,.xls,.csv" hidden>
 
 <div class="dlg-back" id="dlgBack" hidden>
   <div class="dlg" role="dialog" aria-modal="true">
-    <h3 id="dlgTitle"></h3><p id="dlgBody"></p>
+    <h3 id="dlgTitle"></h3><p id="dlgBody"></p><input id="dlgInput" hidden autocomplete="off" spellcheck="false">
     <div class="dlg-actions"><button class="dlg-cancel" id="dlgCancel">Cancel</button><button class="dlg-ok" id="dlgOk">OK</button></div>
   </div>
 </div>
@@ -205,27 +218,19 @@ body.studying .top{position:relative;z-index:30}
 <script>
 /* ── Docks published on this site: one line. A new dock = one JSON file + its name here. ── */
 const DOCK_NAMES = ["NL-RU", "NL-IT", "NL-FR", "NL-LA"];
-const LANG = { nl:"Dutch", ru:"Russian", it:"Italian", fr:"French", la:"Latin", en:"English", de:"German", es:"Spanish",
-  pt:"Portuguese", el:"Greek", pl:"Polish", tr:"Turkish", ar:"Arabic", zh:"Chinese", ja:"Japanese", sv:"Swedish", da:"Danish",
-  no:"Norwegian", fi:"Finnish", hu:"Hungarian", cs:"Czech", uk:"Ukrainian", he:"Hebrew", hi:"Hindi", ko:"Korean", gr:"Greek" };
-/* A dock's name is XX-YY, two language codes, with an optional suffix: NL-LA, NL-LA-2.
-   The codes give the two column labels; the display name comes from the table above. */
-/* One rule for dock names, here and in convert.html: all capitals —
-   nl-la-Lieve → NL-LA-LIEVE — so the file on the site and the name on the
-   DOCK_NAMES line can never disagree on case. */
-function canonName(n){
-  const m = String(n || "").trim().match(/^([A-Za-z]{2})-([A-Za-z]{2})(?:-([A-Za-z0-9]+))?$/);
-  return m ? (m[1] + "-" + m[2] + (m[3] ? "-" + m[3] : "")).toUpperCase() : String(n || "").trim();
-}
+/* A dock's name is any name in capitals (BIOLOGY, NL-LA-LIEVE); here and in convert.html
+   the same rule, so a file on the site and the DOCK_NAMES line can never disagree on case.
+   When the name starts with two language codes, those become the column labels: NL | LA.
+   Otherwise Q | A. */
+const canonName = n => String(n || "").trim().toUpperCase();
+const validName = n => /^[A-Z0-9][A-Z0-9-]*$/.test(n);
 function dockInfo(name){
   const m = String(name).match(/^([A-Za-z]{2})-([A-Za-z]{2})(?:-(.+))?$/);
-  if (!m) return { name, q: "Q", a: "A", display: name };
-  const q = m[1].toUpperCase(), a = m[2].toUpperCase();
-  const lq = LANG[m[1].toLowerCase()], la = LANG[m[2].toLowerCase()];
-  return { name, q, a, display: (lq && la ? lq + " to " + la : q + " to " + a) + (m[3] ? " · " + m[3] : "") };
+  return m ? { name, q: m[1].toUpperCase(), a: m[2].toUpperCase() } : { name, q: "Q", a: "A" };
 }
 const LISTS_DIR = "lists/", ROW_H = 38, DECK_SIZE = 10;
-const DECK_KEY = "wd_lens_deck", DOCK_KEY = "wd_lens_dock", VIEW_KEY = d => "wd_lens_view_" + d;   /* the lens's own keys */
+const DECK_KEY = "wd_lens_deck", DOCK_KEY = "wd_lens_dock", OWN_KEY = "wd_lens_docks", VIEW_KEY = d => "wd_lens_view_" + d;   /* the lens's own keys */
+const OWN_SUFFIX = "-OWN";
 let PAGE = 10;
 /* Rows per page follow the screen height: as many as fit, never a scrollbar. */
 function fitPage(){
@@ -294,24 +299,170 @@ function normalizeRows(raw){
 }
 const hayOf = r => r._hay || (r._hay = strip([r.ID, r.LVL, r.ENT, r.CAT, r.SUB, r.TAG, ...r.pairs.flatMap(p => [p.q, p.a])].join(" \u0001 ")));
 
-/* ── Docks: one Full + one pool each ── */
+/* ── Docks: one Full + one pool each. Published ones come from the site;
+   own ones live in this browser, on this device, under OWN_KEY. ── */
 const DOCKS = {};
 let usingSample = false;
-const dock = raw => { const name = canonName(raw); return DOCKS[name] || (DOCKS[name] = { ...dockInfo(name), rows: null, loaded: false }); };
+const isPublished = name => DOCK_NAMES.map(canonName).includes(name);
+const dock = raw => { const name = canonName(raw); return DOCKS[name] || (DOCKS[name] = { ...dockInfo(name), rows: null, loaded: false, own: false }); };
+function readOwn(){ try { return JSON.parse(localStorage.getItem(OWN_KEY)) || {}; } catch { return {}; } }
+function writeOwn(o){ try { localStorage.setItem(OWN_KEY, JSON.stringify(o)); return true; } catch { return false; } }
+function loadOwn(){
+  for (const [name, st] of Object.entries(readOwn())){
+    if (!st || !Array.isArray(st.rows)) continue;
+    const d = dock(name); d.rows = normalizeRows(st.rows); d.loaded = true; d.own = true;
+  }
+}
+const keyOf = r => strip(r.ENT) + "\u00B7" + strip(r.CAT);
+/* Do the rows on this device still sit under the new rows, place by place? Then progress can stay. */
+const sameOrder = (oldRows, newRows) => oldRows.length <= newRows.length && oldRows.every((r, i) => keyOf(r) === keyOf(newRows[i]));
+const poolKey = d => "wd_rs_" + d;
+function movePool(from, to){ try { const v = localStorage.getItem(poolKey(from)); if (v !== null) localStorage.setItem(poolKey(to), v); localStorage.removeItem(poolKey(from)); } catch {} }
+function clearPool(d){ try { localStorage.removeItem(poolKey(d)); } catch {} }
 async function ensureDock(raw){
   const name = canonName(raw), d = dock(name);
-  if (d.loaded) return d;
+  if (d.loaded && (d.checked || !isPublished(name))) return d;
   let rows = null;
-  try { const r = await fetch(LISTS_DIR + name + ".json", { cache: "no-cache" }); if (r.ok) rows = normalizeRows(await r.json()); } catch {}
-  if (!rows && name === "NL-RU" && location.hostname !== "worddock.app"){ rows = sampleRows(); usingSample = true; }
-  d.rows = rows && rows.length ? rows : null; d.loaded = true;
+  if (isPublished(name)){
+    try { const r = await fetch(LISTS_DIR + name + ".json", { cache: "no-cache" }); if (r.ok) rows = normalizeRows(await r.json()); } catch {}
+    if (!rows && name === "NL-RU" && location.hostname !== "worddock.app"){ rows = sampleRows(); usingSample = true; }
+  }
+  d.checked = true;
+  if (rows && rows.length && d.own){
+    // Published wins. The own copy steps aside; its progress carries when the rows match.
+    // Otherwise the copy keeps living under -OWN with its progress, and this pool starts fresh.
+    const o = readOwn();
+    if (sameOrder(d.rows, rows)){ delete o[name]; writeOwn(o); }
+    else {
+      const alt = name + OWN_SUFFIX;
+      o[alt] = o[name]; delete o[name]; writeOwn(o);
+      const od = dock(alt); od.rows = d.rows; od.loaded = true; od.own = true; od.checked = true; movePool(name, alt);
+      if (activeDock === name) activeDock = alt;
+    }
+    d.own = false;
+  }
+  if (!d.own){ d.rows = rows && rows.length ? rows : null; d.loaded = true; }
   return d;
+}
+/* Import: a sheet becomes an own dock on this device, or replaces one. */
+function putOwn(name, rows, keepPool){
+  const o = readOwn(); o[name] = { rows, when: new Date().toISOString() };
+  if (!writeOwn(o)) return false;
+  const d = dock(name); d.rows = normalizeRows(rows); d.loaded = true; d.own = true; d.checked = true;
+  if (!keepPool) clearPool(name);
+  return true;
+}
+function removeOwn(name){
+  const o = readOwn(); delete o[name]; writeOwn(o);
+  delete DOCKS[name]; clearPool(name);
+  try { localStorage.removeItem(VIEW_KEY(name)); } catch {}
+  if (activeDock === name){ activeDock = null; pipe = []; deckScore = 0; deckDone = false; deckStarted = false; try { localStorage.removeItem(DOCK_KEY); localStorage.removeItem(DECK_KEY); } catch {} }
 }
 function knownCount(name){
   const d = DOCKS[name]; if (d && d.rows) return d.rows.length;
   try { const n = parseInt(localStorage.getItem("wd_rowcount_" + name), 10); return n > 0 ? n : null; } catch { return null; }
 }
 const readPool = d => { try { return JSON.parse(localStorage.getItem("wd_rs_" + d)) || {}; } catch { return {}; } };
+
+/* ── The sheet in and out. SheetJS (xlsx.full.min.js, on this site) loads only when a sheet is touched. ── */
+let xlsxReady = null;
+function loadXLSX(){
+  if (window.XLSX) return Promise.resolve();
+  if (!xlsxReady) xlsxReady = new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "xlsx.full.min.js"; sc.onload = res; sc.onerror = () => { xlsxReady = null; rej(new Error("xlsx.full.min.js not found next to this page")); }; document.head.appendChild(sc); });
+  return xlsxReady;
+}
+const ALIAS = { LVL:"LVL", LEVEL:"LVL", SEG:"LVL", ENT:"ENT", ENTRY:"ENT", CAT:"CAT", CATEGORY:"CAT", SUB:"SUB", TAG:"TAG", TAGS:"TAG" };
+function canonHeader(h){
+  const u = String(h ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  if (ALIAS[u]) return ALIAS[u];
+  const m = u.match(/^([QA])(10|[1-9])$/); return m ? m[1] + m[2] : null;
+}
+const cellText = v => (v === null || v === undefined) ? "" : String(v).trim();
+/* Headers by name, any order; the first sheet with Q1 and A1. A row needs Q1 and A1;
+   the rest is optional; an empty ENT takes A1; IDs come from the row's place. */
+function readSheet(buf){
+  const wb = XLSX.read(buf, { type: "array" });
+  for (const sname of wb.SheetNames){
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sname], { header: 1, defval: null, raw: true });
+    for (let h = 0; h < Math.min(aoa.length, 10); h++){
+      const map = {}; (aoa[h] || []).forEach((c, i) => { const k = canonHeader(c); if (k && !(k in map)) map[k] = i; });
+      if (!("Q1" in map) || !("A1" in map)) continue;
+      const rows = []; let skipped = 0;
+      const get = (arr, k) => (k in map) ? cellText(arr[map[k]]) : "";
+      for (let r = h + 1; r < aoa.length; r++){
+        const arr = aoa[r] || []; if (arr.every(v => v === null || v === undefined || String(v).trim() === "")) continue;
+        const pairs = []; for (let i = 1; i <= 10; i++){ const q = get(arr, "Q" + i), a = get(arr, "A" + i); if (q && a) pairs.push({ q, a }); }
+        if (!get(arr, "Q1") || !get(arr, "A1")){ skipped++; continue; }
+        const row = { ID: String(rows.length + 1).padStart(4, "0"), pairs };
+        const lvl = ("LVL" in map) ? toLevel(arr[map.LVL]) : null; if (lvl !== null) row.LVL = lvl;
+        row.ENT = get(arr, "ENT") || pairs[0].a;
+        const cat = get(arr, "CAT"), sub = get(arr, "SUB"), tag = get(arr, "TAG");
+        if (cat) row.CAT = cat; if (sub) row.SUB = sub; if (tag) row.TAG = tag;
+        rows.push(row);
+      }
+      return { rows, skipped, sheet: sname };
+    }
+  }
+  return null;
+}
+/* The sheet out: the curator's layout, every cell as Text, so it comes back in unchanged. */
+function sheetOut(d){
+  const H = ["LVL", "ENT", "CAT", "SUB", "TAG"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
+  const aoa = [H];
+  for (const r of d.rows){
+    const arr = [r.LVL ?? null, r.ENT || null, r.CAT || null, r.SUB || null, r.TAG || null];
+    for (let i = 0; i < 10; i++){ const p = r.pairs[i]; arr.push(p ? p.q : null, p ? p.a : null); }
+    aoa.push(arr);
+  }
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  for (const addr of Object.keys(ws)) if (addr[0] !== "!"){ ws[addr].t = "s"; ws[addr].v = String(ws[addr].v); ws[addr].z = "@"; }
+  ws["!cols"] = H.map((h, i) => ({ wch: i < 5 ? 12 : 22 }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, d.name.slice(0, 31));
+  XLSX.writeFile(wb, d.name + ".xlsx");
+}
+async function exportDock(name){
+  const d = dock(name); if (!d.rows) return;
+  try { await loadXLSX(); sheetOut(d); } catch (e) { await confirmDlg("No sheet writer", e.message, "OK", "Close"); }
+}
+async function importSheet(file){
+  let got;
+  try { await loadXLSX(); got = readSheet(await file.arrayBuffer()); }
+  catch (e) { await confirmDlg("Could not read this file", e.message, "OK", "Close"); return; }
+  if (!got){ await confirmDlg("No header row with Q1 and A1", "Name the columns in the first row: LVL, ENT, CAT, SUB, TAG, Q1, A1 \u2026", "OK", "Close"); return; }
+  if (!got.rows.length){ await confirmDlg("Nothing to import", "No row has both Q1 and A1.", "OK", "Close"); return; }
+  let name = canonName((file.name || "").replace(/\.[^.]+$/, ""));
+  if (!validName(name)){
+    const v = await promptDlg("Give a NAME for this DOCK", "Letters, digits and hyphens: NL-LA-LIEVE, BIOLOGY.", name.replace(/[^A-Z0-9-]+/g, "-").replace(/^-+|-+$/g, ""));
+    if (v === null) return; name = canonName(v); if (!validName(name)) return;
+  }
+  while (isPublished(name)){
+    const v = await promptDlg(name + " is a WD-DOCK and can't be replaced.", "Name yours " + name + "-01?", name + "-01");
+    if (v === null) return;
+    name = canonName(v); if (!validName(name)) return;
+  }
+  const n = got.rows.length, words = n + (n === 1 ? " word" : " words"), skip = got.skipped ? " \u00B7 " + got.skipped + " skipped" : "";
+  const ex = DOCKS[name] && DOCKS[name].own && DOCKS[name].rows ? DOCKS[name] : null;
+  let keepPool = true;
+  if (ex){
+    const old = ex.rows.length + (ex.rows.length === 1 ? " word" : " words");
+    if (sameOrder(ex.rows, normalizeRows(got.rows))){
+      if (!(await confirmDlg("Replace " + name + " (" + old + ") with this file (" + words + ")?", "Your progress stays." + skip, "Replace", "Keep"))) return;
+    } else {
+      keepPool = false;
+      if (!(await confirmDlg("The words in this file are in another order.", "Replace " + name + " (" + old + ") and start its progress fresh? " + words + skip, "Replace", "Keep"))) return;
+    }
+  } else if (!(await confirmDlg("Add " + name + " to this device?", words + skip + ".", "Add", "Cancel"))) return;
+  if (!putOwn(name, got.rows, keepPool)){ await confirmDlg("Could not keep this dock", "This browser has no room left for it.", "OK", "Close"); return; }
+  if (activeDock === name) initDeck(DOCKS[name].rows);
+  goList(name);
+}
+async function removeDock(name){
+  const d = DOCKS[name]; if (!d || !d.own) return;
+  if (!(await confirmDlg("Remove " + name + " from this device?", "Its progress goes too.", "Remove", "Keep"))) return;
+  removeOwn(name);
+  if (viewDock === name){ viewDock = canonName(DOCK_NAMES[0]); loadView(viewDock); }
+  renderList();
+}
 
 /* ── State ── */
 let level = "list";                              // catalog | list | study
@@ -404,7 +555,7 @@ function renderCrumbs(){
 }
 
 /* ── The list surface ── */
-const dockNames = () => [...new Set([...DOCK_NAMES.map(canonName), ...Object.keys(DOCKS)])];
+const dockNames = () => [...new Set([...DOCK_NAMES.map(canonName), ...Object.keys(DOCKS).filter(n => DOCKS[n].own)])];
 function renderHeading(){
   const h = $("h"); h.innerHTML = "";
   if (level === "catalog"){ h.textContent = "DOCKS"; return; }
@@ -476,25 +627,42 @@ function renderList(){
     $("lvlBox").hidden = true; $("btnStudy").hidden = true;
     $("q").value = catQ; $("q").classList.toggle("on", !!catQ);
     const all = dockNames().map(n => dock(n));
+    // Published docks not seen yet: fetch them, so the Words column fills in.
+    for (const d of all) if ((!d.loaded || (isPublished(d.name) && !d.checked)) && !d.fetching){ d.fetching = true; ensureDock(d.name).then(() => { if (level === "catalog") renderList(); }); }
     const qq = strip(catQ);
-    const rows = qq ? all.filter(d => strip(d.name + " " + d.display).includes(qq)) : all;
-    $("sub").textContent = all.length + (all.length === 1 ? " dock" : " docks") + " on this site";
-    setCols(["22%", "", "14%", "22%"]);
-    head(["Dock", "", "Words", ""]);
+    const rows = qq ? all.filter(d => strip(d.name).includes(qq)) : all;
+    const nOwn = all.filter(d => d.own).length;
+    $("sub").textContent = all.length + (all.length === 1 ? " dock" : " docks") + (nOwn ? ", " + nOwn + " on this device" : "");
+    setCols(["", "14%", "22%", "14%"]);
+    head(["Dock", "Words", "", ""]);
     if (!rows.length){ $("empty").textContent = "No matches."; $("empty").hidden = false; }
     const p = paged(rows); pages = p.pages; total = p.total;
     for (const d of p.slice){
       const tr = document.createElement("tr"); tr.className = "link"; const n = knownCount(d.name);
-      tr.innerHTML = '<td class="b">' + d.name + '</td><td class="dim">' + d.display + '</td><td class="id">' + (n ?? "·") +
-        '</td><td class="now">' + (d.name === activeDock ? "studying now" : "") + "</td>";
+      const tdN = document.createElement("td"); tdN.className = "b"; tdN.textContent = d.name;
+      if (d.own){ const o = document.createElement("span"); o.className = "own"; o.textContent = "on this device"; tdN.appendChild(o); }
+      const tdW = document.createElement("td"); tdW.className = "id"; tdW.textContent = n ?? "\u00B7";
+      const tdS = document.createElement("td"); tdS.className = "now"; tdS.textContent = d.name === activeDock ? "studying now" : "";
+      const tdA = document.createElement("td"); tdA.className = "act";
+      if (d.rows){ const b = document.createElement("button"); b.className = "ib"; b.textContent = "\u2193"; b.title = "Excel: " + d.name + ".xlsx";
+        b.addEventListener("click", e => { e.stopPropagation(); exportDock(d.name); }); tdA.appendChild(b); }
+      if (d.own){ const x = document.createElement("button"); x.className = "ib x"; x.textContent = "\u00D7"; x.title = "Remove from this device";
+        x.addEventListener("click", e => { e.stopPropagation(); removeDock(d.name); }); tdA.appendChild(x); }
+      tr.append(tdN, tdW, tdS, tdA);
       tr.addEventListener("click", () => goList(d.name)); tbody.appendChild(tr);
+    }
+    if (page === pages - 1){
+      // The door in: a sheet on this device becomes a dock.
+      const tr = document.createElement("tr"); tr.className = "link add";
+      tr.innerHTML = '<td colspan="4">+ Add a DOCK from an Excel sheet</td>';
+      tr.addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); }); tbody.appendChild(tr);
     }
   } else {
     const d = dock(viewDock), rowsAll = viewRows();
     $("btnStudy").hidden = false;
     if (!rowsAll){
       $("lvlBox").hidden = true;
-      $("sub").textContent = d.display;
+      $("sub").textContent = "";
       $("empty").textContent = d.loaded ? "Nothing here yet." : "Loading…"; $("empty").hidden = false;
       setCols([]);
     } else {
@@ -526,7 +694,7 @@ function renderList(){
           lv = lo > hi ? "Level " + lvlText.trim() : lo === hi ? "Level " + lo : "Level " + lo + "–" + hi;
         } else lv = span.lo === span.hi ? "Level " + span.lo : "Level " + span.lo + "–" + span.hi;
       }
-      $("sub").textContent = [d.display, lv, rows.length + (rows.length === 1 ? " word" : " words")].filter(Boolean).join(" · ");
+      $("sub").textContent = [lv, rows.length + (rows.length === 1 ? " word" : " words"), d.own ? "on this device" : ""].filter(Boolean).join(" · ");
       if (sortKey) rows = [...rows].sort((x, y) => {
         const a = sortVal(x, sortKey, pool), b = sortVal(y, sortKey, pool);
         const c = (typeof a === "number" && typeof b === "number") ? a - b : String(a).localeCompare(String(b));
@@ -620,7 +788,8 @@ function goList(raw, fromPop){
   else if (!same) page = 0;
   $("q").value = qText;
   show(); pushNav(fromPop);
-  if (!dock(name).loaded) ensureDock(name).then(() => { if (level === "list" && viewDock === name) show(); });
+  const dd = dock(name);
+  if (!dd.loaded || (isPublished(name) && !dd.checked)) ensureDock(name).then(() => { if (level === "list" && (viewDock === name || viewDock === name + OWN_SUFFIX)) show(); });
 }
 function enterStudy(fromPop){
   if (viewDock !== activeDock){ viewDock = activeDock; loadView(activeDock); }
@@ -716,10 +885,11 @@ function renderCard(){
   text.textContent = showQ ? f.q : f.a; text.className = "card-text " + (showQ ? "q" : "a");
 }
 
-/* ── Dialog ── */
+/* ── Dialog: a question with two buttons, or a question with one field ── */
 function confirmDlg(title, body, okLabel, cancelLabel){
   return new Promise(res => {
     const back = $("dlgBack"), ok = $("dlgOk"), cancel = $("dlgCancel");
+    $("dlgInput").hidden = true;
     $("dlgTitle").textContent = title; $("dlgBody").textContent = body; ok.textContent = okLabel; cancel.textContent = cancelLabel; back.hidden = false;
     const done = v => { back.hidden = true; ok.onclick = cancel.onclick = back.onclick = null; document.removeEventListener("keydown", onKey, true); res(v); };
     const onKey = e => { if (e.key === "Escape"){ e.stopPropagation(); done(false); } if (e.key === "Enter"){ e.stopPropagation(); e.preventDefault(); done(true); } };
@@ -727,9 +897,21 @@ function confirmDlg(title, body, okLabel, cancelLabel){
     document.addEventListener("keydown", onKey, true); ok.focus();
   });
 }
+function promptDlg(title, body, value){
+  return new Promise(res => {
+    const back = $("dlgBack"), ok = $("dlgOk"), cancel = $("dlgCancel"), inp = $("dlgInput");
+    $("dlgTitle").textContent = title; $("dlgBody").textContent = body; ok.textContent = "OK"; cancel.textContent = "Cancel";
+    inp.hidden = false; inp.value = value || ""; back.hidden = false;
+    const done = v => { back.hidden = true; inp.hidden = true; ok.onclick = cancel.onclick = back.onclick = null; document.removeEventListener("keydown", onKey, true); res(v); };
+    const onKey = e => { if (e.key === "Escape"){ e.stopPropagation(); done(null); } if (e.key === "Enter"){ e.stopPropagation(); e.preventDefault(); done(inp.value); } };
+    ok.onclick = () => done(inp.value); cancel.onclick = () => done(null); back.onclick = e => { if (e.target === back) done(null); };
+    document.addEventListener("keydown", onKey, true); inp.focus(); inp.select();
+  });
+}
 
 /* ── Input ── */
 $("btnStudy").addEventListener("click", onStudy);
+$("fileIn").addEventListener("change", () => { const f = $("fileIn").files[0]; if (f) importSheet(f); });
 $("pgPrev").addEventListener("click", () => { if (page > 0){ page--; openId = null; renderList(); } });
 $("pgNext").addEventListener("click", () => { page++; openId = null; renderList(); });
 let rsz = null;
@@ -764,6 +946,7 @@ document.addEventListener("keydown", e => {
 
 /* ── Boot: land in study, like the app; the list sits one step back ── */
 (async () => {
+  loadOwn();
   let wanted = null; try { wanted = localStorage.getItem(DOCK_KEY); } catch {}
   wanted = canonName(wanted || DOCK_NAMES[0]);
   let d = await ensureDock(wanted);
