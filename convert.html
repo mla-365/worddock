@@ -6,7 +6,7 @@
 <title>WordDock · publish a list</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock · publish a list — v1.6 (5 Oct 2026) ─────────────────────────
+/* ── WordDock · publish a list — v1.6.1 (5 Oct 2026) ─────────────────────────
    The publisher's tool: a curator's sheet → lists/<key>.json.
    · reads headers by name (any order): LVL ENT CAT SUB TAG Q1 A1 … Q10 A10
    · required per row: Q1 and A1; the rest optional; ENT empty → A1
@@ -77,7 +77,7 @@ th{font-weight:500;color:var(--sec);font-size:12px;border-bottom:.5px solid var(
     <code>LVL</code> (or LEVEL, SEG) · <code>ENT</code> · <code>CAT</code> · <code>SUB</code> · <code>TAG</code> (or TAGS) · <code>Q1 A1 … Q10 A10</code>.
     A row is published when it has Q1 and A1; the rest is optional. An empty ENT takes A1.</p>
     <p><b>IDs.</b> Stamped here from the row's place among the published rows: the first is <code>0001</code>. Publish = freeze: when this site already has a <code>lists/&lt;key&gt;.json</code>, it is a WD list, and every row in it must still be at its place with the same word and class. New rows go after the last published one. If something moved, the download stops and says where.</p>
-    <p><b>Then.</b> Put the file at <code>lists/&lt;key&gt;.json</code> in the repository and commit. If the list is new, add it to the <code>WD_LISTS</code> line near the top of the script in <code>lens.html</code>: its name, as in <code>"NL-LA"</code>.</p>
+    <p><b>Then.</b> Put the file at <code>lists/&lt;key&gt;.json</code> in the repository and commit. If the list is new, add it to the <code>WD_LISTS</code> line near the top of the script in <code>index.html</code>: its name, as in <code>"NL-LA"</code>.</p>
   </div>
 </main>
 
