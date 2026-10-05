@@ -6,7 +6,7 @@
 <title>WordDock</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock lens — preview v0.18 ─────────────────────────────────────────
+/* ── WordDock lens — preview v0.18.1 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -408,7 +408,7 @@ const T = {
     { id: "progress", title: "Progress", paras: [
       "Each time you complete a deck, the scores are updated in the list, in the RS column. A word counts as mastered once its score reaches 10." ] },
     { id: "devices", title: "Devices and sync", paras: [
-      "Your scores live in your browser, on your device. Sync makes a copy in the cloud under a random key - no account, no email, no password; WordDock only ever sees the key, never who you are. Enter the same key on another device and both show the same progress, possibly with a small delay. Scores travel in both directions: a word you struggled with on your phone stays a word to repeat on your laptop.",
+      "Your scores live in your browser, on your device. Sync makes a copy in the cloud under a random key - no account, no email, no password. Enter the same key on another device and both show the same progress, possibly with a small delay. Scores travel in both directions: a word you struggled with on your phone stays a word to repeat on your laptop.",
       "Your key is your way back. Lose your phone or wipe your browser? Enter your key on any device and your progress returns. Keep it somewhere outside your devices - written down, or in a message to yourself.",
       "Only scores travel: your My lists stay on the device where you imported them." ] },
     { id: "wdlists", title: "WD lists", paras: [
@@ -416,7 +416,7 @@ const T = {
     { id: "mylists", title: "My lists", paras: [
       "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>LVL · ENT · CAT · SUB · TAG · Q1 · A1 … Q10 · A10</code>. Only Q1 and A1 are required in each row." ] },
     { id: "contact", title: "Contact", paras: [
-      "Working together through exchange is one of the main purposes of WordDock. If you'd like to take part, write to <a href=\"mailto:michel@worddock.app\">michel@worddock.app</a>.",
+      "Working together through exchange is one of the main purposes of WordDock. If you'd like to take part, write to michel@worddock.app.",
       "More on the specifics: <a class=\"soon\" aria-disabled=\"true\" title=\"Page to come\">WordDock for Insiders</a> (page to come)." ] }
   ]
 };
