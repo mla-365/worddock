@@ -6,15 +6,15 @@
 <title>WordDock</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock lens — preview v0.16 ────────────────────────────────────────
+/* ── WordDock lens — preview v0.17 ────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
-             shared across lists. A WD list is published (lists/<key>.json, on
+             shared across lists. A WD list is published (lists/<NAME>.json, on
              the WD_LISTS line); a My list lives on this device, from a sheet.
-             Every list has a title (what people see) and a key (backstage).
+             A list has one name, shown everywhere: NL-RU, NL-LA-LIEVE.
    · view  = what the table shows: a level range and a word, per list.
    · deck  = the ten lowest-RS words of the view; finish line: all ten clean.
-   Surfaces: study (card + Again / Good, the title in the corner is the door
+   Surfaces: study (card + Again / Good, the name in the corner is the door
    into the list) · list (heading with ▾, search · Level · pager · Study, the
    table) · LISTS (three zones: Published WD Lists, My Lists on this device,
    the door in: + Add a list from an Excel sheet).
@@ -59,8 +59,9 @@ input[type=search].on{border-color:var(--fg)}
 .lvl-f{display:flex;align-items:center;gap:6px;height:36px;padding:0 4px 0 10px;border:.5px solid var(--line2);border-radius:8px;
   font-size:13px;color:var(--muted);background:var(--bg);cursor:text}
 .lvl-f[hidden]{display:none}
-.lvl-f input{width:84px;border:none;outline:none;background:transparent;color:var(--fg);font-size:14px;height:32px;padding:0;
-  font-variant-numeric:tabular-nums}
+.lvl-f input,.lvl-f input[type=search]{flex:none;width:84px;min-width:0;border:none;outline:none;box-shadow:none;background:transparent;color:var(--fg);
+  font-size:14px;height:32px;padding:0;border-radius:0;font-variant-numeric:tabular-nums}
+.lvl-f input[type=search]:focus{border:none;box-shadow:none}
 .lvl-f input::placeholder{color:var(--muted);opacity:.75}
 .lvl-f:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
 .lvl-f.on{border-color:var(--fg)}
@@ -120,7 +121,21 @@ tr.detail td{white-space:normal;padding:2px 10px 14px;border-bottom:.5px solid v
 body.cataloging .cat{display:grid}
 body.cataloging .wrap{display:none}
 .zone-mid{align-self:center;padding:1.25rem 0}
-.zone-bot{padding:.75rem 0 1.25rem}
+.zone-bot{padding:.75rem 0 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+/* Sync: one small grey line at the bottom of LISTS; tap opens the dialog. */
+.sync-line{background:none;border:none;padding:6px 0;color:var(--muted);font-size:12px;cursor:pointer}
+.sync-line:hover{color:var(--sec);text-decoration:underline;text-underline-offset:3px}
+.sync-dlg{position:relative}
+.sync-x{position:absolute;top:10px;right:12px;background:none;border:none;font-size:18px;line-height:1;color:var(--muted);cursor:pointer;padding:3px 7px;border-radius:7px}
+.sync-x:hover{background:var(--card);color:var(--fg)}
+.dlg .sync-desc{margin:0 0 10px;color:var(--sec);font-size:14px}
+.dlg .sync-desc b{color:var(--fg);font-weight:600}
+.sync-key{font-family:var(--mono);font-size:19px;letter-spacing:.06em;text-align:center;padding:12px;margin:10px 0;
+  border:.5px solid var(--line2);border-radius:10px;background:var(--card);user-select:all}
+.dlg .sync-err{color:var(--again);font-size:13px;min-height:1.2em;margin:0 0 6px}
+.dlg .sync-input{width:100%;height:38px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:15px;font-family:var(--mono);margin:0 0 8px}
+.dlg .sync-input:focus{outline:none;border-color:var(--accent)}
+.sync-actions{flex-wrap:wrap;margin-top:14px}
 .sec-h{font-size:20px;font-weight:600;margin:.5rem 0 0;line-height:1.3}
 .cat .controls{margin:.7rem 0 .25rem}
 .cat tbody tr{cursor:pointer}
@@ -199,38 +214,39 @@ body.studying .top{position:relative;z-index:30}
   <h1 class="h" id="h"></h1>
   <p class="sub" id="sub"></p>
   <div class="controls" id="controls">
-    <input type="search" id="q" placeholder="Search" aria-label="Search" autocomplete="off" spellcheck="false">
-    <label class="lvl-f" id="lvlBox">Level<input type="text" id="lvl" aria-label="Level, e.g. 7 or 40-45" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
-    <span class="pager"><button id="pgPrev" aria-label="Previous page">&#8249;</button><span class="count" id="count"></span><button id="pgNext" aria-label="Next page">&#8250;</button></span>
-    <button class="study-btn" id="btnStudy">Study</button>
+    <input type="search" id="q" data-t-ph="search" data-t-aria="search" autocomplete="off" spellcheck="false">
+    <label class="lvl-f" id="lvlBox"><span data-t="level"></span><input type="search" id="lvl" data-t-aria="levelAria" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
+    <span class="pager"><button id="pgPrev" data-t-aria="prevPage">&#8249;</button><span class="count" id="count"></span><button id="pgNext" data-t-aria="nextPage">&#8250;</button></span>
+    <button class="study-btn" id="btnStudy" data-t="study"></button>
   </div>
   <table id="table"><colgroup id="cols"></colgroup><thead id="thead"></thead><tbody id="tbody"></tbody></table>
-  <div class="empty" id="empty" hidden>No matches.</div>
+  <div class="empty" id="empty" hidden data-t="noMatches"></div>
 </main>
 
 <main class="cat" id="catalog">
   <section class="zone-top" id="secWd">
-    <h2 class="sec-h">Published WD Lists</h2>
+    <h2 class="sec-h" data-t="wdHeading"></h2>
     <p class="sub" id="wdSub"></p>
     <div class="controls" id="wdCtl">
-      <input type="search" id="wdQ" placeholder="Search" aria-label="Search the published lists" autocomplete="off" spellcheck="false">
-      <span class="pager"><button id="wdPrev" aria-label="Previous page">&#8249;</button><span class="count" id="wdCount"></span><button id="wdNext" aria-label="Next page">&#8250;</button></span>
+      <input type="search" id="wdQ" data-t-ph="search" data-t-aria="searchWdAria" autocomplete="off" spellcheck="false">
+      <span class="pager"><button id="wdPrev" data-t-aria="prevPage">&#8249;</button><span class="count" id="wdCount"></span><button id="wdNext" data-t-aria="nextPage">&#8250;</button></span>
     </div>
     <table><colgroup><col><col style="width:14%"><col style="width:22%"><col style="width:14%"></colgroup><tbody id="wdBody"></tbody></table>
-    <div class="empty" id="wdEmpty" hidden>No matches.</div>
+    <div class="empty" id="wdEmpty" hidden data-t="noMatches"></div>
   </section>
   <section class="zone-mid" id="secMy">
-    <h2 class="sec-h">My Lists on this device</h2>
+    <h2 class="sec-h" data-t="myHeading"></h2>
     <p class="sub" id="mySub"></p>
     <div class="controls" id="myCtl">
-      <input type="search" id="myQ" placeholder="Search" aria-label="Search the lists on this device" autocomplete="off" spellcheck="false">
-      <span class="pager"><button id="myPrev" aria-label="Previous page">&#8249;</button><span class="count" id="myCount"></span><button id="myNext" aria-label="Next page">&#8250;</button></span>
+      <input type="search" id="myQ" data-t-ph="search" data-t-aria="searchMyAria" autocomplete="off" spellcheck="false">
+      <span class="pager"><button id="myPrev" data-t-aria="prevPage">&#8249;</button><span class="count" id="myCount"></span><button id="myNext" data-t-aria="nextPage">&#8250;</button></span>
     </div>
     <table><colgroup><col><col style="width:14%"><col style="width:22%"><col style="width:14%"></colgroup><tbody id="myBody"></tbody></table>
-    <div class="empty" id="myEmpty" hidden>No matches.</div>
+    <div class="empty" id="myEmpty" hidden data-t="noMatches"></div>
   </section>
   <section class="zone-bot">
-    <button class="add" id="btnAdd">+ Add a list from an Excel sheet</button>
+    <button class="add" id="btnAdd" data-t="add"></button>
+    <button class="sync-line" id="syncLine"></button>
   </section>
 </main>
 
@@ -238,8 +254,8 @@ body.studying .top{position:relative;z-index:30}
   <div class="study-block">
     <div class="card" id="card"><div class="card-tag" id="cardTag"></div><div class="card-text q" id="cardText">…</div></div>
     <div class="actions">
-      <button class="btn btn-again" id="btnAgain">Again</button>
-      <button class="btn btn-good" id="btnGood">Good</button>
+      <button class="btn btn-again" id="btnAgain" data-t="again"></button>
+      <button class="btn btn-good" id="btnGood" data-t="good"></button>
     </div>
   </div>
 </section>
@@ -250,28 +266,110 @@ body.studying .top{position:relative;z-index:30}
 <div class="dlg-back" id="dlgBack" hidden>
   <div class="dlg" role="dialog" aria-modal="true">
     <h3 id="dlgTitle"></h3><p id="dlgBody"></p><input id="dlgInput" hidden autocomplete="off" spellcheck="false">
-    <div class="dlg-actions"><button class="dlg-cancel" id="dlgCancel">Cancel</button><button class="dlg-ok" id="dlgOk">OK</button></div>
+    <div class="dlg-actions"><button class="dlg-cancel" id="dlgCancel" data-t="cancel"></button><button class="dlg-ok" id="dlgOk" data-t="ok"></button></div>
+  </div>
+</div>
+
+<div class="dlg-back" id="syncBack" hidden>
+  <div class="dlg sync-dlg" role="dialog" aria-modal="true">
+    <button class="sync-x" id="syncX" data-t-aria="close">&times;</button>
+    <div id="syncBody"></div>
   </div>
 </div>
 
 <script>
-/* ── WD lists, published on this site: one line. A new WD list = one JSON file (lists/<key>.json)
-   + its entry here: a bare key, or { key, title } when the title should read otherwise. ── */
-const WD_LISTS = [ { key: "NL-RU", title: "Nederlands · Russisch" }, "NL-IT", "NL-FR", "NL-LA" ];
-/* A key is letters, digits and hyphens, in capitals (NL-RU, NL-LA-LIEVE, BIOLOGY): it names
-   lists/<key>.json, the pool wd_rs_<key> and the view. A title is free text, what people see.
-   When the key starts with two language codes, those become the column labels: NL | LA. Otherwise Q | A. */
+/* ── T: every word a user can read, in one place. The code reads only from here; a
+   translation replaces these lines and nothing else. Codes (LVL, CAT, SUB, TAG, RS, ID,
+   ENT) and list names are not words: they stay the same in every language. ── */
+const T = {
+  // static page text (filled into data-t, data-t-ph, data-t-aria at boot)
+  search: "Search", level: "Level", levelAria: "Level, e.g. 7 or 40-45",
+  searchWdAria: "Search the published lists", searchMyAria: "Search the lists on this device",
+  prevPage: "Previous page", nextPage: "Next page", study: "Study",
+  again: "Again", good: "Good", ok: "OK", cancel: "Cancel", close: "Close", keep: "Keep",
+  wdHeading: "Published WD Lists", myHeading: "My Lists on this device", add: "+ Add a list from an Excel sheet",
+  // the list surface
+  words: n => n + (n === 1 ? " word" : " words"),
+  lists: n => n + (n === 1 ? " list" : " lists"),
+  levelOne: n => "Level " + n, levelSpan: (lo, hi) => "Level " + lo + "–" + hi,
+  onDevice: "on this device", noMatches: "No matches.", loading: "Loading…", nothingYet: "Nothing here yet.",
+  otherLists: "Other lists", toList: "To the list", showAll: v => "Show all “" + v + "”",
+  noOtherPairs: "No other pairs.", sample: " · sample data",
+  colQ: "Q", colA: "A", colLVL: "LVL", colCAT: "CAT", colSUB: "SUB", colTAG: "TAG", colRS: "RS", colID: "ID", colENT: "ENT",
+  // LISTS
+  published: "Published", onThisDevice: "On this device", noneYet: "none yet", studyingNow: "studying now",
+  excelOut: k => "Excel: " + k + ".xlsx", removeHere: "Remove from this device",
+  // study
+  deckDone: "One More WordDeck Done!",
+  studyN: (n, k) => "Study " + T.words(n) + " · " + k, studyK: k => "Study " + k,
+  resume: (k, s, n) => "Resume " + k + " · " + s + "/" + n,
+  switchQ: k => "Switch to studying " + k + "?", leaving: k => "You're leaving " + k + ".",
+  unfinished: " Unfinished decks lose progress.", keepStudying: "Keep studying",
+  restartQ: "Restart the deck?", restartBody: n => "Your deck restarts with the " + T.words(n) + " shown.",
+  restart: "Restart", keepDeck: "Keep deck",
+  // the Excel door
+  noWriter: "No sheet writer", noReader: "xlsx.full.min.js not found next to this page",
+  cantRead: "Could not read this file", noHeader: "No header row with Q1 and A1",
+  noHeaderBody: "Name the columns in the first row: LVL, ENT, CAT, SUB, TAG, Q1, A1 …",
+  nothing: "Nothing to import", nothingBody: "No row has both Q1 and A1.",
+  giveName: "Give a NAME for this list", giveNameBody: "Letters, digits and hyphens: NL-LA-LIEVE, BIOLOGY.",
+  isWd: k => k + " is a WD list and can't be replaced.", nameYours: k => "Name yours " + k + "?",
+  skipped: n => " · " + n + " skipped",
+  replaceQ: (k, o, w) => "Replace " + k + " (" + o + ") with this file (" + w + ")?", progressStays: "Your progress stays.",
+  otherOrder: "The words in this file are in another order.", replaceFresh: k => "Replace " + k + " and start its progress fresh?",
+  replace: "Replace", addQ: k => "Add " + k + " to this device?", addBtn: "Add",
+  cantKeep: "Could not keep this list", noRoom: "This browser has no room left for it.",
+  removeQ: k => "Remove " + k + " from this device?", progressGoes: "Its progress goes too.", remove: "Remove",
+  // sync: the bottom line of LISTS
+  keepSafe: "Keep progress safe", synced: ago => "Synced " + ago, syncing: "Syncing…",
+  notSynced: "Not synced — will retry",
+  agoNow: "just now", agoMin: m => m + " min ago", agoH: h => h + " h ago", agoYesterday: "yesterday", agoDays: d => d + " days ago",
+  // sync: the dialog (the dark page's texts)
+  syncOffTitleMain: "Sync is off", syncOffDesc: "Your progress lives only in this browser.",
+  syncHaveKey: "I have a key", syncCreateKey: "Create a key",
+  syncOnTitle: "Sync is on - this is your key:", syncCopy: "Copy key", syncCopied: "Copied", syncSelect: "Select it above",
+  syncTurnOff: "Turn off sync",
+  syncPin: "Treat your key like a PIN: keep it safe, and never leave it on a device that isn't yours.",
+  syncHelpTitle: "Your sync key keeps your progress safe",
+  syncHelp1: "It's a random key, no account needed. Enter it on another browser or device and both share the same progress, possibly with a small delay.",
+  syncHelp2: "Lose your phone or wipe your browser? Your key restores everything. Keep it somewhere safe, like a PIN.",
+  syncBack: "Back", syncCancel: "Cancel",
+  syncNewTitle: "Create a new key?",
+  syncNewBody: "This makes a brand-new key, starting from the progress in this browser. Already have a key - from another device, or from before? Use it instead: a new key can’t see an old key’s progress.",
+  syncCreateNew: "Create new key", syncCreating: "Creating...",
+  syncOffTitle: "Turn off sync?",
+  syncOffBody: "This device stops syncing. Nothing is deleted - your scores stay here. To reconnect later you will need your key:",
+  syncTurnOffBtn: "Turn off", syncKeepOn: "Keep sync on",
+  syncClaimFailTitle: "Couldn't set up sync",
+  syncClaimOffline: "You appear to be offline. Your progress is untouched - try again when you're online.",
+  syncClaimServer: "The key server refused just now. Your progress is untouched - try again in a moment.",
+  syncTryAgain: "Try again",
+  syncCollTitle: "Shared computer, or not your device?",
+  syncCollWarn: "Use a private/incognito window instead - that way each person's progress stays safe.",
+  syncCollBody: n => n + " cards here score higher than the key does. Merging means every card will receive the highest score here and in the key.",
+  syncMerge: "Merge both", syncMerging: "Merging...",
+  syncEnterTitle: "Enter your key", syncEnterBody: "Enter your key (dash is optional):", syncKeyPh: "e.g. 7K2M-9XQF",
+  syncConnect: "Connect", syncConnecting: "Connecting...",
+  syncBadKey: "A WordDock key is 8 characters, like 7K2M-9XQF. Check it and try again.",
+  syncNoServer: "Can't reach the sync server - try again when you're online.",
+  syncNoSuchKey: "This key doesn't exist. Check the 8 characters and try again."
+};
+/* ── WD lists, published on this site: one line. A new WD list = one JSON file (lists/<NAME>.json)
+   + its name here. ── */
+const WD_LISTS = ["NL-RU", "NL-IT", "NL-FR", "NL-LA"];
+/* A list has one name, shown everywhere as it is: letters, digits and hyphens, in capitals
+   (NL-RU, NL-LA-LIEVE, BIOLOGY). It names lists/<NAME>.json, the pool wd_rs_<NAME>, the view,
+   the heading, the corner, the sheet. When it starts with two language codes, those become
+   the column labels: NL | LA. Otherwise Q | A. */
 const canonKey = n => String(n || "").trim().toUpperCase();
 const validKey = n => /^[A-Z0-9][A-Z0-9-]*$/.test(n);
-/* A title becomes a key: capitals, accents dropped, every run of other characters one hyphen.
-   "les 3 (kopie)" → LES-3-KOPIE. */
-const keyFrom = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase()
-  .replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-const WD = new Map(WD_LISTS.map(e => typeof e === "string" ? [canonKey(e), canonKey(e)] : [canonKey(e.key), String(e.title || e.key)]));
-const WD_KEYS = [...WD.keys()];
+/* A file name becomes a name: capitals, every run of characters other than letters, digits and
+   hyphens one hyphen. "les 3 (kopie)" → LES-3-KOPIE. */
+const keyFrom = t => String(t || "").toUpperCase().replace(/[^A-Z0-9-]+/g, "-").replace(/-{2,}/g, "-").replace(/^-+|-+$/g, "");
+const WD_KEYS = WD_LISTS.map(canonKey);
 function labelsOf(key){
   const m = String(key).match(/^([A-Za-z]{2})-([A-Za-z]{2})(?:-(.+))?$/);
-  return m ? { q: m[1].toUpperCase(), a: m[2].toUpperCase() } : { q: "Q", a: "A" };
+  return m ? { q: m[1].toUpperCase(), a: m[2].toUpperCase() } : { q: T.colQ, a: T.colA };
 }
 const LISTS_DIR = "lists/", ROW_H = 38, DECK_SIZE = 10, CAT_PAGE = 5;
 const DECK_KEY = "wd_lens_deck", LIST_KEY = "wd_lens_list", OWN_KEY = "wd_lens_lists", VIEW_KEY = k => "wd_lens_view_" + k;   /* the lens's own keys */
@@ -292,8 +390,13 @@ const $ = id => document.getElementById(id);
 /* Search folds case and accents: "amicus" finds "amīcus", "хороший" finds "хоро́ший". */
 const strip = v => String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 const toks = v => String(v ?? "").split(",").map(x => x.trim()).filter(Boolean);
-const nWords = n => n + (n === 1 ? " word" : " words");
-const nLists = n => n + (n === 1 ? " list" : " lists");
+const nWords = T.words, nLists = T.lists;
+/* Static page text from T: data-t (text), data-t-ph (placeholder), data-t-aria (label). */
+function applyT(root){
+  (root || document).querySelectorAll("[data-t]").forEach(el => { el.textContent = T[el.dataset.t]; });
+  (root || document).querySelectorAll("[data-t-ph]").forEach(el => { el.placeholder = T[el.dataset.tPh]; });
+  (root || document).querySelectorAll("[data-t-aria]").forEach(el => { el.setAttribute("aria-label", T[el.dataset.tAria]); });
+}
 
 /* Level: one integer per row, or none. Old SEG "1A, 1B … 2A" reads as 101, 102 … 201. */
 const SEG_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -347,18 +450,17 @@ function normalizeRows(raw){
 const hayOf = r => r._hay || (r._hay = strip([r.ID, r.LVL, r.ENT, r.CAT, r.SUB, r.TAG, ...r.pairs.flatMap(p => [p.q, p.a])].join(" \u0001 ")));
 
 /* ── Lists: rows + one pool each. WD lists come from the site;
-   My lists live in this browser, on this device, under OWN_KEY as { key: { title, rows, when } }. ── */
+   My lists live in this browser, on this device, under OWN_KEY as { NAME: { rows, when } }. ── */
 const LISTS = {};
 let usingSample = false;
-const isPublished = key => WD.has(key);
-const getList = raw => { const key = canonKey(raw); return LISTS[key] || (LISTS[key] = { key, title: WD.get(key) || key, ...labelsOf(key), rows: null, loaded: false, own: false }); };
-const titleOf = key => key ? getList(key).title : "";
+const isPublished = key => WD_KEYS.includes(key);
+const getList = raw => { const key = canonKey(raw); return LISTS[key] || (LISTS[key] = { key, ...labelsOf(key), rows: null, loaded: false, own: false }); };
 function readOwn(){ try { return JSON.parse(localStorage.getItem(OWN_KEY)) || {}; } catch { return {}; } }
 function writeOwn(o){ try { localStorage.setItem(OWN_KEY, JSON.stringify(o)); return true; } catch { return false; } }
 function loadOwn(){
   for (const [key, st] of Object.entries(readOwn())){
     if (!st || !Array.isArray(st.rows)) continue;
-    const l = getList(key); l.rows = normalizeRows(st.rows); l.title = st.title || key; l.loaded = true; l.own = true;
+    const l = getList(key); l.rows = normalizeRows(st.rows); l.loaded = true; l.own = true;
   }
 }
 const keyOf = r => strip(r.ENT) + "·" + strip(r.CAT);
@@ -377,24 +479,23 @@ async function ensureList(raw){
   }
   l.checked = true;
   if (rows && rows.length && l.own){
-    // A WD list now holds this key. The copy on this device always steps aside to <KEY>-OWN,
-    // titled "<title> (own copy)", with its progress and view; the WD list starts fresh.
+    // A WD list now holds this name. The copy on this device always steps aside to <NAME>-OWN,
+    // with its progress and view; the WD list starts fresh.
     const o = readOwn(), alt = key + OWN_SUFFIX, rec = o[key] || {};
-    const altTitle = (rec.title || l.title || key) + " (own copy)";
-    o[alt] = { ...rec, title: altTitle }; delete o[key]; writeOwn(o);
-    const ol = getList(alt); ol.rows = l.rows; ol.title = altTitle; ol.loaded = true; ol.own = true; ol.checked = true;
+    o[alt] = { rows: rec.rows, when: rec.when }; delete o[key]; writeOwn(o);
+    const ol = getList(alt); ol.rows = l.rows; ol.loaded = true; ol.own = true; ol.checked = true;
     moveKey(poolKey(key), poolKey(alt)); moveKey(VIEW_KEY(key), VIEW_KEY(alt));
     if (activeKey === key){ activeKey = alt; try { localStorage.setItem(LIST_KEY, alt); } catch {} }
-    l.own = false; l.title = WD.get(key) || key;
+    l.own = false;
   }
   if (!l.own){ l.rows = rows && rows.length ? rows : null; l.loaded = true; }
   return l;
 }
 /* Import: a sheet becomes a My list on this device, or replaces one. */
-function putOwn(key, title, rows, keepPool){
-  const o = readOwn(); o[key] = { title, rows, when: new Date().toISOString() };
+function putOwn(key, rows, keepPool){
+  const o = readOwn(); o[key] = { rows, when: new Date().toISOString() };
   if (!writeOwn(o)) return false;
-  const l = getList(key); l.rows = normalizeRows(rows); l.title = title; l.loaded = true; l.own = true; l.checked = true;
+  const l = getList(key); l.rows = normalizeRows(rows); l.loaded = true; l.own = true; l.checked = true;
   if (!keepPool) clearPool(key);
   return true;
 }
@@ -414,7 +515,7 @@ const readPool = k => { try { return JSON.parse(localStorage.getItem("wd_rs_" + 
 let xlsxReady = null;
 function loadXLSX(){
   if (window.XLSX) return Promise.resolve();
-  if (!xlsxReady) xlsxReady = new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "xlsx.full.min.js"; sc.onload = res; sc.onerror = () => { xlsxReady = null; rej(new Error("xlsx.full.min.js not found next to this page")); }; document.head.appendChild(sc); });
+  if (!xlsxReady) xlsxReady = new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "xlsx.full.min.js"; sc.onload = res; sc.onerror = () => { xlsxReady = null; rej(new Error(T.noReader)); }; document.head.appendChild(sc); });
   return xlsxReady;
 }
 const ALIAS = { LVL:"LVL", LEVEL:"LVL", SEG:"LVL", ENT:"ENT", ENTRY:"ENT", CAT:"CAT", CATEGORY:"CAT", SUB:"SUB", TAG:"TAG", TAGS:"TAG" };
@@ -468,46 +569,46 @@ function sheetOut(l){
 }
 async function exportList(key){
   const l = getList(key); if (!l.rows) return;
-  try { await loadXLSX(); sheetOut(l); } catch (e) { await confirmDlg("No sheet writer", e.message, "OK", "Close"); }
+  try { await loadXLSX(); sheetOut(l); } catch (e) { await confirmDlg(T.noWriter, e.message, T.ok, T.close); }
 }
 async function importSheet(file){
   let got;
   try { await loadXLSX(); got = readSheet(await file.arrayBuffer()); }
-  catch (e) { await confirmDlg("Could not read this file", e.message, "OK", "Close"); return; }
-  if (!got){ await confirmDlg("No header row with Q1 and A1", "Name the columns in the first row: LVL, ENT, CAT, SUB, TAG, Q1, A1 …", "OK", "Close"); return; }
-  if (!got.rows.length){ await confirmDlg("Nothing to import", "No row has both Q1 and A1.", "OK", "Close"); return; }
-  // The title is the file name as typed; the key comes from the title. Conflicts are decided on keys.
-  let title = (file.name || "").replace(/\.[^.]+$/, "").trim(), key = keyFrom(title);
+  catch (e) { await confirmDlg(T.cantRead, e.message, T.ok, T.close); return; }
+  if (!got){ await confirmDlg(T.noHeader, T.noHeaderBody, T.ok, T.close); return; }
+  if (!got.rows.length){ await confirmDlg(T.nothing, T.nothingBody, T.ok, T.close); return; }
+  // The name is the file name in capitals; a name that comes out empty is asked for.
+  let key = keyFrom((file.name || "").replace(/\.[^.]+$/, ""));
   for (;;){
     if (!key){
-      const v = await promptDlg("Give a NAME for this list", "A name with letters or digits: Latijn les 3, Biology.", title);
-      if (v === null) return; title = v.trim(); key = keyFrom(title); continue;
+      const v = await promptDlg(T.giveName, T.giveNameBody, "");
+      if (v === null) return; key = keyFrom(v); continue;
     }
     if (isPublished(key)){
-      const v = await promptDlg(title + " is a WD list and can't be replaced.", "Name yours " + key + "-01?", title + "-01");
-      if (v === null) return; title = v.trim(); key = keyFrom(title); continue;
+      const v = await promptDlg(T.isWd(key), T.nameYours(key + "-01"), key + "-01");
+      if (v === null) return; key = keyFrom(v); continue;
     }
     break;
   }
-  const words = nWords(got.rows.length), skip = got.skipped ? " · " + got.skipped + " skipped" : "";
+  const words = nWords(got.rows.length), skip = got.skipped ? T.skipped(got.skipped) : "";
   const ex = LISTS[key] && LISTS[key].own && LISTS[key].rows ? LISTS[key] : null;
   let keepPool = true;
   if (ex){
     const old = nWords(ex.rows.length);
     if (sameOrder(ex.rows, normalizeRows(got.rows))){
-      if (!(await confirmDlg("Replace " + ex.title + " (" + old + ") with this file (" + words + ")?", "Your progress stays." + skip, "Replace", "Keep"))) return;
+      if (!(await confirmDlg(T.replaceQ(key, old, words), T.progressStays + skip, T.replace, T.keep))) return;
     } else {
       keepPool = false;
-      if (!(await confirmDlg("The words in this file are in another order.", "Replace " + ex.title + " and start its progress fresh?" + skip, "Replace", "Keep"))) return;
+      if (!(await confirmDlg(T.otherOrder, T.replaceFresh(key) + skip, T.replace, T.keep))) return;
     }
-  } else if (!(await confirmDlg("Add " + title + " to this device?", words + skip + ".", "Add", "Cancel"))) return;
-  if (!putOwn(key, title, got.rows, keepPool)){ await confirmDlg("Could not keep this list", "This browser has no room left for it.", "OK", "Close"); return; }
+  } else if (!(await confirmDlg(T.addQ(key), words + skip + ".", T.addBtn, T.cancel))) return;
+  if (!putOwn(key, got.rows, keepPool)){ await confirmDlg(T.cantKeep, T.noRoom, T.ok, T.close); return; }
   if (activeKey === key) initDeck(LISTS[key].rows);
   goList(key);
 }
 async function removeList(key){
   const l = LISTS[key]; if (!l || !l.own) return;
-  if (!(await confirmDlg("Remove " + l.title + " from this device?", "Its progress goes too.", "Remove", "Keep"))) return;
+  if (!(await confirmDlg(T.removeQ(key), T.progressGoes, T.remove, T.keep))) return;
   removeOwn(key);
   if (viewKey === key){ viewKey = WD_KEYS[0]; loadView(viewKey); }
   render();
@@ -552,13 +653,13 @@ function levelSpan(rows){
 
 /* ── Columns: LVL | NL | LA | CAT | SUB | TAG | RS (phone: the first three) ── */
 const COLS = [
-  { k:"LVL", label:"LVL", cls:"lvl", w:"7%",  ws:"16%" },
-  { k:"Q1",  label:"Q",   w:"25%", ws:"42%" },
-  { k:"A1",  label:"A",   cls:"b ru", w:"25%", ws:"42%" },
-  { k:"CAT", label:"CAT", cls:"hide-s", th:"hide-s", w:"14%" },
-  { k:"SUB", label:"SUB", cls:"hide-s", th:"hide-s", w:"12%" },
-  { k:"TAG", label:"TAG", cls:"hide-s", th:"hide-s", w:"11%" },
-  { k:"RS",  label:"RS",  cls:"rs hide-s", th:"c hide-s", w:"6%" }
+  { k:"LVL", label:T.colLVL, cls:"lvl", w:"7%",  ws:"16%" },
+  { k:"Q1",  label:T.colQ,   w:"25%", ws:"42%" },
+  { k:"A1",  label:T.colA,   cls:"b ru", w:"25%", ws:"42%" },
+  { k:"CAT", label:T.colCAT, cls:"hide-s", th:"hide-s", w:"14%" },
+  { k:"SUB", label:T.colSUB, cls:"hide-s", th:"hide-s", w:"12%" },
+  { k:"TAG", label:T.colTAG, cls:"hide-s", th:"hide-s", w:"11%" },
+  { k:"RS",  label:T.colRS,  cls:"rs hide-s", th:"c hide-s", w:"6%" }
 ];
 const isSmall = () => window.matchMedia("(max-width:640px)").matches;
 function setCols(ws){
@@ -599,7 +700,7 @@ const visibleRows = () => { const rows = viewRows(); if (!rows) return []; const
 function renderCrumbs(){
   const c = $("crumbs"); c.innerHTML = "";
   if (level !== "study" || !activeKey) return;
-  const b = document.createElement("button"); b.className = "crumb"; b.textContent = titleOf(activeKey); b.title = "To the list";
+  const b = document.createElement("button"); b.className = "crumb"; b.textContent = activeKey; b.title = T.toList;
   b.addEventListener("click", () => goList(activeKey));
   c.appendChild(b);
 }
@@ -608,9 +709,9 @@ function renderCrumbs(){
 const listKeys = () => [...new Set([...WD_KEYS, ...Object.keys(LISTS).filter(k => LISTS[k].own)])];
 function renderHeading(){
   const h = $("h"); h.innerHTML = "";
-  const t = titleOf(viewKey);
+  const t = viewKey;
   if (listKeys().length > 1){
-    const b = document.createElement("button"); b.title = "Other lists";
+    const b = document.createElement("button"); b.title = T.otherLists;
     b.appendChild(document.createTextNode(t));
     const c = document.createElement("span"); c.className = "caret"; c.textContent = "▾"; b.appendChild(c);
     b.addEventListener("click", () => goCatalog());
@@ -624,7 +725,7 @@ function paged(rows){
 }
 function tapSpan(text, value, cls){
   const s = document.createElement("span"); s.className = "tap" + (cls ? " " + cls : ""); s.textContent = text;
-  s.title = "Show all “" + value + "”";
+  s.title = T.showAll(value);
   s.addEventListener("click", e => { e.stopPropagation(); setQuery(value); });
   return s;
 }
@@ -636,7 +737,7 @@ function fillCell(td, r, k, pool){
   if (k === "CAT"){ if (!r.CAT){ td.textContent = "·"; return; } td.appendChild(tapSpan(r.CAT, r.CAT, "tag")); td.title = r.CAT; return; }
   const ts = toks(r[k]);
   if (!ts.length){ td.textContent = "·"; return; }
-  ts.forEach((t, i) => { if (i) td.appendChild(document.createTextNode(", ")); td.appendChild(tapSpan(t, t, k === "SUB" ? "cs-sub" : "tg")); });
+  ts.forEach((t, i) => { if (i) td.appendChild(document.createTextNode("\u2009")); td.appendChild(tapSpan(t, t, "tag")); });
   td.title = ts.join(", ");
 }
 /* Row unfold: ID, ENT, then the other pairs. On a phone also what the columns hide. */
@@ -644,11 +745,11 @@ function detailRow(r, pool, span){
   const tr = document.createElement("tr"); tr.className = "detail";
   const td = document.createElement("td"); td.colSpan = span;
   const meta = document.createElement("div"); meta.className = "det-meta";
-  const bits = [["ID", r.ID], ["ENT", r.ENT || "·"]];
+  const bits = [[T.colID, r.ID], [T.colENT, r.ENT || "·"]];
   if (isSmall()){
     if (r.CAT || r.SUB) bits.push(["", [r.CAT, r.SUB].filter(Boolean).join(" · ")]);
     if (r.TAG) bits.push(["", r.TAG]);
-    bits.push(["RS", pool[r.ID] === undefined ? "·" : pool[r.ID]]);
+    bits.push([T.colRS, pool[r.ID] === undefined ? "·" : pool[r.ID]]);
   }
   bits.forEach(([k, v]) => { const b = document.createElement("b"); b.textContent = (k ? k + " " : "") + v; meta.appendChild(b); });
   td.appendChild(meta);
@@ -658,7 +759,7 @@ function detailRow(r, pool, span){
     rest.forEach(p => { const q = document.createElement("div"); q.className = "dq"; q.textContent = p.q;
       const a = document.createElement("div"); a.className = "da ru"; a.textContent = p.a; g.append(q, a); });
     td.appendChild(g);
-  } else { const n = document.createElement("div"); n.className = "det-none"; n.textContent = "No other pairs."; td.appendChild(n); }
+  } else { const n = document.createElement("div"); n.className = "det-none"; n.textContent = T.noOtherPairs; td.appendChild(n); }
   tr.appendChild(td);
   return tr;
 }
@@ -672,7 +773,7 @@ function renderList(){
   if (!rowsAll){
     $("lvlBox").hidden = true;
     $("sub").textContent = "";
-    $("empty").textContent = l.loaded ? "Nothing here yet." : "Loading…"; $("empty").hidden = false;
+    $("empty").textContent = l.loaded ? T.nothingYet : T.loading; $("empty").hidden = false;
     setCols([]);
   } else {
     const span = levelSpan(rowsAll), range = parseLevel(lvlText);
@@ -700,16 +801,16 @@ function renderList(){
     if (span){
       if (range && range !== "bad"){
         const lo = Math.max(range.lo, span.lo), hi = Math.min(range.hi, span.hi);
-        lv = lo > hi ? "Level " + lvlText.trim() : lo === hi ? "Level " + lo : "Level " + lo + "–" + hi;
-      } else lv = span.lo === span.hi ? "Level " + span.lo : "Level " + span.lo + "–" + span.hi;
+        lv = lo > hi ? T.levelOne(lvlText.trim()) : lo === hi ? T.levelOne(lo) : T.levelSpan(lo, hi);
+      } else lv = span.lo === span.hi ? T.levelOne(span.lo) : T.levelSpan(span.lo, span.hi);
     }
-    $("sub").textContent = [lv, nWords(rows.length), l.own ? "on this device" : ""].filter(Boolean).join(" · ");
+    $("sub").textContent = [lv, nWords(rows.length), l.own ? T.onDevice : ""].filter(Boolean).join(" · ");
     if (sortKey) rows = [...rows].sort((x, y) => {
       const a = sortVal(x, sortKey, pool), b = sortVal(y, sortKey, pool);
       const c = (typeof a === "number" && typeof b === "number") ? a - b : String(a).localeCompare(String(b));
       return (c || (x.ID < y.ID ? -1 : 1)) * sortDir;
     });
-    if (!rows.length){ $("empty").textContent = "No matches."; $("empty").hidden = false; }
+    if (!rows.length){ $("empty").textContent = T.noMatches; $("empty").hidden = false; }
     const p = paged(rows); pages = p.pages; total = p.total;
     const shown = COLS.filter(c => !small || c.ws).length;
     for (const r of p.slice){
@@ -743,28 +844,29 @@ function renderCatalog(){
   const all = listKeys().map(k => getList(k));
   // WD lists not seen yet: fetch them, so the Words column fills in.
   for (const l of all) if ((!l.loaded || (isPublished(l.key) && !l.checked)) && !l.fetching){ l.fetching = true; ensureList(l.key).then(() => { if (level === "catalog") renderCatalog(); }); }
-  renderSection("wd", all.filter(l => !l.own), "Published");
-  renderSection("my", all.filter(l => l.own), "On this device");
+  renderSection("wd", all.filter(l => !l.own), T.published);
+  renderSection("my", all.filter(l => l.own), T.onThisDevice);
+  renderSyncLine();
   renderPos();
 }
 function renderSection(id, lists, unit){
   const S = CAT[id], qq = strip(S.q), body = $(id + "Body");
   body.innerHTML = "";
-  const rows = qq ? lists.filter(l => strip(l.title).includes(qq) || strip(l.key).includes(qq)) : lists;
-  $(id + "Sub").textContent = unit + " · " + (lists.length ? nLists(lists.length) : "none yet");
+  const rows = qq ? lists.filter(l => strip(l.key).includes(qq)) : lists;
+  $(id + "Sub").textContent = unit + " · " + (lists.length ? nLists(lists.length) : T.noneYet);
   $(id + "Ctl").hidden = !lists.length;
   $(id + "Q").value = S.q; $(id + "Q").classList.toggle("on", !!qq);
   const pages = Math.max(1, Math.ceil(rows.length / CAT_PAGE));
   if (S.page >= pages) S.page = pages - 1;
   for (const l of rows.slice(S.page * CAT_PAGE, S.page * CAT_PAGE + CAT_PAGE)){
     const tr = document.createElement("tr"); const n = knownCount(l.key);
-    const tdN = document.createElement("td"); tdN.className = "b"; tdN.textContent = l.title; tdN.title = l.title;
+    const tdN = document.createElement("td"); tdN.className = "b"; tdN.textContent = l.key;
     const tdW = document.createElement("td"); tdW.className = "id"; tdW.textContent = n ?? "·";
-    const tdS = document.createElement("td"); tdS.className = "now"; tdS.textContent = l.key === activeKey ? "studying now" : "";
+    const tdS = document.createElement("td"); tdS.className = "now"; tdS.textContent = l.key === activeKey ? T.studyingNow : "";
     const tdA = document.createElement("td"); tdA.className = "act";
-    if (l.rows){ const b = document.createElement("button"); b.className = "ib"; b.textContent = "↓"; b.title = "Excel: " + l.key + ".xlsx";
+    if (l.rows){ const b = document.createElement("button"); b.className = "ib"; b.textContent = "↓"; b.title = T.excelOut(l.key);
       b.addEventListener("click", e => { e.stopPropagation(); exportList(l.key); }); tdA.appendChild(b); }
-    if (l.own){ const x = document.createElement("button"); x.className = "ib x"; x.textContent = "×"; x.title = "Remove from this device";
+    if (l.own){ const x = document.createElement("button"); x.className = "ib x"; x.textContent = "×"; x.title = T.removeHere;
       x.addEventListener("click", e => { e.stopPropagation(); removeList(l.key); }); tdA.appendChild(x); }
     tr.append(tdN, tdW, tdS, tdA);
     tr.addEventListener("click", () => goList(l.key)); body.appendChild(tr);
@@ -786,20 +888,19 @@ function paintCounter(){ const el = $("deckCount"); if (el) el.textContent = dec
 /* ── The Study action: studies what the table shows ── */
 const midDeck = () => deckStarted && !deckDone;
 function renderStudyBtn(){
-  const b = $("btnStudy"), t = titleOf(viewKey);
-  const vis = visibleRows(), all = viewRows() || [];
+  const b = $("btnStudy"), t = viewKey;
+  const vis = visibleRows();
   b.disabled = !vis.length;
-  if (!vis.length){ b.textContent = "Study " + t; return; }
-  if (viewKey === activeKey && midDeck() && sigOf(vis) === deckSig) b.textContent = "Resume " + t + " · " + deckScore + "/" + pipe.length;
-  else if (vis.length !== all.length) b.textContent = "Study " + nWords(vis.length) + " · " + t;
-  else b.textContent = "Study " + t;
+  if (!vis.length){ b.textContent = T.studyK(t); return; }
+  if (viewKey === activeKey && midDeck() && sigOf(vis) === deckSig) b.textContent = T.resume(t, deckScore, pipe.length);
+  else b.textContent = T.studyN(vis.length, t);
 }
 async function onStudy(){
   const src = visibleRows(); if (!src.length) return;
   if (viewKey !== activeKey){
     if (activeKey){
-      const ok = await confirmDlg("Switch to studying " + titleOf(viewKey) + "?",
-        "You're leaving " + titleOf(activeKey) + "." + (midDeck() ? " Unfinished decks lose progress." : ""), "Study " + titleOf(viewKey), "Keep studying");
+      const ok = await confirmDlg(T.switchQ(viewKey),
+        T.leaving(activeKey) + (midDeck() ? T.unfinished : ""), T.studyK(viewKey), T.keepStudying);
       if (!ok) return;
     }
     activeKey = viewKey;
@@ -807,7 +908,7 @@ async function onStudy(){
     initDeck(src); enterStudy(); return;
   }
   if (sigOf(src) !== deckSig || deckDone){
-    if (midDeck() && !(await confirmDlg("Restart the deck?", "Your deck restarts with the " + nWords(src.length) + " shown.", "Restart", "Keep deck"))){ enterStudy(); return; }
+    if (midDeck() && !(await confirmDlg(T.restartQ, T.restartBody(src.length), T.restart, T.keepDeck))){ enterStudy(); return; }
     initDeck(src);
   }
   enterStudy();
@@ -853,6 +954,7 @@ function enterStudy(fromPop){
 window.addEventListener("popstate", e => {
   const s = e.state; if (!s || !s.wd) return;
   if (!$("dlgBack").hidden) $("dlgCancel").click();
+  hideSyncPanel();
   if (s.level === "study" && activeKey) enterStudy(true);
   else if (s.level === "catalog") goCatalog(true);
   else goList(s.k || viewKey, true);
@@ -903,7 +1005,8 @@ function gradeGood(){
       let pool; try { pool = JSON.parse(localStorage.getItem(key)) || {}; } catch { pool = {}; }
       pipe.forEach(x => { const id = x.row.ID, base = (id in pool) ? pool[id] : 0;
         pool[id] = x.timesDirty === 0 ? base + 1 : x.timesDirty === 1 ? base - 1 : base - 2; });
-      try { localStorage.setItem(key, JSON.stringify(pool)); localStorage.setItem("wd_sync_dirty", "1"); } catch {}
+      try { localStorage.setItem(key, JSON.stringify(pool)); } catch {}
+      markSyncDirty(); syncCatchUp();            // the one moment a score can change: pull, merge, push
     }
   }
   saveDeck(); renderCard();
@@ -928,7 +1031,7 @@ function restoreDeck(rows){
 function renderCard(){
   paintCounter();
   const card = $("card"), text = $("cardText"), tag = $("cardTag");
-  if (deckDone){ card.classList.add("done"); tag.textContent = ""; text.textContent = "One More WordDeck Done!"; text.className = "card-text a"; return; }
+  if (deckDone){ card.classList.add("done"); tag.textContent = ""; text.textContent = T.deckDone; text.className = "card-text a"; return; }
   card.classList.remove("done");
   if (!pipe.length){ tag.textContent = ""; text.textContent = "…"; return; }
   const s = cur(), f = s.row.pairs[s.fi], c = (s.row.CAT || "").toUpperCase(), sub = (s.row.SUB || "").trim().toUpperCase();
@@ -936,6 +1039,383 @@ function renderCard(){
   const showQ = !showingA || peeking;
   text.textContent = showQ ? f.q : f.a; text.className = "card-text " + (showQ ? "q" : "a");
 }
+
+/* ── Sync: ported from index.html v26.98 (the client only; the Worker is untouched).
+   Same contract, same keys, same payload: POST /claim {key}, GET /pull?key=,
+   POST /push {key, progress} with progress = every non-empty wd_rs_* pool on this
+   device (My lists' pools ride along like any other). The wd_sync_* keys are written
+   exactly as index.html writes them, so a key claimed on the dark page works here
+   and back. The comments of index.html hold the reasoning; the functions below are
+   copies, changed only where the lens differs (no loadRS, no initDeck(), its own
+   bottom line on LISTS, no QR, no consent cascade). ── */
+const SYNC_KEY_STORE = "wd_sync_key";
+const KEY_ALPHABET   = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const SYNC_KEY_LEN = 8;           // XXXX-XXXX
+function generateSyncKey(){
+  const bytes = new Uint32Array(SYNC_KEY_LEN);
+  crypto.getRandomValues(bytes);
+  let raw = "";
+  for (const b of bytes) raw += KEY_ALPHABET[b % KEY_ALPHABET.length];
+  return raw;                       // stored bare, formatted only for display
+}
+function formatSyncKey(raw){ return raw.slice(0,4) + "-" + raw.slice(4,8); }
+function normalizeSyncKey(input){ return (input || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function isValidSyncKey(raw){ return raw.length === SYNC_KEY_LEN && [...raw].every(c => KEY_ALPHABET.includes(c)); }
+function getSyncKey(){ try { return localStorage.getItem(SYNC_KEY_STORE) || null; } catch { return null; } }
+function setSyncKey(raw){ try { localStorage.setItem(SYNC_KEY_STORE, raw); } catch {} }
+function clearSyncKey(){ try { localStorage.removeItem(SYNC_KEY_STORE); } catch {} }
+
+const SYNC_API = "https://sync.worddock.app";
+const SYNC_DIRTY_KEY = "wd_sync_dirty";     // "1" while a finished deck is unpushed
+const SYNC_LASTPUSH_KEY = "wd_sync_lastpush";
+const SYNC_PULL_INTERVAL = 60 * 60 * 1000;  // hourly, foreground only
+const SYNC_DELTA_ASK = 100;                 // cards this browser knows better than the key: above this, adoption asks first
+const SYNC_STAMP_KEY = "wd_sync_stamp";     // the cloud's updated_at as this device last saw it
+const SYNC_LASTPULL_KEY = "wd_sync_lastpull"; // when this device last TRIED to pull
+const SYNC_PULL_MIN_GAP  = 60 * 1000;           // guardrail against the alt-tab clicker
+const SYNC_MYPUSH_KEY    = "wd_sync_mypush";    // updated_at of THIS device's last successful push
+const SYNC_MODE_KEY      = "wd_sync_mode";      // "sync" | "backup" — detected from pull stamps
+const SYNC_SOLO_PULLS_KEY= "wd_sync_solopulls"; // consecutive pulls where stamp == own push
+const SYNC_SOLO_RESET    = 10;                  // revert to backup after this many solo pulls
+const SYNC_COOLDOWN_SYNC = 15 * 60 * 1000;     // 15 min — another device may be waiting
+const SYNC_COOLDOWN_BKUP = 3 * 60 * 60 * 1000; // 3 h  — cloud is just a safety copy
+const SYNC_BOOT_WAIT     = 3000;               // lens: the first deck waits for a pull at most this long
+let syncBusy = false;
+let syncPullTimer = null;
+
+/* Lens only: what the bottom line of LISTS says. The time of the last answered
+   request lives under the lens's own key; the wd_sync_* keys stay index.html's. */
+const SYNC_OK_KEY = "wd_lens_synced";
+let syncFailed = false;
+function syncOk(){ syncFailed = false; try { localStorage.setItem(SYNC_OK_KEY, String(Date.now())); } catch {} renderSyncLine(); }
+function syncFail(){ syncFailed = true; renderSyncLine(); }
+
+function markSyncDirty(){ try { localStorage.setItem(SYNC_DIRTY_KEY, "1"); } catch {} }
+function syncIsDirty(){ try { return localStorage.getItem(SYNC_DIRTY_KEY) === "1"; } catch { return false; } }
+function clearSyncDirty(){ try { localStorage.removeItem(SYNC_DIRTY_KEY); } catch {} }
+function getSyncStamp(){ try { return parseInt(localStorage.getItem(SYNC_STAMP_KEY) || "0", 10) || 0; } catch { return 0; } }
+function setSyncStamp(n){ if (!n) return; try { localStorage.setItem(SYNC_STAMP_KEY, String(n)); } catch {} }
+function syncCooldownPassed(){
+  try {
+    const last = parseInt(localStorage.getItem(SYNC_LASTPUSH_KEY) || "0", 10);
+    const mode = localStorage.getItem(SYNC_MODE_KEY) || "backup";
+    const gap  = (mode === "sync") ? SYNC_COOLDOWN_SYNC : SYNC_COOLDOWN_BKUP;
+    return !last || (Date.now() - last) >= gap;
+  } catch { return true; }
+}
+function stampSyncPush(){ try { localStorage.setItem(SYNC_LASTPUSH_KEY, String(Date.now())); } catch {} }
+
+function allPools(){
+  const out = {};
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (!k || !k.startsWith("wd_rs_")) continue;
+    try {
+      const pool = JSON.parse(localStorage.getItem(k)) || {};
+      if (Object.keys(pool).length) out[k.slice("wd_rs_".length)] = pool;
+    } catch {}
+  }
+  return out;
+}
+/* Present in both -> max; present in one -> take it. */
+function mergePools(local, remote){
+  const merged = {};
+  const domains = new Set([...Object.keys(local), ...Object.keys(remote)]);
+  for (const d of domains){
+    const a = local[d] || {}, b = remote[d] || {};
+    const ids = new Set([...Object.keys(a), ...Object.keys(b)]);
+    const pool = {};
+    for (const id of ids){
+      if (id in a && id in b) pool[id] = Math.max(a[id], b[id]);
+      else                    pool[id] = (id in a) ? a[id] : b[id];
+    }
+    merged[d] = pool;
+  }
+  return merged;
+}
+function writePools(pools){
+  for (const [domain, pool] of Object.entries(pools)){
+    try { localStorage.setItem("wd_rs_" + domain, JSON.stringify(pool)); } catch {}
+  }
+}
+function _syncTimeout(){
+  return (typeof AbortSignal !== "undefined" && AbortSignal.timeout) ? AbortSignal.timeout(8000) : undefined;
+}
+async function fetchCloud(key){
+  const res = await fetch(SYNC_API + "/pull?key=" + key, { signal: _syncTimeout() });
+  return await res.json();
+}
+function replacePools(cloud){
+  const keep = new Set(Object.keys(cloud));
+  const gone = [];
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (k && k.startsWith("wd_rs_") && !keep.has(k.slice("wd_rs_".length))) gone.push(k);
+  }
+  for (const k of gone){ try { localStorage.removeItem(k); } catch {} }
+  writePools(cloud);
+}
+/* mode "merge": max per card (adoption). mode "rule": stamp unchanged → local stays;
+   stamp moved and clean → take the cloud; stamp moved and dirty → max. */
+function applyCloud(data, mode){
+  if (!data || data.empty || !data.progress) return;
+  const stamp = parseInt(data.updated_at, 10) || 0;
+  let how = "merge";
+  if (mode === "rule"){
+    const seen = getSyncStamp();
+    if (seen && stamp && stamp === seen) return;        // local stays
+    if (seen && !syncIsDirty()) how = "replace";
+    try {
+      const myPush = parseInt(localStorage.getItem(SYNC_MYPUSH_KEY) || "0", 10);
+      const someoneElsePushed = stamp && (myPush === 0 || stamp !== myPush);
+      if (someoneElsePushed){
+        localStorage.setItem(SYNC_MODE_KEY, "sync");
+        localStorage.setItem(SYNC_SOLO_PULLS_KEY, "0");
+      } else {
+        const solo = parseInt(localStorage.getItem(SYNC_SOLO_PULLS_KEY) || "0", 10) + 1;
+        localStorage.setItem(SYNC_SOLO_PULLS_KEY, String(solo));
+        if (solo >= SYNC_SOLO_RESET) localStorage.setItem(SYNC_MODE_KEY, "backup");
+      }
+    } catch {}
+  }
+  if (how === "replace") replacePools(data.progress);
+  else                   writePools(mergePools(allPools(), data.progress));
+  setSyncStamp(stamp);
+  // Lens: a deck nobody started was dealt from the pre-merge pool, so deal it again;
+  // a running deck is untouched (completion re-reads the live pool). The table repaints.
+  if (deckUnstarted()) initDeck(deckRows);
+  if (level !== "study") render();
+}
+function deckUnstarted(){ return pipe.length > 0 && !deckStarted && !deckDone && !showingA; }
+function deltaAgainstCloud(cloudProgress){
+  const local = allPools();
+  let n = 0;
+  for (const d of Object.keys(local)){
+    const a = local[d], b = (cloudProgress && cloudProgress[d]) || {};
+    for (const id of Object.keys(a)){ if (a[id] > (b[id] || 0)) n++; }
+  }
+  return n;
+}
+function syncPullRecently(){
+  try {
+    const last = parseInt(localStorage.getItem(SYNC_LASTPULL_KEY) || "0", 10);
+    return last && (Date.now() - last) < SYNC_PULL_MIN_GAP;
+  } catch { return false; }
+}
+function stampSyncPull(){ try { localStorage.setItem(SYNC_LASTPULL_KEY, String(Date.now())); } catch {} }
+async function syncPull(){
+  const key = getSyncKey();
+  if (!key || syncBusy) return;
+  if (syncPullRecently()) return;        // braked, nothing sent
+  stampSyncPull();
+  syncBusy = true;
+  try {
+    const data = await fetchCloud(key);
+    if (data && data.error) throw new Error(data.error);
+    applyCloud(data, "rule");
+    syncOk();
+  } catch {
+    syncFail();                          // offline or server down — local stays authoritative
+  } finally {
+    syncBusy = false;
+  }
+}
+/* The gate: dirty + cooldown, unless forced (key creation, key adoption). */
+function syncPush(force, leaving){
+  const key = getSyncKey();
+  if (!key) return;
+  if (!force && !syncIsDirty()) return;          // nothing new to say
+  if (!force && !syncCooldownPassed()) return;   // too soon
+  const body = JSON.stringify({ key, progress: allPools() });
+  const CT = "text/plain;charset=UTF-8";          // load-bearing: no preflight (see index.html)
+  if (!force) stampSyncPush();
+  try {
+    if (leaving && navigator.sendBeacon){
+      const blob = new Blob([body], { type: CT });
+      if (navigator.sendBeacon(SYNC_API + "/push", blob)){ clearSyncDirty(); return; }
+    }
+    fetch(SYNC_API + "/push", { method: "POST", headers: { "content-type": CT }, body, keepalive: true })
+      .then(r => (r && r.ok) ? r.json().catch(() => ({ ok: true })) : null)
+      .then(j => {
+        if (!j){ syncFail(); return; }
+        clearSyncDirty();
+        const t = parseInt(j.updated_at, 10) || 0;
+        setSyncStamp(t);
+        if (!force){ try { localStorage.setItem(SYNC_MYPUSH_KEY, String(t)); } catch {} }
+        syncOk();
+      })
+      .catch(() => syncFail());
+  } catch { syncFail(); }
+}
+/* Strict: no server, no key. Network failure throws to the caller. */
+async function syncClaim(key){
+  const res = await fetch(SYNC_API + "/claim", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ key }), signal: _syncTimeout()
+  });
+  const data = await res.json();
+  if (data.ok) return key;
+  return null;                        // taken, or unexpected: caller regenerates / does not mint
+}
+/* Pull and merge FIRST, then push whatever this device still owes. */
+async function syncCatchUp(){ await syncPull(); syncPush(); }
+function startSyncPullTimer(){
+  stopSyncPullTimer();
+  if (!getSyncKey()) return;
+  syncPullTimer = setInterval(() => { if (document.visibilityState === "visible") syncPull(); }, SYNC_PULL_INTERVAL);
+}
+function stopSyncPullTimer(){ if (syncPullTimer){ clearInterval(syncPullTimer); syncPullTimer = null; } }
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden"){ syncPush(); stopSyncPullTimer(); }
+  else { syncCatchUp(); startSyncPullTimer(); }
+});
+window.addEventListener("pagehide", () => syncPush(false, true));
+
+/* Key creation and adoption, as on the dark page. */
+async function claimFreshKey(){
+  let fresh = null;
+  for (let attempt = 0; attempt < 5 && !fresh; attempt++) fresh = await syncClaim(generateSyncKey());
+  return fresh;
+}
+let _claimFail = "server";
+async function doCreateKey(){
+  let fresh = null;
+  try { fresh = await claimFreshKey(); }
+  catch { _claimFail = "offline"; setSyncState("claim-failed"); return false; }
+  if (!fresh){ _claimFail = "server"; setSyncState("claim-failed"); return false; }
+  setSyncKey(fresh);
+  syncPush(true);                     // a new key carries the progress this browser already holds
+  startSyncPullTimer();
+  renderSyncLine();
+  setSyncState("main");
+  return true;
+}
+let _pendingAdopt = null;
+function adoptKey(key, data){
+  setSyncKey(key);
+  applyCloud(data, "merge");
+  syncPush(true);                     // the merged state goes back up
+  startSyncPullTimer();
+  renderSyncLine();
+  setSyncState("main");
+  hideSyncPanel();
+}
+
+/* ── The sync dialog: one frame, its content switches between states. ── */
+let _syncState = "main";
+function setSyncState(s){ _syncState = s; renderSyncPanelBody(); }
+function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+function sBtn(label, cls, onClick){ const b = el("button", cls, label); b.type = "button"; b.addEventListener("click", onClick); return b; }
+function sActions(...btns){ const d = el("div", "dlg-actions sync-actions"); btns.forEach(b => d.appendChild(b)); return d; }
+function sKey(k){ return el("div", "sync-key", formatSyncKey(k)); }
+function sPin(){ const p = el("p", "sync-desc"); p.appendChild(el("b", "", T.syncPin)); return p; }
+function renderSyncPanelBody(){
+  const root = $("syncBody"); if (!root) return;
+  root.innerHTML = "";
+  const st = _syncState, key = getSyncKey();
+  const title = t => root.appendChild(el("h3", "", t));
+  const desc = t => root.appendChild(el("p", "sync-desc", t));
+  const errLine = () => root.appendChild(el("p", "sync-err", ""));
+  if (st === "help"){
+    title(T.syncHelpTitle); desc(T.syncHelp1);
+    const p = el("p", "sync-desc"); p.appendChild(el("b", "", T.syncHelp2)); root.appendChild(p);
+    root.appendChild(sActions(sBtn(T.syncBack, "dlg-cancel", () => setSyncState("main"))));
+    return;
+  }
+  if (st === "confirm-new"){
+    title(T.syncNewTitle); desc(T.syncNewBody);
+    const create = sBtn(T.syncCreateNew, "dlg-cancel", async () => { create.textContent = T.syncCreating; create.disabled = true; await doCreateKey(); });
+    root.appendChild(sActions(sBtn(T.syncCancel, "dlg-cancel", () => setSyncState("main")), create,
+      sBtn(T.syncHaveKey, "dlg-ok", () => setSyncState("enter-key"))));
+    return;
+  }
+  if (st === "confirm-off"){
+    title(T.syncOffTitle); desc(T.syncOffBody); if (key) root.appendChild(sKey(key));
+    root.appendChild(sActions(
+      sBtn(T.syncTurnOffBtn, "dlg-cancel", () => { clearSyncKey(); stopSyncPullTimer(); renderSyncLine(); setSyncState("main"); }),
+      sBtn(T.syncKeepOn, "dlg-ok", () => setSyncState("main"))));
+    return;
+  }
+  if (st === "claim-failed"){
+    title(T.syncClaimFailTitle); desc(_claimFail === "offline" ? T.syncClaimOffline : T.syncClaimServer);
+    const retry = sBtn(T.syncTryAgain, "dlg-ok", async () => { retry.textContent = T.syncCreating; retry.disabled = true; await doCreateKey(); });
+    root.appendChild(sActions(sBtn(T.syncCancel, "dlg-cancel", () => setSyncState("main")), retry));
+    return;
+  }
+  if (st === "key-collision"){
+    const p = _pendingAdopt; if (!p){ setSyncState("enter-key"); return; }
+    title(T.syncCollTitle);
+    const w = el("p", "sync-desc"); w.appendChild(el("b", "", T.syncCollWarn)); root.appendChild(w);
+    desc(T.syncCollBody(deltaAgainstCloud(p.data.progress)));
+    const merge = sBtn(T.syncMerge, "dlg-ok", async () => {
+      const q = _pendingAdopt; if (!q) return;
+      merge.textContent = T.syncMerging; merge.disabled = true;
+      let fresh = q.data; try { fresh = await fetchCloud(q.key); } catch {}
+      _pendingAdopt = null; adoptKey(q.key, fresh);
+    });
+    root.appendChild(sActions(sBtn(T.syncCancel, "dlg-cancel", () => { _pendingAdopt = null; setSyncState("enter-key"); }), merge));
+    return;
+  }
+  if (st === "enter-key"){
+    title(T.syncEnterTitle); desc(T.syncEnterBody);
+    const inp = el("input", "sync-input"); inp.type = "text"; inp.placeholder = T.syncKeyPh;
+    inp.autocomplete = "off"; inp.spellcheck = false; root.appendChild(inp);
+    root.appendChild(sPin());
+    const err = errLine();
+    const connect = sBtn(T.syncConnect, "dlg-ok", async () => {
+      const raw = normalizeSyncKey(inp.value);
+      if (!isValidSyncKey(raw)){ err.textContent = T.syncBadKey; return; }
+      connect.textContent = T.syncConnecting; connect.disabled = true;
+      let peek;
+      try { peek = await fetchCloud(raw); }
+      catch { err.textContent = T.syncNoServer; connect.textContent = T.syncConnect; connect.disabled = false; return; }
+      if (peek && peek.empty){ err.textContent = T.syncNoSuchKey; connect.textContent = T.syncConnect; connect.disabled = false; return; }
+      if (deltaAgainstCloud(peek.progress) > SYNC_DELTA_ASK){ _pendingAdopt = { key: raw, data: peek }; setSyncState("key-collision"); return; }
+      adoptKey(raw, peek);
+    });
+    inp.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); connect.click(); } });
+    root.appendChild(sActions(sBtn(T.syncCancel, "dlg-cancel", () => setSyncState("main")), connect));
+    setTimeout(() => inp.focus(), 50);
+    return;
+  }
+  // main
+  if (key){
+    title(T.syncOnTitle); root.appendChild(sKey(key)); root.appendChild(sPin());
+    const copy = sBtn(T.syncCopy, "dlg-ok", async () => {
+      try { await navigator.clipboard.writeText(formatSyncKey(key)); copy.textContent = T.syncCopied; }
+      catch { copy.textContent = T.syncSelect; }
+      setTimeout(() => { copy.textContent = T.syncCopy; }, 1600);
+    });
+    root.appendChild(sActions(sBtn("?", "dlg-cancel", () => setSyncState("help")),
+      sBtn(T.syncTurnOff, "dlg-cancel", () => setSyncState("confirm-off")), copy));
+  } else {
+    title(T.syncOffTitleMain); desc(T.syncOffDesc);
+    root.appendChild(sActions(sBtn("?", "dlg-cancel", () => setSyncState("help")),
+      sBtn(T.syncCreateKey, "dlg-cancel", () => setSyncState("confirm-new")),
+      sBtn(T.syncHaveKey, "dlg-ok", () => setSyncState("enter-key"))));
+  }
+}
+function showSyncPanel(){ _syncState = "main"; renderSyncPanelBody(); $("syncBack").hidden = false; }
+function hideSyncPanel(){ $("syncBack").hidden = true; }
+
+/* The bottom line of LISTS: small, grey, one line of truth; tap opens the dialog. */
+function syncAgo(ms){
+  const m = Math.floor((Date.now() - ms) / 60000);
+  if (m < 1) return T.agoNow;
+  if (m < 60) return T.agoMin(m);
+  const h = Math.round(m / 60);
+  if (h < 24) return T.agoH(h);
+  if (h < 48) return T.agoYesterday;
+  return T.agoDays(Math.floor(h / 24));
+}
+function renderSyncLine(){
+  const a = $("syncLine"); if (!a) return;
+  if (!getSyncKey()){ a.textContent = T.keepSafe; a.classList.remove("fail"); return; }
+  let last = 0; try { last = parseInt(localStorage.getItem(SYNC_OK_KEY) || "0", 10) || 0; } catch {}
+  a.classList.toggle("fail", syncFailed);
+  a.textContent = syncFailed ? T.notSynced : last ? T.synced(syncAgo(last)) : T.syncing;
+}
+setInterval(() => { if (level === "catalog") renderSyncLine(); }, 30000);
 
 /* ── Dialog: a question with two buttons, or a question with one field ── */
 function confirmDlg(title, body, okLabel, cancelLabel){
@@ -952,7 +1432,7 @@ function confirmDlg(title, body, okLabel, cancelLabel){
 function promptDlg(title, body, value){
   return new Promise(res => {
     const back = $("dlgBack"), ok = $("dlgOk"), cancel = $("dlgCancel"), inp = $("dlgInput");
-    $("dlgTitle").textContent = title; $("dlgBody").textContent = body; ok.textContent = "OK"; cancel.textContent = "Cancel";
+    $("dlgTitle").textContent = title; $("dlgBody").textContent = body; ok.textContent = T.ok; cancel.textContent = T.cancel;
     inp.hidden = false; inp.value = value || ""; back.hidden = false;
     const done = v => { back.hidden = true; inp.hidden = true; ok.onclick = cancel.onclick = back.onclick = null; document.removeEventListener("keydown", onKey, true); res(v); };
     const onKey = e => { if (e.key === "Escape"){ e.stopPropagation(); done(null); } if (e.key === "Enter"){ e.stopPropagation(); e.preventDefault(); done(inp.value); } };
@@ -964,6 +1444,9 @@ function promptDlg(title, body, value){
 /* ── Input ── */
 $("btnStudy").addEventListener("click", onStudy);
 $("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
+$("syncLine").addEventListener("click", showSyncPanel);
+$("syncX").addEventListener("click", hideSyncPanel);
+$("syncBack").addEventListener("click", e => { if (e.target === $("syncBack")) hideSyncPanel(); });
 $("fileIn").addEventListener("change", () => { const f = $("fileIn").files[0]; if (f) importSheet(f); });
 $("pgPrev").addEventListener("click", () => { if (page > 0){ page--; openId = null; renderList(); } });
 $("pgNext").addEventListener("click", () => { page++; openId = null; renderList(); });
@@ -988,6 +1471,7 @@ $("btnGood").addEventListener("click", e => { gradeGood(); e.currentTarget.blur(
 $("btnAgain").addEventListener("click", e => { gradeAgain(); e.currentTarget.blur(); });
 document.addEventListener("keydown", e => {
   if (!$("dlgBack").hidden) return;
+  if (!$("syncBack").hidden){ if (e.key === "Escape") hideSyncPanel(); return; }
   if (level !== "study"){
     if (document.activeElement && ["INPUT","SELECT"].includes(document.activeElement.tagName)) return;
     if (level === "list"){
@@ -1005,6 +1489,7 @@ document.addEventListener("keydown", e => {
 
 /* ── Boot: land in study, like the app; the list sits one step back ── */
 (async () => {
+  applyT();
   loadOwn();
   let wanted = null; try { wanted = localStorage.getItem(LIST_KEY); } catch {}
   wanted = canonKey(wanted || WD_KEYS[0]);
@@ -1012,14 +1497,18 @@ document.addEventListener("keydown", e => {
   let l = await ensureList(wanted);
   if (activeKey !== wanted){ wanted = activeKey; l = getList(wanted); }   // published wins: the copy moved to -OWN
   if (!l.rows && wanted !== WD_KEYS[0]){ wanted = WD_KEYS[0]; l = await ensureList(wanted); }
-  if (usingSample) document.title += " · sample data";
-  if (!l.rows){ activeKey = null; viewKey = wanted; level = "list"; show(); try { history.replaceState(navState(), ""); } catch {} return; }
+  if (usingSample) document.title += T.sample;
+  if (!l.rows){ activeKey = null; viewKey = wanted; level = "list"; show(); try { history.replaceState(navState(), ""); } catch {} syncCatchUp(); startSyncPullTimer(); return; }
   activeKey = wanted; viewKey = wanted;
   try { localStorage.setItem(LIST_KEY, activeKey); } catch {}
   loadView(activeKey);
+  // Pull before the first deck is built, so it is dealt from the merged pool; never wait long.
+  if (getSyncKey()) await Promise.race([syncPull(), new Promise(r => setTimeout(r, SYNC_BOOT_WAIT))]);
   let src = visibleRows();
   if (!src.length){ qText = query = lvlText = ""; $("q").value = $("lvl").value = ""; saveView(); src = l.rows; }
   if (!restoreDeck(src)) initDeck(src);
+  syncPush();                                   // settle any debt, after the pull
+  startSyncPullTimer();
   level = "list";
   try { history.replaceState(navState(), ""); } catch {}
   enterStudy();
