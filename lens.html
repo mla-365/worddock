@@ -6,19 +6,19 @@
 <title>WordDock</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock lens — preview v0.15 ────────────────────────────────────────
-   Decisions: WD_v27_columns.md (block 1), lens block 2 of 3 Oct.
-   · a dock is a table: one Full + one pool, no lists inside a dock
-   · top line  = the W; in study also the dock name, the door into the list
-   · list      = big heading (dock name, ▾ when there is a choice), sub line,
-                 then search · Level field · pager · Study, then the table
-   · catalog   = DOCKS, a table of docks with the same head; opened from the ▾;
-                 ↓ on every row (the sheet), × on own rows, a last row adds a
-                 dock from an Excel sheet on this device
-   · columns   = LVL | NL | LA | CAT | SUB | TAG | RS; click a row to unfold
-   · study     = studies what the table shows; deck of ten, counter to ten
-   Engine from v26.98 except the finish line: all ten cards clean.
-   Reads lists/<DOCK>.json and wd_rs_<DOCK>; writes RS only at deck completion. */
+/* ── WordDock lens — preview v0.16 ────────────────────────────────────────
+   Words: v27/build.md ("the three words"); columns: v27/columns.md.
+   · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
+             shared across lists. A WD list is published (lists/<key>.json, on
+             the WD_LISTS line); a My list lives on this device, from a sheet.
+             Every list has a title (what people see) and a key (backstage).
+   · view  = what the table shows: a level range and a word, per list.
+   · deck  = the ten lowest-RS words of the view; finish line: all ten clean.
+   Surfaces: study (card + Again / Good, the title in the corner is the door
+   into the list) · list (heading with ▾, search · Level · pager · Study, the
+   table) · LISTS (three zones: Published WD Lists, My Lists on this device,
+   the door in: + Add a list from an Excel sheet).
+   Engine from v26.98 except the finish line. Writes RS only at deck completion. */
 :root{
   --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
   --card:#f6f5ef;--accent:#185fa5;--green:#006600;--green2:#0a7a0a;--q:#6b6a64;
@@ -30,25 +30,27 @@ body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSyst
   line-height:1.5;-webkit-font-smoothing:antialiased}
 button,select,input{font-family:inherit}
 
-/* ── top line: the W; in study the dock name, small and regular (v10) ── */
+/* ── top line: the W; in study the list's title, small and regular ── */
 .top{position:relative;height:52px}
 .top-in{position:absolute;left:46px;top:14px;display:flex;align-items:center;max-width:calc(100% - 62px)}
 .mark{position:absolute;left:16px;top:14px;user-select:none;pointer-events:none}
 .mark.badge{width:24px;height:24px;border-radius:7px;background:var(--green);color:#fff;display:flex;align-items:center;
   justify-content:center;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:15px}
 .crumbs{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap}
-/* The door from study into the list: the dock's name, nothing more. */
-.crumb{background:none;border:none;padding:3px 8px;border-radius:6px;color:var(--fg);cursor:pointer;font-size:13px;line-height:1.4}
+/* The door from study into the list: the list's title, nothing more. */
+.crumb{background:none;border:none;padding:3px 8px;border-radius:6px;color:var(--fg);cursor:pointer;font-size:13px;line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis}
 .crumb:hover{background:var(--card)}
 
 /* ── list surface ── */
 .wrap{max-width:920px;margin:0 auto;padding:.25rem 1.25rem 1.5rem}
 .h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3}
-.h button{background:none;border:none;padding:2px 8px;margin-left:-8px;border-radius:8px;font:inherit;color:inherit;cursor:pointer}
+.h button{background:none;border:none;padding:2px 8px;margin-left:-8px;border-radius:8px;font:inherit;color:inherit;cursor:pointer;text-align:left}
 .h button:hover{background:var(--card)}
 .h .caret{color:var(--muted);font-size:14px;margin-left:6px;font-weight:400}
 .sub{color:var(--sec);font-size:13px;margin:2px 0 0}
 .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:.9rem 0 .75rem}
+.controls[hidden]{display:none}
 input[type=search]{flex:1;min-width:170px;height:36px;padding:0 12px;border:.5px solid var(--line2);border-radius:8px;
   background:var(--bg);color:var(--fg);font-size:14px;outline:none}
 input[type=search]:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
@@ -70,7 +72,7 @@ input[type=search].on{border-color:var(--fg)}
 .pager button[disabled]{color:var(--line2);cursor:default}
 .pager button[hidden]{display:none}
 .study-btn{height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:14px;
-  font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto}
+  font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .study-btn:hover{background:var(--green2)}
 .study-btn[disabled]{opacity:.4;cursor:default}
 .study-btn[hidden]{display:none}
@@ -94,16 +96,7 @@ tbody tr.link{cursor:pointer}
 .dim{color:var(--muted)}
 .now{font-size:12px;color:var(--green2);white-space:nowrap;text-align:right}
 .empty{padding:2rem;text-align:center;color:var(--muted);font-size:14px}
-/* DOCKS: the sheet out (↓) on every row, the way out (×) on own rows, the door in at the bottom. */
-td.act{text-align:right;white-space:nowrap}
-.ib{background:none;border:none;color:var(--sec);font-size:16px;line-height:1;cursor:pointer;padding:3px 7px;border-radius:7px}
-.ib:hover{background:var(--line);color:var(--fg)}
-.ib.x{font-size:15px;color:var(--muted)}
-tr.add td{color:var(--green2);font-weight:500}
-tr.add:hover td{background:var(--card)}
-.own{font-size:11px;color:var(--muted);margin-left:8px;font-weight:400}
-.dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px;font-family:var(--mono)}
-.dlg input:focus{outline:none;border-color:var(--accent)}
+.empty[hidden]{display:none}
 /* Values you can tap: they land in the search box. */
 .tap{cursor:pointer;border-radius:6px}
 span.tap:not(.tag):hover{color:var(--fg);text-decoration:underline;text-underline-offset:2px}
@@ -120,6 +113,25 @@ tr.detail td{white-space:normal;padding:2px 10px 14px;border-bottom:.5px solid v
 .det-pairs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:20px;row-gap:3px;font-size:14px}
 .det-pairs .dq{color:var(--q)}.det-pairs .da{font-weight:500}
 .det-none{color:var(--muted);font-size:13px}
+
+/* ── LISTS: three zones — WD lists on top, My lists in the middle, the door in at the bottom ── */
+.cat{display:none;max-width:920px;margin:0 auto;padding:0 1.25rem;min-height:calc(100vh - 52px);min-height:calc(100dvh - 52px);
+  grid-template-rows:auto 1fr auto}
+body.cataloging .cat{display:grid}
+body.cataloging .wrap{display:none}
+.zone-mid{align-self:center;padding:1.25rem 0}
+.zone-bot{padding:.75rem 0 1.25rem}
+.sec-h{font-size:20px;font-weight:600;margin:.5rem 0 0;line-height:1.3}
+.cat .controls{margin:.7rem 0 .25rem}
+.cat tbody tr{cursor:pointer}
+td.act{text-align:right;white-space:nowrap}
+.ib{background:none;border:none;color:var(--sec);font-size:16px;line-height:1;cursor:pointer;padding:3px 7px;border-radius:7px}
+.ib:hover{background:var(--line);color:var(--fg)}
+.ib.x{font-size:15px;color:var(--muted)}
+.add{background:none;border:none;padding:6px 0;color:var(--green2);font-weight:500;font-size:14px;cursor:pointer}
+.add:hover{text-decoration:underline;text-underline-offset:3px}
+.dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px}
+.dlg input:focus{outline:none;border-color:var(--accent)}
 
 /* ── study: the list is gone; card + Again / Good ── */
 .study{position:fixed;inset:0;z-index:20;background:var(--bg);display:none;flex-direction:column;
@@ -148,6 +160,7 @@ body.studying .top{position:relative;z-index:30}
 /* ── bottom line: the counter, only in study ── */
 .pos{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;align-items:center;gap:6px;
   padding:10px 0 16px;font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--bg);pointer-events:none}
+.pos:empty{display:none}
 .pos > *{pointer-events:auto}
 
 /* ── dialog ── */
@@ -165,8 +178,8 @@ body.studying .top{position:relative;z-index:30}
   .top{padding:12px 12px 0}
   .mark{left:12px}
   .top-in{left:40px;max-width:calc(100% - 52px)}
-  .wrap{padding:.25rem 12px 1.5rem}
-  .h{font-size:20px}
+  .wrap,.cat{padding-left:12px;padding-right:12px}
+  .h{font-size:20px}.sec-h{font-size:18px}
   .hide-s{display:none}
   input[type=search]{min-width:0;flex:1 1 150px}
   .study-btn{margin-left:0;flex:1}
@@ -195,6 +208,32 @@ body.studying .top{position:relative;z-index:30}
   <div class="empty" id="empty" hidden>No matches.</div>
 </main>
 
+<main class="cat" id="catalog">
+  <section class="zone-top" id="secWd">
+    <h2 class="sec-h">Published WD Lists</h2>
+    <p class="sub" id="wdSub"></p>
+    <div class="controls" id="wdCtl">
+      <input type="search" id="wdQ" placeholder="Search" aria-label="Search the published lists" autocomplete="off" spellcheck="false">
+      <span class="pager"><button id="wdPrev" aria-label="Previous page">&#8249;</button><span class="count" id="wdCount"></span><button id="wdNext" aria-label="Next page">&#8250;</button></span>
+    </div>
+    <table><colgroup><col><col style="width:14%"><col style="width:22%"><col style="width:14%"></colgroup><tbody id="wdBody"></tbody></table>
+    <div class="empty" id="wdEmpty" hidden>No matches.</div>
+  </section>
+  <section class="zone-mid" id="secMy">
+    <h2 class="sec-h">My Lists on this device</h2>
+    <p class="sub" id="mySub"></p>
+    <div class="controls" id="myCtl">
+      <input type="search" id="myQ" placeholder="Search" aria-label="Search the lists on this device" autocomplete="off" spellcheck="false">
+      <span class="pager"><button id="myPrev" aria-label="Previous page">&#8249;</button><span class="count" id="myCount"></span><button id="myNext" aria-label="Next page">&#8250;</button></span>
+    </div>
+    <table><colgroup><col><col style="width:14%"><col style="width:22%"><col style="width:14%"></colgroup><tbody id="myBody"></tbody></table>
+    <div class="empty" id="myEmpty" hidden>No matches.</div>
+  </section>
+  <section class="zone-bot">
+    <button class="add" id="btnAdd">+ Add a list from an Excel sheet</button>
+  </section>
+</main>
+
 <section class="study" id="study" aria-hidden="true">
   <div class="study-block">
     <div class="card" id="card"><div class="card-tag" id="cardTag"></div><div class="card-text q" id="cardText">…</div></div>
@@ -216,25 +255,31 @@ body.studying .top{position:relative;z-index:30}
 </div>
 
 <script>
-/* ── Docks published on this site: one line. A new dock = one JSON file + its name here. ── */
-const DOCK_NAMES = ["NL-RU", "NL-IT", "NL-FR", "NL-LA"];
-/* A dock's name is any name in capitals (BIOLOGY, NL-LA-LIEVE); here and in convert.html
-   the same rule, so a file on the site and the DOCK_NAMES line can never disagree on case.
-   When the name starts with two language codes, those become the column labels: NL | LA.
-   Otherwise Q | A. */
-const canonName = n => String(n || "").trim().toUpperCase();
-const validName = n => /^[A-Z0-9][A-Z0-9-]*$/.test(n);
-function dockInfo(name){
-  const m = String(name).match(/^([A-Za-z]{2})-([A-Za-z]{2})(?:-(.+))?$/);
-  return m ? { name, q: m[1].toUpperCase(), a: m[2].toUpperCase() } : { name, q: "Q", a: "A" };
+/* ── WD lists, published on this site: one line. A new WD list = one JSON file (lists/<key>.json)
+   + its entry here: a bare key, or { key, title } when the title should read otherwise. ── */
+const WD_LISTS = [ { key: "NL-RU", title: "Nederlands · Russisch" }, "NL-IT", "NL-FR", "NL-LA" ];
+/* A key is letters, digits and hyphens, in capitals (NL-RU, NL-LA-LIEVE, BIOLOGY): it names
+   lists/<key>.json, the pool wd_rs_<key> and the view. A title is free text, what people see.
+   When the key starts with two language codes, those become the column labels: NL | LA. Otherwise Q | A. */
+const canonKey = n => String(n || "").trim().toUpperCase();
+const validKey = n => /^[A-Z0-9][A-Z0-9-]*$/.test(n);
+/* A title becomes a key: capitals, accents dropped, every run of other characters one hyphen.
+   "les 3 (kopie)" → LES-3-KOPIE. */
+const keyFrom = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase()
+  .replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const WD = new Map(WD_LISTS.map(e => typeof e === "string" ? [canonKey(e), canonKey(e)] : [canonKey(e.key), String(e.title || e.key)]));
+const WD_KEYS = [...WD.keys()];
+function labelsOf(key){
+  const m = String(key).match(/^([A-Za-z]{2})-([A-Za-z]{2})(?:-(.+))?$/);
+  return m ? { q: m[1].toUpperCase(), a: m[2].toUpperCase() } : { q: "Q", a: "A" };
 }
-const LISTS_DIR = "lists/", ROW_H = 38, DECK_SIZE = 10;
-const DECK_KEY = "wd_lens_deck", DOCK_KEY = "wd_lens_dock", OWN_KEY = "wd_lens_docks", VIEW_KEY = d => "wd_lens_view_" + d;   /* the lens's own keys */
+const LISTS_DIR = "lists/", ROW_H = 38, DECK_SIZE = 10, CAT_PAGE = 5;
+const DECK_KEY = "wd_lens_deck", LIST_KEY = "wd_lens_list", OWN_KEY = "wd_lens_lists", VIEW_KEY = k => "wd_lens_view_" + k;   /* the lens's own keys */
 const OWN_SUFFIX = "-OWN";
 let PAGE = 10;
 /* Rows per page follow the screen height: as many as fit, never a scrollbar. */
 function fitPage(){
-  const tb = $("tbody"); if (!tb || level === "study") return false;
+  const tb = $("tbody"); if (!tb || level !== "list") return false;
   const first = tb.querySelector("tr:not(.detail)");
   const rowH = first ? first.getBoundingClientRect().height : ROW_H;
   const top = tb.getBoundingClientRect().top + window.scrollY;
@@ -247,6 +292,8 @@ const $ = id => document.getElementById(id);
 /* Search folds case and accents: "amicus" finds "amīcus", "хороший" finds "хоро́ший". */
 const strip = v => String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 const toks = v => String(v ?? "").split(",").map(x => x.trim()).filter(Boolean);
+const nWords = n => n + (n === 1 ? " word" : " words");
+const nLists = n => n + (n === 1 ? " list" : " lists");
 
 /* Level: one integer per row, or none. Old SEG "1A, 1B … 2A" reads as 101, 102 … 201. */
 const SEG_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -299,70 +346,69 @@ function normalizeRows(raw){
 }
 const hayOf = r => r._hay || (r._hay = strip([r.ID, r.LVL, r.ENT, r.CAT, r.SUB, r.TAG, ...r.pairs.flatMap(p => [p.q, p.a])].join(" \u0001 ")));
 
-/* ── Docks: one Full + one pool each. Published ones come from the site;
-   own ones live in this browser, on this device, under OWN_KEY. ── */
-const DOCKS = {};
+/* ── Lists: rows + one pool each. WD lists come from the site;
+   My lists live in this browser, on this device, under OWN_KEY as { key: { title, rows, when } }. ── */
+const LISTS = {};
 let usingSample = false;
-const isPublished = name => DOCK_NAMES.map(canonName).includes(name);
-const dock = raw => { const name = canonName(raw); return DOCKS[name] || (DOCKS[name] = { ...dockInfo(name), rows: null, loaded: false, own: false }); };
+const isPublished = key => WD.has(key);
+const getList = raw => { const key = canonKey(raw); return LISTS[key] || (LISTS[key] = { key, title: WD.get(key) || key, ...labelsOf(key), rows: null, loaded: false, own: false }); };
+const titleOf = key => key ? getList(key).title : "";
 function readOwn(){ try { return JSON.parse(localStorage.getItem(OWN_KEY)) || {}; } catch { return {}; } }
 function writeOwn(o){ try { localStorage.setItem(OWN_KEY, JSON.stringify(o)); return true; } catch { return false; } }
 function loadOwn(){
-  for (const [name, st] of Object.entries(readOwn())){
+  for (const [key, st] of Object.entries(readOwn())){
     if (!st || !Array.isArray(st.rows)) continue;
-    const d = dock(name); d.rows = normalizeRows(st.rows); d.loaded = true; d.own = true;
+    const l = getList(key); l.rows = normalizeRows(st.rows); l.title = st.title || key; l.loaded = true; l.own = true;
   }
 }
-const keyOf = r => strip(r.ENT) + "\u00B7" + strip(r.CAT);
+const keyOf = r => strip(r.ENT) + "·" + strip(r.CAT);
 /* Do the rows on this device still sit under the new rows, place by place? Then progress can stay. */
 const sameOrder = (oldRows, newRows) => oldRows.length <= newRows.length && oldRows.every((r, i) => keyOf(r) === keyOf(newRows[i]));
-const poolKey = d => "wd_rs_" + d;
-function movePool(from, to){ try { const v = localStorage.getItem(poolKey(from)); if (v !== null) localStorage.setItem(poolKey(to), v); localStorage.removeItem(poolKey(from)); } catch {} }
-function clearPool(d){ try { localStorage.removeItem(poolKey(d)); } catch {} }
-async function ensureDock(raw){
-  const name = canonName(raw), d = dock(name);
-  if (d.loaded && (d.checked || !isPublished(name))) return d;
+const poolKey = k => "wd_rs_" + k;
+function moveKey(from, to){ try { const v = localStorage.getItem(from); if (v !== null) localStorage.setItem(to, v); localStorage.removeItem(from); } catch {} }
+function clearPool(k){ try { localStorage.removeItem(poolKey(k)); } catch {} }
+async function ensureList(raw){
+  const key = canonKey(raw), l = getList(key);
+  if (l.loaded && (l.checked || !isPublished(key))) return l;
   let rows = null;
-  if (isPublished(name)){
-    try { const r = await fetch(LISTS_DIR + name + ".json", { cache: "no-cache" }); if (r.ok) rows = normalizeRows(await r.json()); } catch {}
-    if (!rows && name === "NL-RU" && location.hostname !== "worddock.app"){ rows = sampleRows(); usingSample = true; }
+  if (isPublished(key)){
+    try { const r = await fetch(LISTS_DIR + key + ".json", { cache: "no-cache" }); if (r.ok) rows = normalizeRows(await r.json()); } catch {}
+    if (!rows && key === "NL-RU" && location.hostname !== "worddock.app"){ rows = sampleRows(); usingSample = true; }
   }
-  d.checked = true;
-  if (rows && rows.length && d.own){
-    // Published wins. The own copy steps aside; its progress carries when the rows match.
-    // Otherwise the copy keeps living under -OWN with its progress, and this pool starts fresh.
-    const o = readOwn();
-    if (sameOrder(d.rows, rows)){ delete o[name]; writeOwn(o); }
-    else {
-      const alt = name + OWN_SUFFIX;
-      o[alt] = o[name]; delete o[name]; writeOwn(o);
-      const od = dock(alt); od.rows = d.rows; od.loaded = true; od.own = true; od.checked = true; movePool(name, alt);
-      if (activeDock === name) activeDock = alt;
-    }
-    d.own = false;
+  l.checked = true;
+  if (rows && rows.length && l.own){
+    // A WD list now holds this key. The copy on this device always steps aside to <KEY>-OWN,
+    // titled "<title> (own copy)", with its progress and view; the WD list starts fresh.
+    const o = readOwn(), alt = key + OWN_SUFFIX, rec = o[key] || {};
+    const altTitle = (rec.title || l.title || key) + " (own copy)";
+    o[alt] = { ...rec, title: altTitle }; delete o[key]; writeOwn(o);
+    const ol = getList(alt); ol.rows = l.rows; ol.title = altTitle; ol.loaded = true; ol.own = true; ol.checked = true;
+    moveKey(poolKey(key), poolKey(alt)); moveKey(VIEW_KEY(key), VIEW_KEY(alt));
+    if (activeKey === key){ activeKey = alt; try { localStorage.setItem(LIST_KEY, alt); } catch {} }
+    l.own = false; l.title = WD.get(key) || key;
   }
-  if (!d.own){ d.rows = rows && rows.length ? rows : null; d.loaded = true; }
-  return d;
+  if (!l.own){ l.rows = rows && rows.length ? rows : null; l.loaded = true; }
+  return l;
 }
-/* Import: a sheet becomes an own dock on this device, or replaces one. */
-function putOwn(name, rows, keepPool){
-  const o = readOwn(); o[name] = { rows, when: new Date().toISOString() };
+/* Import: a sheet becomes a My list on this device, or replaces one. */
+function putOwn(key, title, rows, keepPool){
+  const o = readOwn(); o[key] = { title, rows, when: new Date().toISOString() };
   if (!writeOwn(o)) return false;
-  const d = dock(name); d.rows = normalizeRows(rows); d.loaded = true; d.own = true; d.checked = true;
-  if (!keepPool) clearPool(name);
+  const l = getList(key); l.rows = normalizeRows(rows); l.title = title; l.loaded = true; l.own = true; l.checked = true;
+  if (!keepPool) clearPool(key);
   return true;
 }
-function removeOwn(name){
-  const o = readOwn(); delete o[name]; writeOwn(o);
-  delete DOCKS[name]; clearPool(name);
-  try { localStorage.removeItem(VIEW_KEY(name)); } catch {}
-  if (activeDock === name){ activeDock = null; pipe = []; deckScore = 0; deckDone = false; deckStarted = false; try { localStorage.removeItem(DOCK_KEY); localStorage.removeItem(DECK_KEY); } catch {} }
+function removeOwn(key){
+  const o = readOwn(); delete o[key]; writeOwn(o);
+  delete LISTS[key]; clearPool(key);
+  try { localStorage.removeItem(VIEW_KEY(key)); } catch {}
+  if (activeKey === key){ activeKey = null; pipe = []; deckScore = 0; deckDone = false; deckStarted = false; try { localStorage.removeItem(LIST_KEY); localStorage.removeItem(DECK_KEY); } catch {} }
 }
-function knownCount(name){
-  const d = DOCKS[name]; if (d && d.rows) return d.rows.length;
-  try { const n = parseInt(localStorage.getItem("wd_rowcount_" + name), 10); return n > 0 ? n : null; } catch { return null; }
+function knownCount(key){
+  const l = LISTS[key]; if (l && l.rows) return l.rows.length;
+  try { const n = parseInt(localStorage.getItem("wd_rowcount_" + key), 10); return n > 0 ? n : null; } catch { return null; }
 }
-const readPool = d => { try { return JSON.parse(localStorage.getItem("wd_rs_" + d)) || {}; } catch { return {}; } };
+const readPool = k => { try { return JSON.parse(localStorage.getItem("wd_rs_" + k)) || {}; } catch { return {}; } };
 
 /* ── The sheet in and out. SheetJS (xlsx.full.min.js, on this site) loads only when a sheet is touched. ── */
 let xlsxReady = null;
@@ -405,11 +451,11 @@ function readSheet(buf){
   }
   return null;
 }
-/* The sheet out: the curator's layout, every cell as Text, so it comes back in unchanged. */
-function sheetOut(d){
+/* The sheet out: the curator's layout, every cell as Text, so it comes back in unchanged. File name = the key. */
+function sheetOut(l){
   const H = ["LVL", "ENT", "CAT", "SUB", "TAG"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
   const aoa = [H];
-  for (const r of d.rows){
+  for (const r of l.rows){
     const arr = [r.LVL ?? null, r.ENT || null, r.CAT || null, r.SUB || null, r.TAG || null];
     for (let i = 0; i < 10; i++){ const p = r.pairs[i]; arr.push(p ? p.q : null, p ? p.a : null); }
     aoa.push(arr);
@@ -417,67 +463,71 @@ function sheetOut(d){
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   for (const addr of Object.keys(ws)) if (addr[0] !== "!"){ ws[addr].t = "s"; ws[addr].v = String(ws[addr].v); ws[addr].z = "@"; }
   ws["!cols"] = H.map((h, i) => ({ wch: i < 5 ? 12 : 22 }));
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, d.name.slice(0, 31));
-  XLSX.writeFile(wb, d.name + ".xlsx");
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, l.key.slice(0, 31));
+  XLSX.writeFile(wb, l.key + ".xlsx");
 }
-async function exportDock(name){
-  const d = dock(name); if (!d.rows) return;
-  try { await loadXLSX(); sheetOut(d); } catch (e) { await confirmDlg("No sheet writer", e.message, "OK", "Close"); }
+async function exportList(key){
+  const l = getList(key); if (!l.rows) return;
+  try { await loadXLSX(); sheetOut(l); } catch (e) { await confirmDlg("No sheet writer", e.message, "OK", "Close"); }
 }
 async function importSheet(file){
   let got;
   try { await loadXLSX(); got = readSheet(await file.arrayBuffer()); }
   catch (e) { await confirmDlg("Could not read this file", e.message, "OK", "Close"); return; }
-  if (!got){ await confirmDlg("No header row with Q1 and A1", "Name the columns in the first row: LVL, ENT, CAT, SUB, TAG, Q1, A1 \u2026", "OK", "Close"); return; }
+  if (!got){ await confirmDlg("No header row with Q1 and A1", "Name the columns in the first row: LVL, ENT, CAT, SUB, TAG, Q1, A1 …", "OK", "Close"); return; }
   if (!got.rows.length){ await confirmDlg("Nothing to import", "No row has both Q1 and A1.", "OK", "Close"); return; }
-  let name = canonName((file.name || "").replace(/\.[^.]+$/, ""));
-  if (!validName(name)){
-    const v = await promptDlg("Give a NAME for this DOCK", "Letters, digits and hyphens: NL-LA-LIEVE, BIOLOGY.", name.replace(/[^A-Z0-9-]+/g, "-").replace(/^-+|-+$/g, ""));
-    if (v === null) return; name = canonName(v); if (!validName(name)) return;
+  // The title is the file name as typed; the key comes from the title. Conflicts are decided on keys.
+  let title = (file.name || "").replace(/\.[^.]+$/, "").trim(), key = keyFrom(title);
+  for (;;){
+    if (!key){
+      const v = await promptDlg("Give a NAME for this list", "A name with letters or digits: Latijn les 3, Biology.", title);
+      if (v === null) return; title = v.trim(); key = keyFrom(title); continue;
+    }
+    if (isPublished(key)){
+      const v = await promptDlg(title + " is a WD list and can't be replaced.", "Name yours " + key + "-01?", title + "-01");
+      if (v === null) return; title = v.trim(); key = keyFrom(title); continue;
+    }
+    break;
   }
-  while (isPublished(name)){
-    const v = await promptDlg(name + " is a WD-DOCK and can't be replaced.", "Name yours " + name + "-01?", name + "-01");
-    if (v === null) return;
-    name = canonName(v); if (!validName(name)) return;
-  }
-  const n = got.rows.length, words = n + (n === 1 ? " word" : " words"), skip = got.skipped ? " \u00B7 " + got.skipped + " skipped" : "";
-  const ex = DOCKS[name] && DOCKS[name].own && DOCKS[name].rows ? DOCKS[name] : null;
+  const words = nWords(got.rows.length), skip = got.skipped ? " · " + got.skipped + " skipped" : "";
+  const ex = LISTS[key] && LISTS[key].own && LISTS[key].rows ? LISTS[key] : null;
   let keepPool = true;
   if (ex){
-    const old = ex.rows.length + (ex.rows.length === 1 ? " word" : " words");
+    const old = nWords(ex.rows.length);
     if (sameOrder(ex.rows, normalizeRows(got.rows))){
-      if (!(await confirmDlg("Replace " + name + " (" + old + ") with this file (" + words + ")?", "Your progress stays." + skip, "Replace", "Keep"))) return;
+      if (!(await confirmDlg("Replace " + ex.title + " (" + old + ") with this file (" + words + ")?", "Your progress stays." + skip, "Replace", "Keep"))) return;
     } else {
       keepPool = false;
-      if (!(await confirmDlg("The words in this file are in another order.", "Replace " + name + " (" + old + ") and start its progress fresh? " + words + skip, "Replace", "Keep"))) return;
+      if (!(await confirmDlg("The words in this file are in another order.", "Replace " + ex.title + " and start its progress fresh?" + skip, "Replace", "Keep"))) return;
     }
-  } else if (!(await confirmDlg("Add " + name + " to this device?", words + skip + ".", "Add", "Cancel"))) return;
-  if (!putOwn(name, got.rows, keepPool)){ await confirmDlg("Could not keep this dock", "This browser has no room left for it.", "OK", "Close"); return; }
-  if (activeDock === name) initDeck(DOCKS[name].rows);
-  goList(name);
+  } else if (!(await confirmDlg("Add " + title + " to this device?", words + skip + ".", "Add", "Cancel"))) return;
+  if (!putOwn(key, title, got.rows, keepPool)){ await confirmDlg("Could not keep this list", "This browser has no room left for it.", "OK", "Close"); return; }
+  if (activeKey === key) initDeck(LISTS[key].rows);
+  goList(key);
 }
-async function removeDock(name){
-  const d = DOCKS[name]; if (!d || !d.own) return;
-  if (!(await confirmDlg("Remove " + name + " from this device?", "Its progress goes too.", "Remove", "Keep"))) return;
-  removeOwn(name);
-  if (viewDock === name){ viewDock = canonName(DOCK_NAMES[0]); loadView(viewDock); }
-  renderList();
+async function removeList(key){
+  const l = LISTS[key]; if (!l || !l.own) return;
+  if (!(await confirmDlg("Remove " + l.title + " from this device?", "Its progress goes too.", "Remove", "Keep"))) return;
+  removeOwn(key);
+  if (viewKey === key){ viewKey = WD_KEYS[0]; loadView(viewKey); }
+  render();
 }
 
 /* ── State ── */
-let level = "list";                              // catalog | list | study
-let viewDock = "NL-RU", activeDock = null;
-let qText = "", query = "", lvlText = "", catQ = "", page = 0, sortKey = null, sortDir = 1, openId = null;
-const viewRows = () => { const d = DOCKS[viewDock]; return d && d.rows ? d.rows : null; };
+let level = "list";                              // catalog (LISTS) | list | study
+let viewKey = WD_KEYS[0], activeKey = null;
+let qText = "", query = "", lvlText = "", page = 0, sortKey = null, sortDir = 1, openId = null;
+const CAT = { wd: { q: "", page: 0 }, my: { q: "", page: 0 } };   // LISTS: search and page per section
+const viewRows = () => { const l = LISTS[viewKey]; return l && l.rows ? l.rows : null; };
 
-/* ── What the table shows is remembered per dock: a level range and a word. ── */
-function loadView(d){
-  let v = {}; try { v = JSON.parse(localStorage.getItem(VIEW_KEY(d))) || {}; } catch {}
+/* ── What the table shows is remembered per list: a level range and a word. ── */
+function loadView(k){
+  let v = {}; try { v = JSON.parse(localStorage.getItem(VIEW_KEY(k))) || {}; } catch {}
   qText = String(v.q || ""); query = strip(qText); lvlText = String(v.lvl || "");
   $("q").value = qText; $("lvl").value = lvlText;
 }
 function saveView(){
-  try { localStorage.setItem(VIEW_KEY(viewDock), JSON.stringify({ lvl: lvlText, q: qText })); } catch {}
+  try { localStorage.setItem(VIEW_KEY(viewKey), JSON.stringify({ lvl: lvlText, q: qText })); } catch {}
 }
 
 /* ── Level field: "7", "40-45", "1-12", "12-"; empty = the whole range ── */
@@ -545,32 +595,27 @@ function matcherFor(rows){
 }
 const visibleRows = () => { const rows = viewRows(); if (!rows) return []; const ok = matcherFor(rows); return rows.filter(ok); };
 
-/* ── Top line: in study, the dock's name = the door into the list; otherwise nothing ── */
+/* ── Top line: in study, the list's title = the door into the list; otherwise nothing ── */
 function renderCrumbs(){
   const c = $("crumbs"); c.innerHTML = "";
-  if (level !== "study" || !activeDock) return;
-  const b = document.createElement("button"); b.className = "crumb"; b.textContent = activeDock; b.title = "To the list";
-  b.addEventListener("click", () => goList(activeDock));
+  if (level !== "study" || !activeKey) return;
+  const b = document.createElement("button"); b.className = "crumb"; b.textContent = titleOf(activeKey); b.title = "To the list";
+  b.addEventListener("click", () => goList(activeKey));
   c.appendChild(b);
 }
 
 /* ── The list surface ── */
-const dockNames = () => [...new Set([...DOCK_NAMES.map(canonName), ...Object.keys(DOCKS).filter(n => DOCKS[n].own)])];
+const listKeys = () => [...new Set([...WD_KEYS, ...Object.keys(LISTS).filter(k => LISTS[k].own)])];
 function renderHeading(){
   const h = $("h"); h.innerHTML = "";
-  if (level === "catalog"){ h.textContent = "DOCKS"; return; }
-  if (dockNames().length > 1){
-    const b = document.createElement("button"); b.title = "Other docks";
-    b.appendChild(document.createTextNode(viewDock));
+  const t = titleOf(viewKey);
+  if (listKeys().length > 1){
+    const b = document.createElement("button"); b.title = "Other lists";
+    b.appendChild(document.createTextNode(t));
     const c = document.createElement("span"); c.className = "caret"; c.textContent = "▾"; b.appendChild(c);
     b.addEventListener("click", () => goCatalog());
     h.appendChild(b);
-  } else h.textContent = viewDock;
-}
-function head(labels){
-  const tr = document.createElement("tr");
-  labels.forEach(t => { const th = document.createElement("th"); th.className = "plain"; th.textContent = t; tr.appendChild(th); });
-  $("thead").appendChild(tr);
+  } else h.textContent = t;
 }
 function paged(rows){
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
@@ -617,102 +662,65 @@ function detailRow(r, pool, span){
   tr.appendChild(td);
   return tr;
 }
+const render = () => level === "catalog" ? renderCatalog() : renderList();
 function renderList(){
   const tbody = $("tbody"); $("thead").innerHTML = ""; tbody.innerHTML = ""; $("empty").hidden = true;
   renderHeading();
   let pages = 1, total = 0;
-
-  if (level === "catalog"){
-    // A table of docks, same head, same box. Tap a row to open the dock.
-    $("lvlBox").hidden = true; $("btnStudy").hidden = true;
-    $("q").value = catQ; $("q").classList.toggle("on", !!catQ);
-    const all = dockNames().map(n => dock(n));
-    // Published docks not seen yet: fetch them, so the Words column fills in.
-    for (const d of all) if ((!d.loaded || (isPublished(d.name) && !d.checked)) && !d.fetching){ d.fetching = true; ensureDock(d.name).then(() => { if (level === "catalog") renderList(); }); }
-    const qq = strip(catQ);
-    const rows = qq ? all.filter(d => strip(d.name).includes(qq)) : all;
-    const nOwn = all.filter(d => d.own).length;
-    $("sub").textContent = all.length + (all.length === 1 ? " dock" : " docks") + (nOwn ? ", " + nOwn + " on this device" : "");
-    setCols(["", "14%", "22%", "14%"]);
-    head(["Dock", "Words", "", ""]);
+  const l = getList(viewKey), rowsAll = viewRows();
+  $("btnStudy").hidden = false;
+  if (!rowsAll){
+    $("lvlBox").hidden = true;
+    $("sub").textContent = "";
+    $("empty").textContent = l.loaded ? "Nothing here yet." : "Loading…"; $("empty").hidden = false;
+    setCols([]);
+  } else {
+    const span = levelSpan(rowsAll), range = parseLevel(lvlText);
+    // The grey value of the field is the whole range: what exists, and how to type it.
+    $("lvlBox").hidden = !span;
+    $("lvl").placeholder = span ? span.lo + "-" + span.hi : "";
+    $("lvlBox").classList.toggle("bad", range === "bad");
+    $("lvlBox").classList.toggle("on", !!range && range !== "bad");
+    $("q").classList.toggle("on", !!query);
+    const small = isSmall();
+    setCols(COLS.filter(c => !small || c.ws).map(c => small ? c.ws : c.w));
+    const pool = readPool(viewKey);
+    const trh = document.createElement("tr");
+    for (const c of COLS){
+      const th = document.createElement("th"); if (c.th) th.className = c.th;
+      th.textContent = c.k === "Q1" ? l.q : c.k === "A1" ? l.a : c.label;
+      if (sortKey === c.k){ const s = document.createElement("span"); s.className = "arr"; s.textContent = sortDir > 0 ? "▲" : "▼"; th.appendChild(s); }
+      th.addEventListener("click", () => { sortDir = sortKey === c.k ? -sortDir : 1; sortKey = c.k; page = 0; renderList(); });
+      trh.appendChild(th);
+    }
+    $("thead").appendChild(trh);
+    let rows = visibleRows();
+    // The line under the heading: which levels, how many words.
+    let lv = "";
+    if (span){
+      if (range && range !== "bad"){
+        const lo = Math.max(range.lo, span.lo), hi = Math.min(range.hi, span.hi);
+        lv = lo > hi ? "Level " + lvlText.trim() : lo === hi ? "Level " + lo : "Level " + lo + "–" + hi;
+      } else lv = span.lo === span.hi ? "Level " + span.lo : "Level " + span.lo + "–" + span.hi;
+    }
+    $("sub").textContent = [lv, nWords(rows.length), l.own ? "on this device" : ""].filter(Boolean).join(" · ");
+    if (sortKey) rows = [...rows].sort((x, y) => {
+      const a = sortVal(x, sortKey, pool), b = sortVal(y, sortKey, pool);
+      const c = (typeof a === "number" && typeof b === "number") ? a - b : String(a).localeCompare(String(b));
+      return (c || (x.ID < y.ID ? -1 : 1)) * sortDir;
+    });
     if (!rows.length){ $("empty").textContent = "No matches."; $("empty").hidden = false; }
     const p = paged(rows); pages = p.pages; total = p.total;
-    for (const d of p.slice){
-      const tr = document.createElement("tr"); tr.className = "link"; const n = knownCount(d.name);
-      const tdN = document.createElement("td"); tdN.className = "b"; tdN.textContent = d.name;
-      if (d.own){ const o = document.createElement("span"); o.className = "own"; o.textContent = "on this device"; tdN.appendChild(o); }
-      const tdW = document.createElement("td"); tdW.className = "id"; tdW.textContent = n ?? "\u00B7";
-      const tdS = document.createElement("td"); tdS.className = "now"; tdS.textContent = d.name === activeDock ? "studying now" : "";
-      const tdA = document.createElement("td"); tdA.className = "act";
-      if (d.rows){ const b = document.createElement("button"); b.className = "ib"; b.textContent = "\u2193"; b.title = "Excel: " + d.name + ".xlsx";
-        b.addEventListener("click", e => { e.stopPropagation(); exportDock(d.name); }); tdA.appendChild(b); }
-      if (d.own){ const x = document.createElement("button"); x.className = "ib x"; x.textContent = "\u00D7"; x.title = "Remove from this device";
-        x.addEventListener("click", e => { e.stopPropagation(); removeDock(d.name); }); tdA.appendChild(x); }
-      tr.append(tdN, tdW, tdS, tdA);
-      tr.addEventListener("click", () => goList(d.name)); tbody.appendChild(tr);
-    }
-    if (page === pages - 1){
-      // The door in: a sheet on this device becomes a dock.
-      const tr = document.createElement("tr"); tr.className = "link add";
-      tr.innerHTML = '<td colspan="4">+ Add a DOCK from an Excel sheet</td>';
-      tr.addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); }); tbody.appendChild(tr);
-    }
-  } else {
-    const d = dock(viewDock), rowsAll = viewRows();
-    $("btnStudy").hidden = false;
-    if (!rowsAll){
-      $("lvlBox").hidden = true;
-      $("sub").textContent = "";
-      $("empty").textContent = d.loaded ? "Nothing here yet." : "Loading…"; $("empty").hidden = false;
-      setCols([]);
-    } else {
-      const span = levelSpan(rowsAll), range = parseLevel(lvlText);
-      // The grey value of the field is the whole range: what exists, and how to type it.
-      $("lvlBox").hidden = !span;
-      $("lvl").placeholder = span ? span.lo + "-" + span.hi : "";
-      $("lvlBox").classList.toggle("bad", range === "bad");
-      $("lvlBox").classList.toggle("on", !!range && range !== "bad");
-      $("q").classList.toggle("on", !!query);
-      const small = isSmall();
-      setCols(COLS.filter(c => !small || c.ws).map(c => small ? c.ws : c.w));
-      const pool = readPool(viewDock);
-      const trh = document.createElement("tr");
+    const shown = COLS.filter(c => !small || c.ws).length;
+    for (const r of p.slice){
+      const tr = document.createElement("tr"); tr.className = "row" + (openId === r.ID ? " open" : "");
       for (const c of COLS){
-        const th = document.createElement("th"); if (c.th) th.className = c.th;
-        th.textContent = c.k === "Q1" ? d.q : c.k === "A1" ? d.a : c.label;
-        if (sortKey === c.k){ const s = document.createElement("span"); s.className = "arr"; s.textContent = sortDir > 0 ? "▲" : "▼"; th.appendChild(s); }
-        th.addEventListener("click", () => { sortDir = sortKey === c.k ? -sortDir : 1; sortKey = c.k; page = 0; renderList(); });
-        trh.appendChild(th);
+        const td = document.createElement("td"); if (c.cls) td.className = c.cls;
+        fillCell(td, r, c.k, pool); tr.appendChild(td);
       }
-      $("thead").appendChild(trh);
-      let rows = visibleRows();
-      // The line under the heading: which levels, how many words.
-      let lv = "";
-      if (span){
-        if (range && range !== "bad"){
-          const lo = Math.max(range.lo, span.lo), hi = Math.min(range.hi, span.hi);
-          lv = lo > hi ? "Level " + lvlText.trim() : lo === hi ? "Level " + lo : "Level " + lo + "–" + hi;
-        } else lv = span.lo === span.hi ? "Level " + span.lo : "Level " + span.lo + "–" + span.hi;
-      }
-      $("sub").textContent = [lv, rows.length + (rows.length === 1 ? " word" : " words"), d.own ? "on this device" : ""].filter(Boolean).join(" · ");
-      if (sortKey) rows = [...rows].sort((x, y) => {
-        const a = sortVal(x, sortKey, pool), b = sortVal(y, sortKey, pool);
-        const c = (typeof a === "number" && typeof b === "number") ? a - b : String(a).localeCompare(String(b));
-        return (c || (x.ID < y.ID ? -1 : 1)) * sortDir;
-      });
-      if (!rows.length){ $("empty").textContent = "No matches."; $("empty").hidden = false; }
-      const p = paged(rows); pages = p.pages; total = p.total;
-      const shown = COLS.filter(c => !small || c.ws).length;
-      for (const r of p.slice){
-        const tr = document.createElement("tr"); tr.className = "row" + (openId === r.ID ? " open" : "");
-        for (const c of COLS){
-          const td = document.createElement("td"); if (c.cls) td.className = c.cls;
-          fillCell(td, r, c.k, pool); tr.appendChild(td);
-        }
-        tr.addEventListener("click", () => { openId = openId === r.ID ? null : r.ID; renderList(); });
-        tbody.appendChild(tr);
-        if (openId === r.ID) tbody.appendChild(detailRow(r, pool, shown));
-      }
+      tr.addEventListener("click", () => { openId = openId === r.ID ? null : r.ID; renderList(); });
+      tbody.appendChild(tr);
+      if (openId === r.ID) tbody.appendChild(detailRow(r, pool, shown));
     }
   }
   renderStudyBtn();
@@ -730,6 +738,44 @@ function setQuery(v){
   qText = v; query = strip(v); $("q").value = v; page = 0; openId = null; saveView(); renderList();
 }
 
+/* ── LISTS: two sections of at most five rows each, then the door in ── */
+function renderCatalog(){
+  const all = listKeys().map(k => getList(k));
+  // WD lists not seen yet: fetch them, so the Words column fills in.
+  for (const l of all) if ((!l.loaded || (isPublished(l.key) && !l.checked)) && !l.fetching){ l.fetching = true; ensureList(l.key).then(() => { if (level === "catalog") renderCatalog(); }); }
+  renderSection("wd", all.filter(l => !l.own), "Published");
+  renderSection("my", all.filter(l => l.own), "On this device");
+  renderPos();
+}
+function renderSection(id, lists, unit){
+  const S = CAT[id], qq = strip(S.q), body = $(id + "Body");
+  body.innerHTML = "";
+  const rows = qq ? lists.filter(l => strip(l.title).includes(qq) || strip(l.key).includes(qq)) : lists;
+  $(id + "Sub").textContent = unit + " · " + (lists.length ? nLists(lists.length) : "none yet");
+  $(id + "Ctl").hidden = !lists.length;
+  $(id + "Q").value = S.q; $(id + "Q").classList.toggle("on", !!qq);
+  const pages = Math.max(1, Math.ceil(rows.length / CAT_PAGE));
+  if (S.page >= pages) S.page = pages - 1;
+  for (const l of rows.slice(S.page * CAT_PAGE, S.page * CAT_PAGE + CAT_PAGE)){
+    const tr = document.createElement("tr"); const n = knownCount(l.key);
+    const tdN = document.createElement("td"); tdN.className = "b"; tdN.textContent = l.title; tdN.title = l.title;
+    const tdW = document.createElement("td"); tdW.className = "id"; tdW.textContent = n ?? "·";
+    const tdS = document.createElement("td"); tdS.className = "now"; tdS.textContent = l.key === activeKey ? "studying now" : "";
+    const tdA = document.createElement("td"); tdA.className = "act";
+    if (l.rows){ const b = document.createElement("button"); b.className = "ib"; b.textContent = "↓"; b.title = "Excel: " + l.key + ".xlsx";
+      b.addEventListener("click", e => { e.stopPropagation(); exportList(l.key); }); tdA.appendChild(b); }
+    if (l.own){ const x = document.createElement("button"); x.className = "ib x"; x.textContent = "×"; x.title = "Remove from this device";
+      x.addEventListener("click", e => { e.stopPropagation(); removeList(l.key); }); tdA.appendChild(x); }
+    tr.append(tdN, tdW, tdS, tdA);
+    tr.addEventListener("click", () => goList(l.key)); body.appendChild(tr);
+  }
+  $(id + "Empty").hidden = !(lists.length && !rows.length);
+  const first = rows.length ? S.page * CAT_PAGE + 1 : 0, last = Math.min(rows.length, (S.page + 1) * CAT_PAGE);
+  $(id + "Count").textContent = pages > 1 ? first + "–" + last + " / " + rows.length : "";
+  $(id + "Prev").hidden = $(id + "Next").hidden = pages <= 1;
+  $(id + "Prev").disabled = S.page === 0; $(id + "Next").disabled = S.page >= pages - 1;
+}
+
 /* ── Bottom line ── */
 function renderPos(){
   const pos = $("pos"); pos.innerHTML = "";
@@ -740,60 +786,66 @@ function paintCounter(){ const el = $("deckCount"); if (el) el.textContent = dec
 /* ── The Study action: studies what the table shows ── */
 const midDeck = () => deckStarted && !deckDone;
 function renderStudyBtn(){
-  const b = $("btnStudy");
-  if (level !== "list"){ b.disabled = !activeDock; b.textContent = activeDock ? ((midDeck() ? "Resume " : "Study ") + activeDock) : "Study"; return; }
+  const b = $("btnStudy"), t = titleOf(viewKey);
   const vis = visibleRows(), all = viewRows() || [];
   b.disabled = !vis.length;
-  if (!vis.length){ b.textContent = "Study " + viewDock; return; }
-  if (viewDock === activeDock && midDeck() && sigOf(vis) === deckSig) b.textContent = "Resume " + viewDock + " · " + deckScore + "/" + pipe.length;
-  else if (vis.length !== all.length) b.textContent = "Study " + vis.length + (vis.length === 1 ? " word · " : " words · ") + viewDock;
-  else b.textContent = "Study " + viewDock;
+  if (!vis.length){ b.textContent = "Study " + t; return; }
+  if (viewKey === activeKey && midDeck() && sigOf(vis) === deckSig) b.textContent = "Resume " + t + " · " + deckScore + "/" + pipe.length;
+  else if (vis.length !== all.length) b.textContent = "Study " + nWords(vis.length) + " · " + t;
+  else b.textContent = "Study " + t;
 }
 async function onStudy(){
-  if (level !== "list"){ if (activeDock) enterStudy(); return; }
   const src = visibleRows(); if (!src.length) return;
-  if (viewDock !== activeDock){
-    if (activeDock){
-      const ok = await confirmDlg("Switch to studying " + viewDock + "?",
-        "You're leaving " + activeDock + "." + (midDeck() ? " Unfinished decks lose progress." : ""), "Study " + viewDock, "Keep studying");
+  if (viewKey !== activeKey){
+    if (activeKey){
+      const ok = await confirmDlg("Switch to studying " + titleOf(viewKey) + "?",
+        "You're leaving " + titleOf(activeKey) + "." + (midDeck() ? " Unfinished decks lose progress." : ""), "Study " + titleOf(viewKey), "Keep studying");
       if (!ok) return;
     }
-    activeDock = viewDock;
-    try { localStorage.setItem(DOCK_KEY, activeDock); } catch {}
+    activeKey = viewKey;
+    try { localStorage.setItem(LIST_KEY, activeKey); } catch {}
     initDeck(src); enterStudy(); return;
   }
   if (sigOf(src) !== deckSig || deckDone){
-    if (midDeck() && !(await confirmDlg("Restart the deck?", "Your deck restarts with the " + src.length + (src.length === 1 ? " word" : " words") + " shown.", "Restart", "Keep deck"))){ enterStudy(); return; }
+    if (midDeck() && !(await confirmDlg("Restart the deck?", "Your deck restarts with the " + nWords(src.length) + " shown.", "Restart", "Keep deck"))){ enterStudy(); return; }
     initDeck(src);
   }
   enterStudy();
 }
 
 /* ── Navigation; the browser's back button moves inside WordDock too ── */
-function navState(){ return { wd: 1, level, d: viewDock }; }
+function navState(){ return { wd: 1, level, k: viewKey }; }
 function pushNav(fromPop){
   if (fromPop) return;
   const s = navState(), h = history.state;
-  if (h && h.wd && h.level === s.level && h.d === s.d) return;
+  if (h && h.wd && h.level === s.level && h.k === s.k) return;
   try { history.pushState(s, ""); } catch {}
 }
-function show(){ renderCrumbs(); if (level === "study") renderPos(); else renderList(); }
+function show(){
+  renderCrumbs();
+  document.body.classList.toggle("cataloging", level === "catalog");
+  if (level === "study") renderPos(); else render();
+}
 function leaveStudy(){ document.body.classList.remove("studying"); $("study").setAttribute("aria-hidden", "true"); }
-function goCatalog(fromPop){ leaveStudy(); level = "catalog"; page = 0; show(); pushNav(fromPop); }
+function goCatalog(fromPop){ leaveStudy(); level = "catalog"; show(); window.scrollTo(0, 0); pushNav(fromPop); }
 function goList(raw, fromPop){
-  const name = canonName(raw);
-  const same = viewDock === name && level === "study";
+  const key = canonKey(raw);
+  const same = viewKey === key && level === "study";
   leaveStudy(); level = "list";
-  if (viewDock !== name){ viewDock = name; loadView(name); sortKey = null; page = 0; openId = null; }
+  if (viewKey !== key){ viewKey = key; loadView(key); sortKey = null; page = 0; openId = null; }
   else if (!same) page = 0;
   $("q").value = qText;
   show(); pushNav(fromPop);
-  const dd = dock(name);
-  if (!dd.loaded || (isPublished(name) && !dd.checked)) ensureDock(name).then(() => { if (level === "list" && (viewDock === name || viewDock === name + OWN_SUFFIX)) show(); });
+  const l = getList(key);
+  if (!l.loaded || (isPublished(key) && !l.checked)) ensureList(key).then(() => {
+    if (level !== "list") return;
+    if (viewKey === key || viewKey === key + OWN_SUFFIX) show();
+  });
 }
 function enterStudy(fromPop){
-  if (viewDock !== activeDock){ viewDock = activeDock; loadView(activeDock); }
+  if (viewKey !== activeKey){ viewKey = activeKey; loadView(activeKey); }
   level = "study";
+  document.body.classList.remove("cataloging");
   document.body.classList.add("studying"); $("study").setAttribute("aria-hidden", "false");
   document.activeElement && document.activeElement.blur();
   show(); renderCard(); pushNav(fromPop);
@@ -801,9 +853,9 @@ function enterStudy(fromPop){
 window.addEventListener("popstate", e => {
   const s = e.state; if (!s || !s.wd) return;
   if (!$("dlgBack").hidden) $("dlgCancel").click();
-  if (s.level === "study" && activeDock) enterStudy(true);
+  if (s.level === "study" && activeKey) enterStudy(true);
   else if (s.level === "catalog") goCatalog(true);
-  else goList(s.d || viewDock, true);
+  else goList(s.k || viewKey, true);
 });
 
 /* ── Engine, from v26.98. One change: the finish line.
@@ -814,13 +866,13 @@ window.addEventListener("popstate", e => {
    counted. RS +1 / −1 / −2 by timesDirty at completion. ── */
 let pipe = [], deckScore = 0, deckDone = false, deckStarted = false, showingA = false, peeking = false, deckSig = "", deckRows = [];
 const sigOf = rows => rows.map(r => r.ID).join(",");
-function buildDeck(rows, d){
-  const pool = readPool(d);
+function buildDeck(rows, k){
+  const pool = readPool(k);
   return [...rows].sort((a, b) => ((pool[a.ID] || 0) - (pool[b.ID] || 0)) || (a.ID < b.ID ? -1 : 1))
     .slice(0, Math.min(DECK_SIZE, rows.length)).map(row => ({ row, fi: 0, passDirty: false, needsRedemption: false, timesDirty: 0, clean: false }));
 }
 function initDeck(rows){
-  deckRows = rows; deckSig = sigOf(rows); pipe = buildDeck(rows, activeDock);
+  deckRows = rows; deckSig = sigOf(rows); pipe = buildDeck(rows, activeKey);
   deckScore = 0; deckDone = false; deckStarted = false; showingA = false; peeking = false;
   saveDeck(); renderCard();
 }
@@ -847,7 +899,7 @@ function gradeGood(){
     deckScore = countClean();
     if (deckScore === pipe.length){
       deckDone = true;
-      const key = "wd_rs_" + activeDock;
+      const key = "wd_rs_" + activeKey;
       let pool; try { pool = JSON.parse(localStorage.getItem(key)) || {}; } catch { pool = {}; }
       pipe.forEach(x => { const id = x.row.ID, base = (id in pool) ? pool[id] : 0;
         pool[id] = x.timesDirty === 0 ? base + 1 : x.timesDirty === 1 ? base - 1 : base - 2; });
@@ -859,13 +911,13 @@ function gradeGood(){
 /* The deck in progress survives a reload: Resume means the same ten cards, same places. */
 function saveDeck(){
   try {
-    localStorage.setItem(DECK_KEY, JSON.stringify({ dock: activeDock, sig: deckSig, done: deckDone, started: deckStarted,
+    localStorage.setItem(DECK_KEY, JSON.stringify({ list: activeKey, sig: deckSig, done: deckDone, started: deckStarted,
       pipe: pipe.map(x => [x.row.ID, x.fi, x.passDirty ? 1 : 0, x.needsRedemption ? 1 : 0, x.timesDirty, x.clean ? 1 : 0]) }));
   } catch {}
 }
 function restoreDeck(rows){
   let s; try { s = JSON.parse(localStorage.getItem(DECK_KEY)); } catch { return false; }
-  if (!s || s.done || !s.started || s.dock !== activeDock || s.sig !== sigOf(rows) || !Array.isArray(s.pipe)) return false;
+  if (!s || s.done || !s.started || s.list !== activeKey || s.sig !== sigOf(rows) || !Array.isArray(s.pipe)) return false;
   const byId = new Map(rows.map(r => [r.ID, r]));
   const p = s.pipe.map(([id, fi, pd, nr, td, c]) => { const row = byId.get(id); return row ? { row, fi: Math.min(fi, row.pairs.length - 1), passDirty: !!pd, needsRedemption: !!nr, timesDirty: td, clean: !!c } : null; });
   if (p.some(x => !x)) return false;
@@ -911,13 +963,18 @@ function promptDlg(title, body, value){
 
 /* ── Input ── */
 $("btnStudy").addEventListener("click", onStudy);
+$("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
 $("fileIn").addEventListener("change", () => { const f = $("fileIn").files[0]; if (f) importSheet(f); });
 $("pgPrev").addEventListener("click", () => { if (page > 0){ page--; openId = null; renderList(); } });
 $("pgNext").addEventListener("click", () => { page++; openId = null; renderList(); });
+for (const id of ["wd", "my"]){
+  $(id + "Q").addEventListener("input", e => { CAT[id].q = e.target.value; CAT[id].page = 0; renderCatalog(); });
+  $(id + "Prev").addEventListener("click", () => { if (CAT[id].page > 0){ CAT[id].page--; renderCatalog(); } });
+  $(id + "Next").addEventListener("click", () => { CAT[id].page++; renderCatalog(); });
+}
 let rsz = null;
-window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if (level !== "study") renderList(); }, 120); });
+window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if (level !== "study") render(); }, 120); });
 $("q").addEventListener("input", e => {
-  if (level === "catalog"){ catQ = e.target.value; page = 0; renderList(); return; }
   qText = e.target.value; query = strip(qText); page = 0; openId = null; saveView(); renderList();
 });
 $("lvl").addEventListener("input", e => { lvlText = e.target.value; page = 0; openId = null; saveView(); renderList(); });
@@ -933,31 +990,35 @@ document.addEventListener("keydown", e => {
   if (!$("dlgBack").hidden) return;
   if (level !== "study"){
     if (document.activeElement && ["INPUT","SELECT"].includes(document.activeElement.tagName)) return;
-    if (e.key === "ArrowRight" && !$("pgNext").hidden && !$("pgNext").disabled) $("pgNext").click();
-    if (e.key === "ArrowLeft" && !$("pgPrev").hidden && !$("pgPrev").disabled) $("pgPrev").click();
-    if (e.key === "/"){ e.preventDefault(); $("q").focus(); }
-    if (e.key === "Escape" && level === "catalog" && activeDock) goList(activeDock);
+    if (level === "list"){
+      if (e.key === "ArrowRight" && !$("pgNext").hidden && !$("pgNext").disabled) $("pgNext").click();
+      if (e.key === "ArrowLeft" && !$("pgPrev").hidden && !$("pgPrev").disabled) $("pgPrev").click();
+      if (e.key === "/"){ e.preventDefault(); $("q").focus(); }
+    }
+    if (e.key === "Escape" && level === "catalog" && activeKey) goList(activeKey);
     return;
   }
   if (e.key === " " || e.key === "Enter"){ e.preventDefault(); if (deckDone) initDeck(deckRows); else if (!showingA) reveal(); else gradeGood(); }
   if ((e.key === "ArrowLeft" || e.key === "p" || e.key === "P") && showingA && !deckDone){ e.preventDefault(); gradeAgain(); }
-  if (e.key === "Escape") goList(activeDock);
+  if (e.key === "Escape") goList(activeKey);
 });
 
 /* ── Boot: land in study, like the app; the list sits one step back ── */
 (async () => {
   loadOwn();
-  let wanted = null; try { wanted = localStorage.getItem(DOCK_KEY); } catch {}
-  wanted = canonName(wanted || DOCK_NAMES[0]);
-  let d = await ensureDock(wanted);
-  if (!d.rows && wanted !== canonName(DOCK_NAMES[0])){ wanted = canonName(DOCK_NAMES[0]); d = await ensureDock(wanted); }
+  let wanted = null; try { wanted = localStorage.getItem(LIST_KEY); } catch {}
+  wanted = canonKey(wanted || WD_KEYS[0]);
+  activeKey = wanted;
+  let l = await ensureList(wanted);
+  if (activeKey !== wanted){ wanted = activeKey; l = getList(wanted); }   // published wins: the copy moved to -OWN
+  if (!l.rows && wanted !== WD_KEYS[0]){ wanted = WD_KEYS[0]; l = await ensureList(wanted); }
   if (usingSample) document.title += " · sample data";
-  if (!d.rows){ viewDock = wanted; level = "list"; show(); try { history.replaceState(navState(), ""); } catch {} return; }
-  activeDock = wanted; viewDock = wanted;
-  try { localStorage.setItem(DOCK_KEY, activeDock); } catch {}
-  loadView(activeDock);
+  if (!l.rows){ activeKey = null; viewKey = wanted; level = "list"; show(); try { history.replaceState(navState(), ""); } catch {} return; }
+  activeKey = wanted; viewKey = wanted;
+  try { localStorage.setItem(LIST_KEY, activeKey); } catch {}
+  loadView(activeKey);
   let src = visibleRows();
-  if (!src.length){ qText = query = lvlText = ""; $("q").value = $("lvl").value = ""; saveView(); src = d.rows; }
+  if (!src.length){ qText = query = lvlText = ""; $("q").value = $("lvl").value = ""; saveView(); src = l.rows; }
   if (!restoreDeck(src)) initDeck(src);
   level = "list";
   try { history.replaceState(navState(), ""); } catch {}

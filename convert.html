@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WordDock · publish a dock</title>
+<title>WordDock · publish a list</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock · publish a dock — v1.4 (4 Oct 2026) ──────────────────────────
-   The publisher's tool: a curator's sheet → lists/<dock>.json.
+/* ── WordDock · publish a list — v1.5 (5 Oct 2026) ─────────────────────────
+   The publisher's tool: a curator's sheet → lists/<key>.json.
    · reads headers by name (any order): LVL ENT CAT SUB TAG Q1 A1 … Q10 A10
    · required per row: Q1 and A1; the rest optional; ENT empty → A1
    · IDs stamped from the row's place among the published rows (0001 …)
    · publish = freeze: the previous JSON on this site is the ledger — a
-     published row that moved or changed word·class stops the publish
-   Columns: WD_v27_columns.md. */
+     published row that moved or changed word·class stops the publish;
+     new rows after the last published one are fine (a WD list grows at the end)
+   Columns: v27/columns.md. */
 :root{--bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;--card:#f6f5ef;
   --green:#006600;--green2:#0a7a0a;--red:#b44a4a;--red-bg:#fbf2f2;--ok-bg:#f1f8f1;--ok-ink:#0a5a0a;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
@@ -58,12 +59,12 @@ th{font-weight:500;color:var(--sec);font-size:12px;border-bottom:.5px solid var(
 <body>
 <header class="top"><span class="mark" aria-hidden="true">W</span></header>
 <main class="wrap">
-  <h1>Publish a dock</h1>
-  <p class="sub">A curator's sheet becomes <span class="k">lists/&lt;dock&gt;.json</span>. Nothing leaves this page except the file you download.</p>
+  <h1>Publish a list</h1>
+  <p class="sub">A curator's sheet becomes <span class="k">lists/&lt;key&gt;.json</span>. Nothing leaves this page except the file you download.</p>
 
   <div class="row">
     <label class="file go" id="pick">Choose the sheet (.xlsx)<input type="file" id="file" accept=".xlsx,.xlsm,.xls,.csv"></label>
-    <span class="name">Dock<input id="dock" placeholder="NL-LA" autocomplete="off" spellcheck="false"></span>
+    <span class="name">List<input id="key" placeholder="NL-LA" autocomplete="off" spellcheck="false"></span>
     <span class="fname" id="fname"></span>
     <button class="btn quiet" id="dl" disabled>Download JSON</button>
   </div>
@@ -75,8 +76,8 @@ th{font-weight:500;color:var(--sec);font-size:12px;border-bottom:.5px solid var(
     <p><b>How a sheet is read.</b> The first sheet whose header row has <code>Q1</code> and <code>A1</code>. Columns are found by name, in any order:
     <code>LVL</code> (or LEVEL, SEG) · <code>ENT</code> · <code>CAT</code> · <code>SUB</code> · <code>TAG</code> (or TAGS) · <code>Q1 A1 … Q10 A10</code>.
     A row is published when it has Q1 and A1; the rest is optional. An empty ENT takes A1.</p>
-    <p><b>IDs.</b> Stamped here from the row's place among the published rows: the first is <code>0001</code>. Publish = freeze: when this site already has a <code>lists/&lt;dock&gt;.json</code>, every row in it must still be at its place with the same word and class. New rows go after the last published one. If something moved, the download stops and says where.</p>
-    <p><b>Then.</b> Put the file at <code>lists/&lt;dock&gt;.json</code> in the repository and commit. If the dock is new, add its name to the <code>DOCK_NAMES</code> line near the top of the script in <code>lens.html</code>.</p>
+    <p><b>IDs.</b> Stamped here from the row's place among the published rows: the first is <code>0001</code>. Publish = freeze: when this site already has a <code>lists/&lt;key&gt;.json</code>, it is a WD list, and every row in it must still be at its place with the same word and class. New rows go after the last published one. If something moved, the download stops and says where.</p>
+    <p><b>Then.</b> Put the file at <code>lists/&lt;key&gt;.json</code> in the repository and commit. If the list is new, add it to the <code>WD_LISTS</code> line near the top of the script in <code>lens.html</code>: its key, or <code>{ key: "NL-LA", title: "Nederlands · Latijn" }</code>.</p>
   </div>
 </main>
 
@@ -100,13 +101,13 @@ function toLevel(v){
   if (m){ const i = "ABCDEFGHJKLMNPQRSTUVWXYZ".indexOf(m[2]); return i < 0 ? null : parseInt(m[1], 10) * 100 + i + 1; }
   return null;
 }
-/* One rule for dock names, here and in the lens: the file name is the dock name, in capitals —
+/* One rule for keys, here and in the lens: the file name gives the key, in capitals —
    NL-LA-Lieve.xlsx → NL-LA-LIEVE, Biology.xlsx → BIOLOGY. Letters, digits and hyphens. */
-const canonName = n => String(n || "").trim().toUpperCase();
-const validName = n => /^[A-Z0-9][A-Z0-9-]*$/.test(n);
-function dockFromFilename(n){
-  const base = canonName((n || "").replace(/\.[^.]+$/, ""));
-  return validName(base) ? base : base.replace(/[^A-Z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
+const canonKey = n => String(n || "").trim().toUpperCase();
+const validKey = n => /^[A-Z0-9][A-Z0-9-]*$/.test(n);
+function keyFromFilename(n){
+  const base = canonKey((n || "").replace(/\.[^.]+$/, ""));
+  return validKey(base) ? base : base.replace(/[^A-Z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
 let result = null;   /* { rows, skipped, fallbacks, span } */
@@ -150,11 +151,11 @@ function buildRows(src){
   return { rows, skipped, fallbacks, span: lo === Infinity ? null : { lo, hi } };
 }
 const keyOf = r => strip(r.ENT) + "·" + strip(r.CAT);
-/* The ledger: the JSON already published under this name on this site. */
-async function fetchPrev(dock){
-  if (!dock || location.protocol === "file:") return { rows: null, reason: location.protocol === "file:" ? "opened from disk, so the site's ledger is not reachable" : "" };
+/* The ledger: the JSON already published under this key on this site — a WD list. */
+async function fetchPrev(key){
+  if (!key || location.protocol === "file:") return { rows: null, reason: location.protocol === "file:" ? "opened from disk, so the site's ledger is not reachable" : "" };
   try {
-    const r = await fetch("lists/" + dock + ".json", { cache: "no-cache" });
+    const r = await fetch("lists/" + key + ".json", { cache: "no-cache" });
     if (r.status === 404) return { rows: null, reason: "" };
     if (!r.ok) return { rows: null, reason: "the site answered " + r.status };
     const j = await r.json();
@@ -175,10 +176,10 @@ function check(rows, prevRows){
   return stops;
 }
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
-function render(dock, src, res, ledger){
+function render(key, src, res, ledger){
   const out = $("out"), pv = $("preview");
-  const named = validName(dock);
-  $("dock").parentElement.classList.toggle("need", !named);
+  const named = validKey(key);
+  $("key").parentElement.classList.toggle("need", !named);
   const stops = named ? check(res.rows, ledger.rows) : [];
   const n = res.rows.length, newFrom = ledger.rows ? ledger.rows.length : 0;
   let html = "";
@@ -187,13 +188,13 @@ function render(dock, src, res, ledger){
     res.span ? "levels <b>" + res.span.lo + "–" + res.span.hi + "</b>" : "no levels",
     res.skipped.length ? "<b>" + res.skipped.length + "</b> skipped, no Q1 + A1: rows " + res.skipped.slice(0, 15).join(", ") + (res.skipped.length > 15 ? " …" : "") : "nothing skipped",
     res.fallbacks ? res.fallbacks + " ENT taken from A1" : "every ENT typed",
-    ledger.rows ? "ledger: <b>" + ledger.rows.length + "</b> rows already published" + (n > newFrom ? ", <b>" + (n - newFrom) + "</b> new (" + res.rows[newFrom].ID + " – " + res.rows[n - 1].ID + ")" : ", nothing new")
+    ledger.rows ? "<b>" + esc(key) + "</b> is a WD list: <b>" + ledger.rows.length + "</b> rows already published" + (n > newFrom ? ", <b>" + (n - newFrom) + "</b> new (" + res.rows[newFrom].ID + " – " + res.rows[n - 1].ID + ")" : ", nothing new")
                : "no previous publish on this site" + (ledger.reason ? " — " + esc(ledger.reason) : "") + "; IDs start at 0001"
   ];
-  if (!named) html += '<div class="box stop"><h3>Give the dock a NAME</h3>The file name is taken when it can be a name; this one can\u2019t. Type one in the Dock field: capitals, digits and hyphens \u2014 NL-LA-LIEVE, BIOLOGY.</div>';
-  html += '<div class="box ' + (stops.length ? "stop" : "ok") + '"><h3>' + (stops.length ? "Stopped \u2014 published rows changed" : named ? "Ready \u2014 " + dock + ".json" : "Read") + "</h3><ul>" +
+  if (!named) html += '<div class="box stop"><h3>Give the list a NAME</h3>The file name is taken when it can be a name; this one can’t. Type one in the List field: capitals, digits and hyphens — NL-LA-LIEVE, BIOLOGY.</div>';
+  html += '<div class="box ' + (stops.length ? "stop" : "ok") + '"><h3>' + (stops.length ? "Stopped — published rows changed" : named ? "Ready — " + key + ".json" : "Read") + "</h3><ul>" +
     facts.map(f => "<li>" + f + "</li>").join("") + "</ul>" +
-    (stops.length ? "<ul style='margin-top:8px'>" + stops.map(s => "<li>" + esc(s) + "</li>").join("") + "</ul><p class='muted' style='margin:8px 0 0'>Publish = freeze: put the rows back in their place, or publish under a new dock name.</p>" : "") + "</div>";
+    (stops.length ? "<ul style='margin-top:8px'>" + stops.map(s => "<li>" + esc(s) + "</li>").join("") + "</ul><p class='muted' style='margin:8px 0 0'>Publish = freeze: put the rows back in their place, or publish under a new list name.</p>" : "") + "</div>";
   out.innerHTML = html;
   const cols = ["ID", "LVL", "ENT", "CAT", "SUB", "TAG", "Q1", "A1", "pairs"];
   let t = "<table><colgroup><col style='width:7%'><col style='width:6%'><col style='width:13%'><col style='width:10%'><col style='width:10%'><col style='width:10%'><col><col><col style='width:7%'></colgroup><tr>" +
@@ -206,21 +207,21 @@ function render(dock, src, res, ledger){
   pv.innerHTML = t;
   const ready = !stops.length && named;
   $("dl").disabled = !ready;
-  $("dl").textContent = named ? "Download " + dock + ".json" : "Download \u2014 name needed";
+  $("dl").textContent = named ? "Download " + key + ".json" : "Download — name needed";
   $("dl").classList.toggle("go", ready); $("dl").classList.toggle("quiet", !ready);
   $("pick").classList.toggle("go", !ready); $("pick").classList.toggle("quiet", ready);
 }
 async function run(){
   const f = $("file").files[0]; if (!f || !result) return;
-  const dock = canonName($("dock").value);
-  const ledger = validName(dock) ? await fetchPrev(dock) : { rows: null, reason: "" };
+  const key = canonKey($("key").value);
+  const ledger = validKey(key) ? await fetchPrev(key) : { rows: null, reason: "" };
   prev = ledger;
-  render(dock, result.src, result.res, ledger);
+  render(key, result.src, result.res, ledger);
 }
 $("file").addEventListener("change", async () => {
   const f = $("file").files[0]; if (!f) return;
   $("fname").textContent = f.name;
-  $("dock").value = dockFromFilename(f.name);        /* every new file brings its own name; edit it if you like */
+  $("key").value = keyFromFilename(f.name);          /* every new file brings its own name; edit it if you like */
   let src;
   try { src = readWorkbook(await f.arrayBuffer()); }
   catch (e) { $("out").innerHTML = '<div class="box stop"><h3>Not a readable sheet</h3>' + esc(e.message) + "</div>"; return; }
@@ -228,18 +229,18 @@ $("file").addEventListener("change", async () => {
   result = { src, res: buildRows(src) };
   run();
 });
-$("dock").addEventListener("change", () => { $("dock").value = canonName($("dock").value); run(); });
-$("dock").addEventListener("input", () => { if (result) render(canonName($("dock").value), result.src, result.res, prev || { rows: null, reason: "" }); });
+$("key").addEventListener("change", () => { $("key").value = canonKey($("key").value); run(); });
+$("key").addEventListener("input", () => { if (result) render(canonKey($("key").value), result.src, result.res, prev || { rows: null, reason: "" }); });
 $("dl").addEventListener("click", () => {
   if (!result) return;
-  const dock = canonName($("dock").value);
+  const key = canonKey($("key").value);
   const text = "[\n" + result.res.rows.map(r => JSON.stringify(r)).join(",\n") + "\n]\n";
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-  a.download = dock + ".json";
+  a.download = key + ".json";
   document.body.appendChild(a); a.click(); a.remove();          /* in the page, or Firefox ignores the click */
   setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-  $("fname").textContent = dock + ".json downloaded \u2014 put it in lists/ and commit";
+  $("fname").textContent = key + ".json downloaded — put it in lists/ and commit";
 });
 </script>
 </body>
