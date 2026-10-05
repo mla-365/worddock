@@ -6,7 +6,7 @@
 <title>WordDock</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock lens — preview v0.17 ────────────────────────────────────────
+/* ── WordDock lens — preview v0.17.1 ───────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -320,10 +320,9 @@ const T = {
   replace: "Replace", addQ: k => "Add " + k + " to this device?", addBtn: "Add",
   cantKeep: "Could not keep this list", noRoom: "This browser has no room left for it.",
   removeQ: k => "Remove " + k + " from this device?", progressGoes: "Its progress goes too.", remove: "Remove",
-  // sync: the bottom line of LISTS
-  keepSafe: "Keep progress safe", synced: ago => "Synced " + ago, syncing: "Syncing…",
-  notSynced: "Not synced — will retry",
-  agoNow: "just now", agoMin: m => m + " min ago", agoH: h => h + " h ago", agoYesterday: "yesterday", agoDays: d => d + " days ago",
+  // sync: the bottom line of LISTS. "Sync is on" claims only what the page knows; a time
+  // ("synced just now") would claim that this device is current, which it can't know.
+  keepSafe: "Keep progress safe", syncOn: "Sync is on", notSynced: "Not synced — will retry",
   // sync: the dialog (the dark page's texts)
   syncOffTitleMain: "Sync is off", syncOffDesc: "Your progress lives only in this browser.",
   syncHaveKey: "I have a key", syncCreateKey: "Create a key",
@@ -1083,11 +1082,10 @@ const SYNC_BOOT_WAIT     = 3000;               // lens: the first deck waits for
 let syncBusy = false;
 let syncPullTimer = null;
 
-/* Lens only: what the bottom line of LISTS says. The time of the last answered
-   request lives under the lens's own key; the wd_sync_* keys stay index.html's. */
-const SYNC_OK_KEY = "wd_lens_synced";
+/* Lens only: what the bottom line of LISTS says — whether the last request was answered.
+   Nothing is stored for it; the wd_sync_* keys stay index.html's. */
 let syncFailed = false;
-function syncOk(){ syncFailed = false; try { localStorage.setItem(SYNC_OK_KEY, String(Date.now())); } catch {} renderSyncLine(); }
+function syncOk(){ syncFailed = false; renderSyncLine(); }
 function syncFail(){ syncFailed = true; renderSyncLine(); }
 
 function markSyncDirty(){ try { localStorage.setItem(SYNC_DIRTY_KEY, "1"); } catch {} }
@@ -1398,24 +1396,15 @@ function renderSyncPanelBody(){
 function showSyncPanel(){ _syncState = "main"; renderSyncPanelBody(); $("syncBack").hidden = false; }
 function hideSyncPanel(){ $("syncBack").hidden = true; }
 
-/* The bottom line of LISTS: small, grey, one line of truth; tap opens the dialog. */
-function syncAgo(ms){
-  const m = Math.floor((Date.now() - ms) / 60000);
-  if (m < 1) return T.agoNow;
-  if (m < 60) return T.agoMin(m);
-  const h = Math.round(m / 60);
-  if (h < 24) return T.agoH(h);
-  if (h < 48) return T.agoYesterday;
-  return T.agoDays(Math.floor(h / 24));
-}
+/* The bottom line of LISTS: small, grey, one line of truth; tap opens the dialog.
+   No key: "Keep progress safe". A key: "Sync is on", or "Not synced — will retry"
+   after a request that got no answer. */
 function renderSyncLine(){
   const a = $("syncLine"); if (!a) return;
   if (!getSyncKey()){ a.textContent = T.keepSafe; a.classList.remove("fail"); return; }
-  let last = 0; try { last = parseInt(localStorage.getItem(SYNC_OK_KEY) || "0", 10) || 0; } catch {}
   a.classList.toggle("fail", syncFailed);
-  a.textContent = syncFailed ? T.notSynced : last ? T.synced(syncAgo(last)) : T.syncing;
+  a.textContent = syncFailed ? T.notSynced : T.syncOn;
 }
-setInterval(() => { if (level === "catalog") renderSyncLine(); }, 30000);
 
 /* ── Dialog: a question with two buttons, or a question with one field ── */
 function confirmDlg(title, body, okLabel, cancelLabel){
