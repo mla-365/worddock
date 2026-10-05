@@ -6,7 +6,7 @@
 <title>WordDock</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock lens — preview v0.17.1 ───────────────────────────────────────
+/* ── WordDock lens — preview v0.18 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -17,7 +17,8 @@
    Surfaces: study (card + Again / Good, the name in the corner is the door
    into the list) · list (heading with ▾, search · Level · pager · Study, the
    table) · LISTS (three zones: Published WD Lists, My Lists on this device,
-   the door in: + Add a list from an Excel sheet).
+   the door in: + Add a list from an Excel sheet) · About (the W opens it: a
+   rail of topics, the chosen topic's text; the W, Esc or back returns).
    Engine from v26.98 except the finish line. Writes RS only at deck completion. */
 :root{
   --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
@@ -33,9 +34,15 @@ button,select,input{font-family:inherit}
 /* ── top line: the W; in study the list's title, small and regular ── */
 .top{position:relative;height:52px}
 .top-in{position:absolute;left:46px;top:14px;display:flex;align-items:center;max-width:calc(100% - 62px)}
-.mark{position:absolute;left:16px;top:14px;user-select:none;pointer-events:none}
+.mark{position:absolute;left:16px;top:14px;user-select:none}
 .mark.badge{width:24px;height:24px;border-radius:7px;background:var(--green);color:#fff;display:flex;align-items:center;
   justify-content:center;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:15px}
+/* The W is the door to About (and back out of it). */
+button.mark{border:none;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.mark:hover{background:var(--green2)}
+button.mark:focus{outline:none}
+button.mark:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+body.abouting button.mark{box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 22%,transparent)}
 .crumbs{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap}
 /* The door from study into the list: the list's title, nothing more. */
 .crumb{background:none;border:none;padding:3px 8px;border-radius:6px;color:var(--fg);cursor:pointer;font-size:13px;line-height:1.4;
@@ -148,6 +155,28 @@ td.act{text-align:right;white-space:nowrap}
 .dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px}
 .dlg input:focus{outline:none;border-color:var(--accent)}
 
+/* ── About: the black page's surface (v26.98 #aboutbrowser), in the light page's colours.
+   A rail of topics on the left, the chosen topic's text on the right; on a phone one
+   pane at a time (the rail first, a topic opens its text, the heading goes back). ── */
+.about{display:none;max-width:920px;margin:0 auto;padding:.25rem 1.25rem 2rem}
+body.abouting .about{display:block}
+body.abouting .wrap,body.abouting .cat{display:none}
+.about-h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3}
+.about-h button{background:none;border:none;padding:2px 8px;margin-left:-8px;border-radius:8px;font:inherit;color:inherit;cursor:default;text-align:left}
+.about-panes{display:grid;grid-template-columns:220px minmax(0,1fr);column-gap:32px;margin-top:1rem}
+.about-rail{border-right:.5px solid var(--line2);padding-right:14px;align-self:start}
+.about-topic{display:block;width:100%;text-align:left;background:none;border:none;padding:9px 12px;margin:0 0 3px;border-radius:8px;
+  font-size:14px;color:var(--sec);cursor:pointer;line-height:1.35}
+.about-topic:hover{background:var(--card);color:var(--fg)}
+.about-topic.active{background:var(--green);color:#fff}
+.about-content{max-width:640px;min-width:0}
+.about-content h2{font-size:20px;font-weight:600;margin:.15rem 0 .7rem;line-height:1.3}
+.about-content p{color:var(--sec);font-size:15px;line-height:1.65;margin:0 0 .85rem}
+.about-content em{color:var(--fg);font-style:italic}
+.about-content code{font-family:var(--mono);font-size:12.5px;background:var(--card);border:.5px solid var(--line);padding:1px 5px;border-radius:4px;color:var(--fg);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.about-content a{color:var(--accent);text-underline-offset:2px}
+.about-content .soon{color:var(--muted);text-decoration:underline dotted;text-underline-offset:3px;cursor:default}
+
 /* ── study: the list is gone; card + Again / Good ── */
 .study{position:fixed;inset:0;z-index:20;background:var(--bg);display:none;flex-direction:column;
   align-items:center;padding:0 16px}
@@ -200,13 +229,22 @@ body.studying .top{position:relative;z-index:30}
   .study-btn{margin-left:0;flex:1}
   .card{height:200px;padding:24px 22px}
   .card-text{font-size:24px}
+  .about{padding-left:12px;padding-right:12px}
+  .about-h{font-size:20px}
+  .about-panes{grid-template-columns:1fr;margin-top:.75rem}
+  .about-rail{border-right:none;padding-right:0}
+  .about.show-detail .about-rail,.about.show-rail .about-content{display:none}
+  .about.show-detail .about-h button{cursor:pointer;color:var(--sec)}
+  .about.show-detail .about-h button::before{content:"\2190\00a0"}
+  .about.show-detail .about-h button:hover{background:var(--card);color:var(--fg)}
+  .about-topic{min-height:46px;font-size:15px}
 }
 </style>
 </head>
 <body>
 
 <header class="top">
-  <span class="mark badge" aria-hidden="true">W</span>
+  <button type="button" class="mark badge" id="wMark" data-t-aria="aboutAria">W</button>
   <div class="top-in"><nav class="crumbs" id="crumbs"></nav></div>
 </header>
 
@@ -248,6 +286,14 @@ body.studying .top{position:relative;z-index:30}
     <button class="add" id="btnAdd" data-t="add"></button>
     <button class="sync-line" id="syncLine"></button>
   </section>
+</main>
+
+<main class="about show-rail" id="aboutbrowser">
+  <h1 class="about-h"><button type="button" id="aboutHead" data-t="aboutHeading"></button></h1>
+  <div class="about-panes">
+    <nav class="about-rail" id="aboutRail"></nav>
+    <article class="about-content" id="aboutContent"></article>
+  </div>
 </main>
 
 <section class="study" id="study" aria-hidden="true">
@@ -351,7 +397,28 @@ const T = {
   syncConnect: "Connect", syncConnecting: "Connecting...",
   syncBadKey: "A WordDock key is 8 characters, like 7K2M-9XQF. Check it and try again.",
   syncNoServer: "Can't reach the sync server - try again when you're online.",
-  syncNoSuchKey: "This key doesn't exist. Check the 8 characters and try again."
+  syncNoSuchKey: "This key doesn't exist. Check the 8 characters and try again.",
+  // About: the W opens it. Six topics, in this order. The paragraphs are HTML (only
+  // <em>, <code>, <a>); a translation replaces the strings and keeps the tags.
+  aboutAria: "About WordDock", aboutHeading: "About", aboutBack: "Back to the topics",
+  aboutTopics: [
+    { id: "studying", title: "Studying", paras: [
+      "Enter or the space bar shows the answer; press it again to give the grade <em>Good</em> for the answer you had in mind, wrote down or said out loud. Tapping the card flips between Q and A. If your answer was wrong, tap <em>Again</em>.",
+      "A deck is complete after ten clean passes, and the next deck is drawn from your lowest-scoring words." ] },
+    { id: "progress", title: "Progress", paras: [
+      "Each time you complete a deck, the scores are updated in the list, in the RS column. A word counts as mastered once its score reaches 10." ] },
+    { id: "devices", title: "Devices and sync", paras: [
+      "Your scores live in your browser, on your device. Sync makes a copy in the cloud under a random key - no account, no email, no password; WordDock only ever sees the key, never who you are. Enter the same key on another device and both show the same progress, possibly with a small delay. Scores travel in both directions: a word you struggled with on your phone stays a word to repeat on your laptop.",
+      "Your key is your way back. Lose your phone or wipe your browser? Enter your key on any device and your progress returns. Keep it somewhere outside your devices - written down, or in a message to yourself.",
+      "Only scores travel: your My lists stay on the device where you imported them." ] },
+    { id: "wdlists", title: "WD lists", paras: [
+      "Lists made and tested by users, then published on WordDock, so every user can study them at once." ] },
+    { id: "mylists", title: "My lists", paras: [
+      "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>LVL · ENT · CAT · SUB · TAG · Q1 · A1 … Q10 · A10</code>. Only Q1 and A1 are required in each row." ] },
+    { id: "contact", title: "Contact", paras: [
+      "Working together through exchange is one of the main purposes of WordDock. If you'd like to take part, write to <a href=\"mailto:michel@worddock.app\">michel@worddock.app</a>.",
+      "More on the specifics: <a class=\"soon\" aria-disabled=\"true\" title=\"Page to come\">WordDock for Insiders</a> (page to come)." ] }
+  ]
 };
 /* ── WD lists, published on this site: one line. A new WD list = one JSON file (lists/<NAME>.json)
    + its name here. ── */
@@ -614,7 +681,7 @@ async function removeList(key){
 }
 
 /* ── State ── */
-let level = "list";                              // catalog (LISTS) | list | study
+let level = "list";                              // catalog (LISTS) | list | study | about
 let viewKey = WD_KEYS[0], activeKey = null;
 let qText = "", query = "", lvlText = "", page = 0, sortKey = null, sortDir = 1, openId = null;
 const CAT = { wd: { q: "", page: 0 }, my: { q: "", page: 0 } };   // LISTS: search and page per section
@@ -762,7 +829,7 @@ function detailRow(r, pool, span){
   tr.appendChild(td);
   return tr;
 }
-const render = () => level === "catalog" ? renderCatalog() : renderList();
+const render = () => level === "about" ? null : level === "catalog" ? renderCatalog() : renderList();
 function renderList(){
   const tbody = $("tbody"); $("thead").innerHTML = ""; tbody.innerHTML = ""; $("empty").hidden = true;
   renderHeading();
@@ -950,10 +1017,82 @@ function enterStudy(fromPop){
   document.activeElement && document.activeElement.blur();
   show(); renderCard(); pushNav(fromPop);
 }
+
+/* ── About: copied from v26.98 (aboutTopics, #aboutbrowser, #aboutRail, #aboutContent).
+   The W opens it, from study, the list or LISTS; the first topic is selected on open.
+   Back — the W again, Esc, or the browser's back — returns to where the user came from,
+   through the history: About is one entry on top of that place (two on a phone once a
+   topic is open), so leaving pops those entries and the place below takes over. ── */
+let aboutTopicId = T.aboutTopics[0].id, aboutPane = "rail";
+const aboutState = pane => ({ wd: 1, level: "about", k: viewKey, pane });
+function renderAbout(){
+  const ab = $("aboutbrowser"), rail = $("aboutRail"), content = $("aboutContent");
+  ab.classList.toggle("show-detail", aboutPane === "detail");
+  ab.classList.toggle("show-rail", aboutPane !== "detail");
+  $("aboutHead").title = aboutPane === "detail" ? T.aboutBack : "";
+  rail.innerHTML = "";
+  // Every topic, always shown, in order: a table of contents, not a working set.
+  for (const t of T.aboutTopics){
+    const b = document.createElement("button"); b.type = "button";
+    b.className = "about-topic" + (t.id === aboutTopicId ? " active" : "");
+    b.textContent = t.title;
+    b.addEventListener("click", () => {
+      aboutTopicId = t.id;
+      // Phone: choosing a topic reveals its text; Back returns to the rail.
+      if (isSmall() && aboutPane !== "detail"){ aboutPane = "detail"; try { history.pushState(aboutState("detail"), ""); } catch {} }
+      renderAbout();
+      if (isSmall()) window.scrollTo(0, 0);
+    });
+    rail.appendChild(b);
+  }
+  const topic = T.aboutTopics.find(t => t.id === aboutTopicId) || T.aboutTopics[0];
+  content.innerHTML = "";
+  const h = document.createElement("h2"); h.textContent = topic.title; content.appendChild(h);
+  for (const html of topic.paras){ const p = document.createElement("p"); p.innerHTML = html; content.appendChild(p); }
+}
+function openAbout(fromPop, pane){
+  if (level !== "about"){
+    if (!$("dlgBack").hidden) return;
+    hideSyncPanel();
+    leaveStudy(); document.body.classList.remove("cataloging");
+    level = "about"; aboutTopicId = T.aboutTopics[0].id;
+    document.body.classList.add("abouting");
+    renderCrumbs(); renderPos(); window.scrollTo(0, 0);
+    if (document.activeElement && document.activeElement !== $("wMark")) document.activeElement.blur();
+  }
+  aboutPane = pane || "rail";
+  renderAbout();
+  if (!fromPop){ try { history.pushState(aboutState(aboutPane), ""); } catch {} }
+}
+function closeAbout(){
+  if (level !== "about") return;
+  const h = history.state;
+  const n = h && h.wd && h.level === "about" ? (h.pane === "detail" ? 2 : 1) : 0;
+  if (n){ try { history.go(-n); return; } catch {} }
+  returnFromAbout({ level: "list", k: viewKey });              // no history to pop: the list
+}
+/* Back to the place below About, as it was: the card, the list (same page, same view) or LISTS. */
+function returnFromAbout(s){
+  document.body.classList.remove("abouting");
+  if (s.level === "study" && activeKey) enterStudy(true);
+  else if (s.level === "catalog") goCatalog(true);
+  else if (canonKey(s.k || viewKey) !== viewKey) goList(s.k, true);
+  else { level = "list"; show(); }
+}
+$("wMark").addEventListener("click", e => { e.currentTarget.blur(); if (level === "about") closeAbout(); else openAbout(); });
+$("aboutHead").addEventListener("click", () => {
+  if (aboutPane !== "detail") return;
+  const h = history.state;
+  if (h && h.level === "about" && h.pane === "detail") history.back();
+  else { aboutPane = "rail"; renderAbout(); }
+});
+
 window.addEventListener("popstate", e => {
   const s = e.state; if (!s || !s.wd) return;
   if (!$("dlgBack").hidden) $("dlgCancel").click();
   hideSyncPanel();
+  if (s.level === "about"){ openAbout(true, s.pane); return; }
+  if (level === "about"){ returnFromAbout(s); return; }
   if (s.level === "study" && activeKey) enterStudy(true);
   else if (s.level === "catalog") goCatalog(true);
   else goList(s.k || viewKey, true);
@@ -1461,6 +1600,7 @@ $("btnAgain").addEventListener("click", e => { gradeAgain(); e.currentTarget.blu
 document.addEventListener("keydown", e => {
   if (!$("dlgBack").hidden) return;
   if (!$("syncBack").hidden){ if (e.key === "Escape") hideSyncPanel(); return; }
+  if (level === "about"){ if (e.key === "Escape"){ e.preventDefault(); closeAbout(); } return; }
   if (level !== "study"){
     if (document.activeElement && ["INPUT","SELECT"].includes(document.activeElement.tagName)) return;
     if (level === "list"){
