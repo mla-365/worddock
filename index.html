@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.21.2 ─────────────────────────────────────────
+/* ── WordDock — v0.21.3 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -247,13 +247,17 @@ body.studying .top{position:relative;z-index:30}
 .dlg-cancel{background:#fff;border:.5px solid var(--line2);color:var(--sec)}
 .dlg-ok{background:var(--green);border:none;color:#fff;font-weight:500}
 
-/* A low screen (a phone on its side): a smaller card, a bit lower, clear of the top line. */
+/* A low screen (a phone on its side, often with the browser bar on top): the card and its
+   buttons are centred in the room between the top line (52px) and the counter (~40px), and
+   the card shrinks with that room, never below 80px and never above 150px. */
 @media (max-height:500px){
-  .study-block{top:55%}
-  .card{height:150px;padding:16px 28px}
-  .card-tag{top:10px}
-  .card-text{font-size:24px}
-  .actions{margin-top:10px}
+  .study-block{top:calc(52px + (100dvh - 92px) / 2)}
+  .card{height:clamp(80px, calc(100dvh - 164px), 150px);padding:10px 24px}
+  .card-tag{top:6px;font-size:10px}
+  .card-text{font-size:22px}
+  .actions{margin-top:8px}
+  .btn{height:38px}
+  .pos{padding:6px 0 8px}
 }
 @media (max-width:640px){
   .top{padding:12px 12px 0}
