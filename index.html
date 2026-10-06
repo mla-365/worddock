@@ -31,7 +31,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.19.2 ─────────────────────────────────────────
+/* ── WordDock — v0.20 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -42,8 +42,8 @@
    Surfaces: study (card + Again / Good, the name in the corner is the door
    into the list) · list (heading with ▾, search · Level · pager · Study, the
    table) · LISTS (three zones: Published WD Lists, My Lists on this device,
-   the door in: + Add a list from an Excel sheet) · About (the W opens it: a
-   rail of topics, the chosen topic's text; the W, Esc or back returns).
+   the door in: + Add a list from an Excel sheet) · About ("About WordDock" on the
+   bottom line of LISTS opens it: a rail of topics, the chosen topic's text; "All lists", Esc or back returns).
    Engine from v26.98 except the finish line. Writes RS only at deck completion. */
 :root{
   --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
@@ -63,11 +63,6 @@ button,select,input{font-family:inherit}
 .mark.badge{width:24px;height:24px;border-radius:7px;background:var(--green);color:#fff;display:flex;align-items:center;
   justify-content:center;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:15px}
 /* The W is the door to About (and back out of it). */
-button.mark{border:none;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
-button.mark:hover{background:var(--green2)}
-button.mark:focus{outline:none}
-button.mark:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
-body.abouting button.mark{box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 22%,transparent)}
 .crumbs{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap}
 /* The door from study into the list: the list's title, nothing more. */
 .crumb{background:none;border:none;padding:3px 8px;border-radius:6px;color:var(--fg);cursor:pointer;font-size:13px;line-height:1.4;
@@ -145,6 +140,7 @@ tr.detail td{white-space:normal;padding:2px 10px 14px;border-bottom:.5px solid v
 .det-pairs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:20px;row-gap:3px;font-size:14px}
 .det-pairs .dq{color:var(--q)}.det-pairs .da{font-weight:500}
 .det-none{color:var(--muted);font-size:13px}
+.det-tags{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
 
 /* ── LISTS: three zones — WD lists on top, My lists in the middle, the door in at the bottom ── */
 .cat{display:none;max-width:920px;margin:0 auto;padding:0 1.25rem;min-height:calc(100vh - 52px);min-height:calc(100dvh - 52px);
@@ -269,7 +265,7 @@ body.studying .top{position:relative;z-index:30}
 <body>
 
 <header class="top">
-  <button type="button" class="mark badge" id="wMark" data-t-aria="aboutAria">W</button>
+  <div class="mark badge" aria-hidden="true">W</div>
   <div class="top-in"><nav class="crumbs" id="crumbs"></nav></div>
 </header>
 
@@ -310,6 +306,7 @@ body.studying .top{position:relative;z-index:30}
   </section>
   <section class="zone-bot">
     <button class="sync-line" id="syncLine"></button>
+    <button class="sync-line" id="aboutLink" data-t="aboutLink"></button>
   </section>
 </main>
 
@@ -425,7 +422,7 @@ const T = {
   syncNoSuchKey: "This key doesn't exist. Check the 8 characters and try again.",
   // About: the W opens it. Six topics, in this order. The paragraphs are HTML (only
   // <em>, <code>, <a>); a translation replaces the strings and keeps the tags.
-  aboutAria: "About WordDock", aboutHeading: "About", aboutBack: "Back to the topics",
+  aboutLink: "About WordDock", aboutHeading: "About", aboutBack: "Back to the topics",
   aboutTopics: [
     { id: "studying", title: "Studying", paras: [
       "Enter or the space bar shows the answer; press it again to give the grade <em>Good</em> for the answer you had in mind, wrote down or said out loud. Tapping the card flips between Q and A. If your answer was wrong, tap <em>Again</em>.",
@@ -744,9 +741,9 @@ function levelSpan(rows){
 
 /* ── Columns: LVL | NL | LA | CAT | SUB | TAG | RS (phone: the first three) ── */
 const COLS = [
-  { k:"LVL", label:T.colLVL, cls:"lvl", w:"7%",  ws:"16%" },
-  { k:"Q1",  label:T.colQ,   w:"25%", ws:"42%" },
-  { k:"A1",  label:T.colA,   cls:"b ru", w:"25%", ws:"42%" },
+  { k:"LVL", label:T.colLVL, cls:"lvl hide-s", th:"hide-s", w:"7%" },
+  { k:"Q1",  label:T.colQ,   w:"25%", ws:"50%" },
+  { k:"A1",  label:T.colA,   cls:"b ru", w:"25%", ws:"50%" },
   { k:"CAT", label:T.colCAT, cls:"hide-s", th:"hide-s", w:"14%" },
   { k:"SUB", label:T.colSUB, cls:"hide-s", th:"hide-s", w:"12%" },
   { k:"TAG", label:T.colTAG, cls:"hide-s", th:"hide-s", w:"11%" },
@@ -795,6 +792,7 @@ function renderCrumbs(){
   const b = document.createElement("button"); b.className = "crumb";
   if (level === "study" && activeKey){ b.textContent = activeKey; b.title = T.toList; b.addEventListener("click", () => goList(activeKey)); }
   else if (level === "list"){ b.textContent = T.allLists; b.addEventListener("click", () => goCatalog()); }
+  else if (level === "about"){ b.textContent = T.allLists; b.addEventListener("click", () => closeAbout()); }
   else return;
   c.appendChild(b);
 }
@@ -834,12 +832,20 @@ function detailRow(r, pool, span){
   const meta = document.createElement("div"); meta.className = "det-meta";
   const bits = [[T.colID, r.ID], [T.colENT, r.ENT || "·"]];
   if (isSmall()){
-    if (r.CAT || r.SUB) bits.push(["", [r.CAT, r.SUB].filter(Boolean).join(" · ")]);
-    if (r.TAG) bits.push(["", r.TAG]);
+    if (r.LVL != null) bits.unshift([T.colLVL, r.LVL]);
     bits.push([T.colRS, pool[r.ID] === undefined ? "·" : pool[r.ID]]);
   }
   bits.forEach(([k, v]) => { const b = document.createElement("b"); b.textContent = (k ? k + " " : "") + v; meta.appendChild(b); });
   td.appendChild(meta);
+  // Phone: the columns CAT, SUB, TAG live here, and a tap filters on the value, as on a PC.
+  if (isSmall()){
+    const vals = [r.CAT, ...toks(r.SUB), ...toks(r.TAG)].filter(Boolean);
+    if (vals.length){
+      const t = document.createElement("div"); t.className = "det-tags";
+      vals.forEach(v => t.appendChild(tapSpan(v, v, "tag")));
+      td.appendChild(t);
+    }
+  }
   const rest = r.pairs.slice(1);
   if (rest.length){
     const g = document.createElement("div"); g.className = "det-pairs";
@@ -1040,8 +1046,8 @@ function enterStudy(fromPop){
 }
 
 /* ── About: copied from v26.98 (aboutTopics, #aboutbrowser, #aboutRail, #aboutContent).
-   The W opens it, from study, the list or LISTS; the first topic is selected on open.
-   Back — the W again, Esc, or the browser's back — returns to where the user came from,
+   "About WordDock" on the bottom line of LISTS opens it; the first topic is selected on open.
+   Back — "All lists" on the top line, Esc, or the browser's back — returns to LISTS,
    through the history: About is one entry on top of that place (two on a phone once a
    topic is open), so leaving pops those entries and the place below takes over. ── */
 let aboutTopicId = T.aboutTopics[0].id, aboutPane = "rail";
@@ -1079,7 +1085,7 @@ function openAbout(fromPop, pane){
     level = "about"; aboutTopicId = T.aboutTopics[0].id;
     document.body.classList.add("abouting");
     renderCrumbs(); renderPos(); window.scrollTo(0, 0);
-    if (document.activeElement && document.activeElement !== $("wMark")) document.activeElement.blur();
+    if (document.activeElement) document.activeElement.blur();
   }
   aboutPane = pane || "rail";
   renderAbout();
@@ -1090,7 +1096,7 @@ function closeAbout(){
   const h = history.state;
   const n = h && h.wd && h.level === "about" ? (h.pane === "detail" ? 2 : 1) : 0;
   if (n){ try { history.go(-n); return; } catch {} }
-  returnFromAbout({ level: "list", k: viewKey });              // no history to pop: the list
+  returnFromAbout({ level: "catalog" });                       // no history to pop: All lists
 }
 /* Back to the place below About, as it was: the card, the list (same page, same view) or LISTS. */
 function returnFromAbout(s){
@@ -1100,7 +1106,7 @@ function returnFromAbout(s){
   else if (canonKey(s.k || viewKey) !== viewKey) goList(s.k, true);
   else { level = "list"; show(); }
 }
-$("wMark").addEventListener("click", e => { e.currentTarget.blur(); if (level === "about") closeAbout(); else openAbout(); });
+$("aboutLink").addEventListener("click", e => { e.currentTarget.blur(); openAbout(); });
 $("aboutHead").addEventListener("click", () => {
   if (aboutPane !== "detail") return;
   const h = history.state;
@@ -1670,8 +1676,8 @@ document.addEventListener("keydown", e => {
 function resumeScreen(s){
   if (s.level === "catalog"){ goCatalog(true); return; }
   const k = canonKey(s.k || activeKey), known = isPublished(k) || (LISTS[k] && LISTS[k].own);
+  if (s.level === "about"){ goCatalog(true); openAbout(true, s.pane === "detail" && isSmall() ? "detail" : "rail"); return; }
   goList(known ? k : activeKey, true);
-  if (s.level === "about") openAbout(true, s.pane === "detail" && isSmall() ? "detail" : "rail");
 }
 </script>
 
