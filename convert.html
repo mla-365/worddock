@@ -6,9 +6,9 @@
 <title>WordDock · publish a list</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock · publish a list — v1.6.2 (6 Oct 2026) ─────────────────────────
+/* ── WordDock · publish a list — v1.7 (6 Oct 2026) ─────────────────────────
    The publisher's tool: a curator's sheet → lists/<key>.json.
-   · reads headers by name (any order): LVL ENT CAT SUB TAG Q1 A1 … Q10 A10
+   · reads headers by name (any order): ENT CAT SUB TAG L Q1 A1 … Q10 A10 (L: A1 … C2, A1.3)
    · required per row: Q1 and A1; the rest optional; ENT empty → A1
    · IDs stamped from the row's place among the published rows (0001 …)
    · publish = freeze: the previous JSON on this site is the ledger — a
@@ -74,7 +74,7 @@ th{font-weight:500;color:var(--sec);font-size:12px;border-bottom:.5px solid var(
 
   <div class="help">
     <p><b>How a sheet is read.</b> The first sheet whose header row has <code>Q1</code> and <code>A1</code>. Columns are found by name, in any order:
-    <code>LVL</code> (or L, LEVEL, SEG) · <code>ENT</code> · <code>CAT</code> · <code>SUB</code> · <code>TAG</code> (or TAGS) · <code>Q1 A1 … Q10 A10</code>.
+    <code>ENT</code> · <code>CAT</code> · <code>SUB</code> · <code>TAG</code> (or TAGS) · <code>L</code> (or LVL, LEVEL: A1 … C2, A1.3, or a number) · <code>Q1 A1 … Q10 A10</code>.
     A row is published when it has Q1 and A1; the rest is optional. An empty ENT takes A1.</p>
     <p><b>IDs.</b> Stamped here from the row's place among the published rows: the first is <code>0001</code>. Publish = freeze: when this site already has a <code>lists/&lt;key&gt;.json</code>, it is a WD list, and every row in it must still be at its place with the same word and class. New rows go after the last published one. If something moved, the download stops and says where.</p>
     <p><b>Then.</b> Put the file at <code>lists/&lt;key&gt;.json</code> in the repository and commit. If the list is new, add it to the <code>WD_LISTS</code> line near the top of the script in <code>index.html</code>: its name, as in <code>"NL-LA"</code>.</p>
@@ -92,14 +92,18 @@ function canon(h){
   if (ALIAS[u]) return ALIAS[u];
   const m = u.match(/^([QA])(10|[1-9])$/); return m ? m[1] + m[2] : null;
 }
-function toLevel(v){
-  if (v === null || v === undefined || v === "") return null;
-  if (typeof v === "number") return Number.isFinite(v) ? Math.round(v) : null;
-  const s = String(v).trim().toUpperCase();
-  if (/^\d+$/.test(s)) return parseInt(s, 10);
-  const m = s.match(/^([1-9])([A-Z])$/);                        /* old SEG 1A → 101 */
-  if (m){ const i = "ABCDEFGHJKLMNPQRSTUVWXYZ".indexOf(m[2]); return i < 0 ? null : parseInt(m[1], 10) * 100 + i + 1; }
-  return null;
+/* L, the level: BAND or BAND.UNIT — the same rule as in the app (index.html, parseL). */
+const CEFR = ["A1", "A2", "B1", "B2", "C1", "C2"];
+function parseL(v){
+  if (v === undefined || v === null || v === "") return null;
+  const s = String(v).trim().toUpperCase().replace(/\s+/g, "").replace(",", ".");
+  const m = s.match(/^(A1|A2|B1|B2|C1|C2|\d{1,3})(?:\.(\d{1,2}))?$/);
+  if (!m) return null;
+  const ci = CEFR.indexOf(m[1]);
+  const band = ci >= 0 ? m[1] : String(parseInt(m[1], 10));
+  const rank = ci >= 0 ? ci + 1 : 10 + parseInt(m[1], 10);
+  const unit = m[2] !== undefined ? parseInt(m[2], 10) : null;
+  return { text: band + (unit !== null ? "." + unit : ""), key: rank * 1000 + (unit === null ? 0 : unit + 1) };
 }
 /* One rule for keys, here and in the lens: the file name gives the key, in capitals —
    NL-LA-Lieve.xlsx → NL-LA-LIEVE, Biology.xlsx → BIOLOGY. Letters, digits and hyphens. */
@@ -129,6 +133,7 @@ function buildRows(src){
   const { map, aoa, headerRow } = src;
   const rows = [], skipped = [];
   let fallbacks = 0;
+  const Lkeys = new Map(), badL = [];
   const get = (arr, k) => (k in map) ? txt(arr[map[k]]) : "";
   for (let r = headerRow + 1; r < aoa.length; r++){
     const arr = aoa[r] || [];
@@ -137,8 +142,10 @@ function buildRows(src){
     for (let i = 1; i <= 10; i++){ const q = get(arr, "Q" + i), a = get(arr, "A" + i); if (q && a) pairs.push({ q, a }); }
     if (!get(arr, "Q1") || !get(arr, "A1")){ skipped.push(r + 1); continue; }
     const row = { ID: String(rows.length + 1).padStart(4, "0") };
-    const lvl = ("LVL" in map) ? toLevel(arr[map.LVL]) : null;
-    if (lvl !== null) row.LVL = lvl;
+    const rawL = ("LVL" in map) ? txt(arr[map.LVL]) : "";
+    const L = parseL(rawL);
+    if (L){ row.L = L.text; Lkeys.set(row, L.key); }
+    else if (rawL) badL.push(r + 1 + " (" + rawL + ")");
     let ent = get(arr, "ENT"); if (!ent){ ent = pairs[0].a; fallbacks++; }
     row.ENT = ent;
     const cat = get(arr, "CAT"), sub = get(arr, "SUB"), tag = get(arr, "TAG");
@@ -146,9 +153,15 @@ function buildRows(src){
     row.pairs = pairs;
     rows.push(row);
   }
-  let lo = Infinity, hi = -Infinity;
-  for (const r of rows) if (r.LVL !== undefined){ if (r.LVL < lo) lo = r.LVL; if (r.LVL > hi) hi = r.LVL; }
-  return { rows, skipped, fallbacks, span: lo === Infinity ? null : { lo, hi } };
+  // The span, and every place where L steps back along the rows (a sublist pasted in the wrong place?).
+  let lo = null, hi = null, last = null; const back = [];
+  for (const r of rows){
+    const k = Lkeys.get(r); if (k === undefined) continue;
+    if (!lo || k < Lkeys.get(lo)) lo = r; if (!hi || k > Lkeys.get(hi)) hi = r;
+    if (last && k < Lkeys.get(last)) back.push(r.ID + " (" + r.L + " after " + last.L + ")");
+    last = r;
+  }
+  return { rows, skipped, fallbacks, badL, back, span: lo ? { lo: lo.L, hi: hi.L } : null };
 }
 const keyOf = r => strip(r.ENT) + "·" + strip(r.CAT);
 /* The ledger: the JSON already published under this key on this site — a WD list. */
@@ -186,6 +199,8 @@ function render(key, src, res, ledger){
   const facts = [
     "<b>" + n + "</b> rows published from sheet “" + esc(src.sheet) + "”" + (src.headerRow ? " (header in row " + (src.headerRow + 1) + ")" : ""),
     res.span ? "levels <b>" + res.span.lo + "–" + res.span.hi + "</b>" : "no levels",
+    res.badL.length ? "<b>" + res.badL.length + "</b> L not read (use A1 … C2, A1.3, or a number): rows " + esc(res.badL.slice(0, 10).join(", ")) + (res.badL.length > 10 ? " …" : "") : "",
+    res.back.length ? "⚠ L steps back at <b>" + res.back.length + "</b> place(s): " + esc(res.back.slice(0, 8).join(", ")) + (res.back.length > 8 ? " …" : "") + " — a sublist in the wrong place?" : "",
     res.skipped.length ? "<b>" + res.skipped.length + "</b> skipped, no Q1 + A1: rows " + res.skipped.slice(0, 15).join(", ") + (res.skipped.length > 15 ? " …" : "") : "nothing skipped",
     res.fallbacks ? res.fallbacks + " ENT taken from A1" : "every ENT typed",
     ledger.rows ? "<b>" + esc(key) + "</b> is a WD list: <b>" + ledger.rows.length + "</b> rows already published" + (n > newFrom ? ", <b>" + (n - newFrom) + "</b> new (" + res.rows[newFrom].ID + " – " + res.rows[n - 1].ID + ")" : ", nothing new")
@@ -193,14 +208,14 @@ function render(key, src, res, ledger){
   ];
   if (!named) html += '<div class="box stop"><h3>Give the list a NAME</h3>The file name is taken when it can be a name; this one can’t. Type one in the List field: capitals, digits and hyphens — NL-LA-LIEVE, BIOLOGY.</div>';
   html += '<div class="box ' + (stops.length ? "stop" : "ok") + '"><h3>' + (stops.length ? "Stopped — published rows changed" : named ? "Ready — " + key + ".json" : "Read") + "</h3><ul>" +
-    facts.map(f => "<li>" + f + "</li>").join("") + "</ul>" +
+    facts.filter(Boolean).map(f => "<li>" + f + "</li>").join("") + "</ul>" +
     (stops.length ? "<ul style='margin-top:8px'>" + stops.map(s => "<li>" + esc(s) + "</li>").join("") + "</ul><p class='muted' style='margin:8px 0 0'>Publish = freeze: put the rows back in their place, or publish under a new list name.</p>" : "") + "</div>";
   out.innerHTML = html;
-  const cols = ["ID", "LVL", "ENT", "CAT", "SUB", "TAG", "Q1", "A1", "pairs"];
+  const cols = ["ID", "L", "ENT", "CAT", "SUB", "TAG", "Q1", "A1", "pairs"];
   let t = "<table><colgroup><col style='width:7%'><col style='width:6%'><col style='width:13%'><col style='width:10%'><col style='width:10%'><col style='width:10%'><col><col><col style='width:7%'></colgroup><tr>" +
     cols.map(c => "<th>" + c + "</th>").join("") + "</tr>";
   for (const r of res.rows.slice(0, 15)){
-    t += "<tr><td class='mono'>" + r.ID + "</td><td class='mono'>" + (r.LVL ?? "·") + "</td><td>" + esc(r.ENT) + "</td><td>" + esc(r.CAT || "·") + "</td><td>" + esc(r.SUB || "·") +
+    t += "<tr><td class='mono'>" + r.ID + "</td><td class='mono'>" + (r.L ?? "·") + "</td><td>" + esc(r.ENT) + "</td><td>" + esc(r.CAT || "·") + "</td><td>" + esc(r.SUB || "·") +
       "</td><td>" + esc(r.TAG || "·") + "</td><td>" + esc(r.pairs[0].q) + "</td><td>" + esc(r.pairs[0].a) + "</td><td class='mono'>" + r.pairs.length + "</td></tr>";
   }
   t += "</table>" + (n > 15 ? "<p class='muted' style='font-size:12px'>first 15 of " + n + "</p>" : "");
@@ -225,7 +240,7 @@ $("file").addEventListener("change", async () => {
   let src;
   try { src = readWorkbook(await f.arrayBuffer()); }
   catch (e) { $("out").innerHTML = '<div class="box stop"><h3>Not a readable sheet</h3>' + esc(e.message) + "</div>"; return; }
-  if (!src){ $("out").innerHTML = '<div class="box stop"><h3>No header row with Q1 and A1 found</h3>Give the columns their names in the first row: LVL, ENT, CAT, SUB, TAG, Q1, A1 …</div>'; $("preview").innerHTML = ""; $("dl").disabled = true; return; }
+  if (!src){ $("out").innerHTML = '<div class="box stop"><h3>No header row with Q1 and A1 found</h3>Give the columns their names in the first row: ENT, CAT, SUB, TAG, L, Q1, A1 …</div>'; $("preview").innerHTML = ""; $("dl").disabled = true; return; }
   result = { src, res: buildRows(src) };
   run();
 });

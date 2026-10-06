@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.21.3 ─────────────────────────────────────────
+/* ── WordDock — v0.22 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -144,7 +144,7 @@ tr.detail td{white-space:normal;padding:2px 10px 14px;border-bottom:.5px solid v
 .det-pairs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:20px;row-gap:3px;font-size:14px}
 .det-pairs .dq{color:var(--q)}.det-pairs .da{font-weight:500}
 .det-none{color:var(--muted);font-size:13px}
-.det-grid{display:grid;grid-template-columns:auto max-content minmax(0,1fr) minmax(0,1fr) auto;column-gap:10px;row-gap:3px;margin:2px 0 10px;align-items:start}
+.det-grid{display:grid;grid-template-columns:max-content minmax(0,1fr) minmax(0,1fr) auto auto;column-gap:10px;row-gap:3px;margin:2px 0 10px;align-items:start}
 .dg-h{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.02em}
 .dg-v{display:flex;flex-wrap:wrap;gap:4px;min-width:0;font-size:13px;color:var(--sec)}
 .dg-v .tag{background:var(--bg);white-space:normal}
@@ -218,6 +218,12 @@ body.studying .top{position:relative;z-index:30}
   box-shadow:0 10px 36px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:center;
   padding:28px 40px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;
   transition:background-color .2s,border-color .2s;user-select:none}
+/* The pairs of one word, as dots: done · current · still to come. Shown only when a word has more than one pair. */
+.card-dots{position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;gap:7px}
+.card-dots i{width:7px;height:7px;border-radius:50%;border:1px solid var(--line2);box-sizing:border-box}
+.card-dots i.done{background:var(--line2);border-color:var(--line2)}
+.card-dots i.now{background:var(--sec);border-color:var(--sec)}
+.card.done .card-dots{display:none}
 .card-tag{position:absolute;top:16px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
 .card-text{font-size:28px;text-align:center;white-space:pre-line;word-break:break-word;max-height:100%;overflow-y:auto}
 .card-text.q{color:var(--q)}.card-text.a{color:var(--fg)}
@@ -254,6 +260,7 @@ body.studying .top{position:relative;z-index:30}
   .study-block{top:calc(52px + (100dvh - 92px) / 2)}
   .card{height:clamp(80px, calc(100dvh - 164px), 150px);padding:10px 24px}
   .card-tag{top:6px;font-size:10px}
+  .card-dots{bottom:7px}
   .card-text{font-size:22px}
   .actions{margin-top:8px}
   .btn{height:38px}
@@ -340,7 +347,7 @@ body.studying .top{position:relative;z-index:30}
 
 <section class="study" id="study" aria-hidden="true">
   <div class="study-block">
-    <div class="card" id="card"><div class="card-tag" id="cardTag"></div><div class="card-text q" id="cardText">…</div></div>
+    <div class="card" id="card"><div class="card-tag" id="cardTag"></div><div class="card-text q" id="cardText">…</div><div class="card-dots" id="cardDots" aria-hidden="true"></div></div>
     <div class="actions">
       <button class="btn btn-again" id="btnAgain" data-t="again"></button>
       <button class="btn btn-good" id="btnGood" data-t="good"></button>
@@ -367,11 +374,11 @@ body.studying .top{position:relative;z-index:30}
 
 <script>
 /* ── T: every word a user can read, in one place. The code reads only from here; a
-   translation replaces these lines and nothing else. Codes (LVL, CAT, SUB, TAG, RS, ID,
+   translation replaces these lines and nothing else. Codes (L, CAT, SUB, TAG, RS, ID,
    ENT) and list names are not words: they stay the same in every language. ── */
 const T = {
   // static page text (filled into data-t, data-t-ph, data-t-aria at boot)
-  search: "Search", level: "Level", levelAria: "Level, e.g. 7 or 40-45",
+  search: "Search", level: "Level", levelAria: "Level, e.g. A1, A1.3 or A1-A2",
   searchWdAria: "Search the published lists", searchMyAria: "Search the lists on this device",
   prevPage: "Previous page", nextPage: "Next page", study: "Study",
   again: "Again", good: "Good", ok: "OK", cancel: "Cancel", close: "Close", keep: "Keep",
@@ -384,7 +391,7 @@ const T = {
   months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], noMatches: "No matches.", loading: "Loading…", nothingYet: "Nothing here yet.",
   allLists: "All lists", toList: "To the list", showAll: v => "Show all “" + v + "”",
   noOtherPairs: "No other pairs.", sample: " · sample data",
-  colQ: "Q", colA: "A", colLVL: "LVL", colCAT: "CAT", colSUB: "SUB", colTAG: "TAG", colRS: "RS", colID: "ID", colENT: "ENT",
+  colQ: "Q", colA: "A", colL: "L", colCAT: "CAT", colSUB: "SUB", colTAG: "TAG", colRS: "RS", colID: "ID", colENT: "ENT",
   // LISTS
   published: "Published", onThisDevice: "On this device", noneYet: "none yet", studyingNow: "studying now",
   excelOut: k => "Excel: " + k + ".xlsx", removeHere: "Remove from this device",
@@ -399,7 +406,7 @@ const T = {
   // the Excel door
   noWriter: "No sheet writer", noReader: "xlsx.full.min.js not found next to this page",
   cantRead: "Could not read this file", noHeader: "No header row with Q1 and A1",
-  noHeaderBody: "Name the columns in the first row: LVL, ENT, CAT, SUB, TAG, Q1, A1 …",
+  noHeaderBody: "Name the columns in the first row: ENT, CAT, SUB, TAG, L, Q1, A1 …",
   nothing: "Nothing to import", nothingBody: "No row has both Q1 and A1.",
   giveName: "Give a NAME for this list", giveNameBody: "Letters, digits and hyphens: NL-LA-LIEVE, BIOLOGY.",
   isWd: k => k + " is a WD list and can't be replaced.", nameYours: k => "Name yours " + k + "?",
@@ -461,7 +468,7 @@ const T = {
     { id: "wdlists", title: "WD lists", paras: [
       "Lists made and tested by users, then published on WordDock, so every user can study them at once." ] },
     { id: "mylists", title: "My lists", paras: [
-      "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>LVL · ENT · CAT · SUB · TAG · Q1 · A1 … Q10 · A10</code>. Only Q1 and A1 are required in each row." ] },
+      "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>ENT · CAT · SUB · TAG · L · Q1 · A1 … Q10 · A10</code>. Only Q1 and A1 are required in each row." ] },
     { id: "contact", title: "Contact", paras: [
       "Working together through exchange is one of the main purposes of WordDock. If you'd like to take part, write to michel@worddock.app.",
       "More on the specifics: <a class=\"soon\" aria-disabled=\"true\" title=\"Page to come\">WordDock for Insiders</a> (page to come)." ] }
@@ -511,40 +518,45 @@ function applyT(root){
   (root || document).querySelectorAll("[data-t-aria]").forEach(el => { el.setAttribute("aria-label", T[el.dataset.tAria]); });
 }
 
-/* Level: one integer per row, or none. Old SEG "1A, 1B … 2A" reads as 101, 102 … 201. */
-const SEG_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-function toLevel(v){
+/* L, the level: BAND or BAND.UNIT — A1 … C2 (or a plain number for lists that are not
+   languages), optionally a unit 0–99: A1, A1.3, B2.12, 2, 2.3. A1.01 is A1.1. The text is
+   what the curator sees; the key sorts it: bands in CEFR order, units as numbers, a plain
+   band before its units. */
+const CEFR = ["A1", "A2", "B1", "B2", "C1", "C2"];
+function parseL(v){
   if (v === undefined || v === null || v === "") return null;
-  if (typeof v === "number") return Number.isFinite(v) ? Math.round(v) : null;
-  const s = String(v).trim().toUpperCase();
-  if (/^\d+$/.test(s)) return parseInt(s, 10);
-  const m = s.match(/^([1-9])([A-Z])$/);
-  if (m){ const i = SEG_LETTERS.indexOf(m[2]); return i < 0 ? null : parseInt(m[1], 10) * 100 + i + 1; }
-  return null;
+  const s = String(v).trim().toUpperCase().replace(/\s+/g, "").replace(",", ".");
+  const m = s.match(/^(A1|A2|B1|B2|C1|C2|\d{1,3})(?:\.(\d{1,2}))?$/);
+  if (!m) return null;
+  const ci = CEFR.indexOf(m[1]);
+  const band = ci >= 0 ? m[1] : String(parseInt(m[1], 10));
+  const rank = ci >= 0 ? ci + 1 : 10 + parseInt(m[1], 10);
+  const unit = m[2] !== undefined ? parseInt(m[2], 10) : null;
+  return { text: band + (unit !== null ? "." + unit : ""), rank, unit, key: rank * 1000 + (unit === null ? 0 : unit + 1) };
 }
 
 /* Sample rows, used only when lists/NL-RU.json can't be fetched (local testing). */
 const SAMPLE = [
-  ["1A","0001","в","voorzetsel","","",[["in","в"],["in de klas","в кла́ссе"]]],
-  ["1A","0002","и","voegwoord","","",[["en","и"]]],
-  ["1A","0003","не","partikel","","",[["niet","не"],["ik weet niet","я не зна́ю"]]],
-  ["1A","0004","я","voornaamwoord","pers","",[["ik","я"]]],
-  ["1A","0005","ты","voornaamwoord","pers","",[["jij","ты"]]],
-  ["1A","0006","дом","zelfst. nw","m","wonen",[["huis","дом"],["thuis","до́ма"],["naar huis","домо́й"]]],
-  ["1A","0007","мама","zelfst. nw","v","familie",[["mama","ма́ма"]]],
-  ["1A","0008","хлеб","zelfst. nw","m","eten",[["brood","хлеб"]]],
-  ["1A","0009","вода","zelfst. nw","v","eten",[["water","вода́"]]],
-  ["1A","0010","большой","bijv. nw","","",[["groot","большо́й"],["een groot huis","большо́й дом"]]],
-  ["1B","0011","хороший","bijv. nw","","",[["goed","хоро́ший"]]],
-  ["1B","0012","ходить","werkwoord","beweging, onregelmatig","",[["gaan (te voet)","ходи́ть"],["vervoeging","хожу́ — хо́дишь — хо́дят"],["ik ga naar school","я хожу́ в шко́лу"]]],
-  ["1B","0013","читать","werkwoord","","",[["lezen","чита́ть"],["vervoeging","чита́ю — чита́ешь — чита́ют"]]],
-  ["1B","0014","говорить","werkwoord","","",[["spreken","говори́ть"]]],
-  ["1B","0015","да","bijwoord","","",[["ja","да"]]],
-  ["1B","0016","нет","bijwoord","","",[["nee","нет"]]],
-  ["2A","0017","спасибо","tussenw.","","beleefd",[["dank je","спаси́бо"]]],
-  ["2A","0018","кто","voornaamwoord","vraag","",[["wie","кто"]]],
-  ["2A","0019","что","voornaamwoord","vraag","",[["wat","что"]]],
-  ["2A","0020","один","telwoord","","",[["één","оди́н"]]]
+  ["A1.1","0001","в","voorzetsel","","",[["in","в"],["in de klas","в кла́ссе"]]],
+  ["A1.1","0002","и","voegwoord","","",[["en","и"]]],
+  ["A1.1","0003","не","partikel","","",[["niet","не"],["ik weet niet","я не зна́ю"]]],
+  ["A1.1","0004","я","voornaamwoord","pers","",[["ik","я"]]],
+  ["A1.1","0005","ты","voornaamwoord","pers","",[["jij","ты"]]],
+  ["A1.1","0006","дом","zelfst. nw","m","wonen",[["huis","дом"],["thuis","до́ма"],["naar huis","домо́й"]]],
+  ["A1.1","0007","мама","zelfst. nw","v","familie",[["mama","ма́ма"]]],
+  ["A1.1","0008","хлеб","zelfst. nw","m","eten",[["brood","хлеб"]]],
+  ["A1.1","0009","вода","zelfst. nw","v","eten",[["water","вода́"]]],
+  ["A1.1","0010","большой","bijv. nw","","",[["groot","большо́й"],["een groot huis","большо́й дом"]]],
+  ["A1.2","0011","хороший","bijv. nw","","",[["goed","хоро́ший"]]],
+  ["A1.2","0012","ходить","werkwoord","beweging, onregelmatig","",[["gaan (te voet)","ходи́ть"],["vervoeging","хожу́ — хо́дишь — хо́дят"],["ik ga naar school","я хожу́ в шко́лу"]]],
+  ["A1.2","0013","читать","werkwoord","","",[["lezen","чита́ть"],["vervoeging","чита́ю — чита́ешь — чита́ют"]]],
+  ["A1.2","0014","говорить","werkwoord","","",[["spreken","говори́ть"]]],
+  ["A1.2","0015","да","bijwoord","","",[["ja","да"]]],
+  ["A1.2","0016","нет","bijwoord","","",[["nee","нет"]]],
+  ["A2.1","0017","спасибо","tussenw.","","beleefd",[["dank je","спаси́бо"]]],
+  ["A2.1","0018","кто","voornaamwoord","vraag","",[["wie","кто"]]],
+  ["A2.1","0019","что","voornaamwoord","vraag","",[["wat","что"]]],
+  ["A2.1","0020","один","telwoord","","",[["één","оди́н"]]]
 ];
 const sampleRows = () => normalizeRows(SAMPLE.map(([SEG,ID,ENT,CAT,SUB,TAG,p]) => ({ SEG, ID, ENT, CAT, SUB, TAG, pairs: p.map(([q,a]) => ({ q, a })) })));
 /* Required: ID and a first pair. Everything else optional; an empty ENT falls back to A1. */
@@ -553,8 +565,9 @@ function normalizeRows(raw){
     const pairs = (r.pairs || []).filter(p => p && p.q && p.a).map(p => ({ q: String(p.q), a: String(p.a) }));
     const row = {
       ID: String(r.ID ?? "").trim(), CAT: r.CAT || "", SUB: r.SUB || "", TAG: r.TAG ?? r.TAGS ?? "",
-      LVL: toLevel(r.LVL ?? r.LEVEL ?? r.Level ?? r.SEG), pairs
+      LVL: null, Lk: null, pairs
     };
+    const L = parseL(r.L ?? r.LVL ?? r.LEVEL ?? r.Level ?? r.SEG); if (L){ row.LVL = L.text; row.Lk = L.key; }
     row.ENT = r.ENT || (pairs[0] ? pairs[0].a : "");
     if (/^\d{1,3}$/.test(row.ID)) row.ID = row.ID.padStart(4, "0");
     return row;
@@ -660,7 +673,7 @@ function readSheet(buf){
         const pairs = []; for (let i = 1; i <= 10; i++){ const q = get(arr, "Q" + i), a = get(arr, "A" + i); if (q && a) pairs.push({ q, a }); }
         if (!get(arr, "Q1") || !get(arr, "A1")){ skipped++; continue; }
         const row = { ID: String(rows.length + 1).padStart(4, "0"), pairs };
-        const lvl = ("LVL" in map) ? toLevel(arr[map.LVL]) : null; if (lvl !== null) row.LVL = lvl;
+        const L = ("LVL" in map) ? parseL(arr[map.LVL]) : null; if (L) row.L = L.text;
         row.ENT = get(arr, "ENT") || pairs[0].a;
         const cat = get(arr, "CAT"), sub = get(arr, "SUB"), tag = get(arr, "TAG");
         if (cat) row.CAT = cat; if (sub) row.SUB = sub; if (tag) row.TAG = tag;
@@ -673,10 +686,10 @@ function readSheet(buf){
 }
 /* The sheet out: the curator's layout, every cell as Text, so it comes back in unchanged. File name = the key. */
 function sheetOut(l){
-  const H = ["LVL", "ENT", "CAT", "SUB", "TAG"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
+  const H = ["ENT", "CAT", "SUB", "TAG", "L"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
   const aoa = [H];
   for (const r of l.rows){
-    const arr = [r.LVL ?? null, r.ENT || null, r.CAT || null, r.SUB || null, r.TAG || null];
+    const arr = [r.ENT || null, r.CAT || null, r.SUB || null, r.TAG || null, r.LVL ?? null];
     for (let i = 0; i < 10; i++){ const p = r.pairs[i]; arr.push(p ? p.q : null, p ? p.a : null); }
     aoa.push(arr);
   }
@@ -750,34 +763,35 @@ function saveView(){
   try { localStorage.setItem(VIEW_KEY(viewKey), JSON.stringify({ lvl: lvlText, q: qText })); } catch {}
 }
 
-/* ── Level field: "7", "40-45", "1-12", "12-"; empty = the whole range ── */
+/* ── Level field: "A1", "A1.3", "A1-A2", "A1.2-A1.5", "-B1", "B1-" (or numbers: "2", "2-4");
+   a band alone covers all its units; empty = the whole list ── */
 function parseLevel(t){
-  const s = String(t || "").replace(/[–—]/g, "-").trim();
+  const s = String(t || "").replace(/[–—]/g, "-").replace(/\s+/g, "");
   if (!s) return null;
-  let m;
-  if ((m = s.match(/^(\d+)$/))) return { lo: +m[1], hi: +m[1] };
-  if ((m = s.match(/^(\d+)\s+(\d+)$/)) || (m = s.match(/^(\d*)\s*-\s*(\d*)$/))){
-    if (!m[1] && !m[2]) return "bad";
-    let lo = m[1] ? +m[1] : -Infinity, hi = m[2] ? +m[2] : Infinity;
-    if (lo > hi) [lo, hi] = [hi, lo];
-    return { lo, hi };
-  }
-  return "bad";
+  const end = (x, hi) => { const L = parseL(x); if (!L) return null; return L.unit === null ? L.rank * 1000 + (hi ? 999 : 0) : L.key; };
+  const m = s.match(/^([^-]*)-([^-]*)$/);
+  if (!m){ const lo = end(s, false), hi = end(s, true); return lo === null ? "bad" : { lo, hi }; }
+  if (!m[1] && !m[2]) return "bad";
+  let lo = m[1] ? end(m[1], false) : -Infinity, hi = m[2] ? end(m[2], true) : Infinity;
+  if (lo === null || hi === null) return "bad";
+  if (lo > hi){ lo = m[2] ? end(m[2], false) : -Infinity; hi = m[1] ? end(m[1], true) : Infinity; }
+  return { lo, hi };
 }
+/* The first and last level among these rows, as text. */
 function levelSpan(rows){
-  let lo = Infinity, hi = -Infinity;
-  for (const r of rows) if (r.LVL != null){ if (r.LVL < lo) lo = r.LVL; if (r.LVL > hi) hi = r.LVL; }
-  return lo === Infinity ? null : { lo, hi };
+  let lo = null, hi = null;
+  for (const r of rows) if (r.Lk != null){ if (!lo || r.Lk < lo.Lk) lo = r; if (!hi || r.Lk > hi.Lk) hi = r; }
+  return lo ? { lo: lo.LVL, hi: hi.LVL } : null;
 }
 
-/* ── Columns: LVL | NL | LA | CAT | SUB | TAG | RS (phone: the first three) ── */
+/* ── Columns: NL | LA | CAT | SUB | TAG | L | RS (phone: the first two) ── */
 const COLS = [
-  { k:"LVL", label:T.colLVL, cls:"lvl hide-s", th:"hide-s", w:"7%" },
   { k:"Q1",  label:T.colQ,   w:"25%", ws:"50%" },
   { k:"A1",  label:T.colA,   cls:"b ru", w:"25%", ws:"50%" },
   { k:"CAT", label:T.colCAT, cls:"hide-s", th:"hide-s", w:"14%" },
   { k:"SUB", label:T.colSUB, cls:"hide-s", th:"hide-s", w:"12%" },
   { k:"TAG", label:T.colTAG, cls:"hide-s", th:"hide-s", w:"11%" },
+  { k:"LVL", label:T.colL,   cls:"lvl hide-s", th:"hide-s", w:"7%" },
   { k:"RS",  label:T.colRS,  cls:"rs hide-s", th:"c hide-s", w:"6%" }
 ];
 const isSmall = () => window.matchMedia("(max-width:640px)").matches;
@@ -786,7 +800,7 @@ function setCols(ws){
   for (const w of ws){ const c = document.createElement("col"); if (w) c.style.width = w; cg.appendChild(c); }
 }
 function sortVal(r, k, pool){
-  if (k === "LVL") return r.LVL ?? Infinity;
+  if (k === "LVL") return r.Lk ?? Infinity;
   if (k === "RS") return pool[r.ID] || 0;
   if (k === "Q1") return r.pairs[0].q;
   if (k === "A1") return r.pairs[0].a;
@@ -803,8 +817,8 @@ function vocabOf(rows){
   return v;
 }
 function matcherFor(rows){
-  const range = parseLevel(lvlText);
-  const lvlOk = (range && range !== "bad") ? (r => r.LVL != null && r.LVL >= range.lo && r.LVL <= range.hi) : () => true;
+  const range = levelSpan(rows) ? parseLevel(lvlText) : null;   // a list without levels ignores a stale Level field
+  const lvlOk = (range && range !== "bad") ? (r => r.Lk != null && r.Lk >= range.lo && r.Lk <= range.hi) : () => true;
   let textOk = () => true;
   if (query){
     textOk = vocabOf(rows).has(query)
@@ -857,7 +871,7 @@ function fillCell(td, r, k, pool){
   td.title = ts.join(", ");
 }
 /* Row unfold. PC: ID, ENT (the curator's references), then the other pairs.
-   Phone: a small table of what the columns hide — LVL | CAT | SUB | TAG | RS, heads above
+   Phone: a small table of what the columns hide — CAT | SUB | TAG | L | RS, heads above
    values, CAT/SUB/TAG tappable as on a PC — then the other pairs. No ID, no ENT. */
 function detailRow(r, pool, span){
   const tr = document.createElement("tr"); tr.className = "detail";
@@ -867,14 +881,14 @@ function detailRow(r, pool, span){
     const cell = (cls, kids) => { const d = document.createElement("div"); d.className = cls; kids.forEach(k => d.appendChild(typeof k === "string" ? document.createTextNode(k) : k)); return d; };
     const tapsOr = vals => vals.length ? vals.map(v => tapSpan(v, v, "tag")) : ["·"];
     const cols = [
-      [T.colLVL, [r.LVL != null ? String(r.LVL) : "·"]],
       [T.colCAT, tapsOr(r.CAT ? [r.CAT] : [])],
       [T.colSUB, tapsOr(toks(r.SUB))],
       [T.colTAG, tapsOr(toks(r.TAG))],
+      [T.colL,   [r.LVL != null ? String(r.LVL) : "·"]],
       [T.colRS,  [pool[r.ID] === undefined ? "·" : String(pool[r.ID])]]
     ];
     cols.forEach(([h]) => g.appendChild(cell("dg-h", [h])));
-    cols.forEach(([, v], i) => g.appendChild(cell("dg-v" + (i === 0 || i === 4 ? " dg-n" : ""), v)));
+    cols.forEach(([, v], i) => g.appendChild(cell("dg-v" + (i >= 3 ? " dg-n" : ""), v)));
     td.appendChild(g);
   } else {
     const meta = document.createElement("div"); meta.className = "det-meta";
@@ -927,10 +941,8 @@ function renderList(){
     // The line under the heading: which levels, how many words.
     let lv = "";
     if (span){
-      if (range && range !== "bad"){
-        const lo = Math.max(range.lo, span.lo), hi = Math.min(range.hi, span.hi);
-        lv = lo > hi ? T.levelOne(lvlText.trim()) : lo === hi ? T.levelOne(lo) : T.levelSpan(lo, hi);
-      } else lv = span.lo === span.hi ? T.levelOne(span.lo) : T.levelSpan(span.lo, span.hi);
+      const sp = range && range !== "bad" ? levelSpan(rows) : span;
+      lv = !sp ? T.levelOne(lvlText.trim()) : sp.lo === sp.hi ? T.levelOne(sp.lo) : T.levelSpan(sp.lo, sp.hi);
     }
     const since = l.own ? ownSince(viewKey) : "";
     $("sub").textContent = [lv, nWords(rows.length), l.own ? (since ? T.onDeviceSince(since) : T.onDevice) : ""].filter(Boolean).join(" · ");
@@ -1234,10 +1246,13 @@ function restoreDeck(rows){
 function renderCard(){
   paintCounter();
   const card = $("card"), text = $("cardText"), tag = $("cardTag");
+  const dots = $("cardDots"); dots.innerHTML = "";
   if (deckDone){ card.classList.add("done"); tag.textContent = ""; text.textContent = T.deckDone; text.className = "card-text a"; return; }
   card.classList.remove("done");
   if (!pipe.length){ tag.textContent = ""; text.textContent = "…"; return; }
   const s = cur(), f = s.row.pairs[s.fi], c = (s.row.CAT || "").toUpperCase(), sub = (s.row.SUB || "").trim().toUpperCase();
+  // Going horizontally: one dot per pair of this word.
+  if (s.row.pairs.length > 1) s.row.pairs.forEach((_, i) => { const d = document.createElement("i"); d.className = i < s.fi ? "done" : i === s.fi ? "now" : ""; dots.appendChild(d); });
   tag.textContent = sub ? c + " · " + sub : c;
   const showQ = !showingA || peeking;
   text.textContent = showQ ? f.q : f.a; text.className = "card-text " + (showQ ? "q" : "a");
