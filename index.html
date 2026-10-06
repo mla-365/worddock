@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.21 ─────────────────────────────────────────
+/* ── WordDock — v0.21.1 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -368,7 +368,8 @@ const T = {
   words: n => n + (n === 1 ? " word" : " words"),
   lists: n => n + (n === 1 ? " list" : " lists"),
   levelOne: n => "Level " + n, levelSpan: (lo, hi) => "Level " + lo + "–" + hi,
-  onDevice: "on this device", noMatches: "No matches.", loading: "Loading…", nothingYet: "Nothing here yet.",
+  onDevice: "on this device", onDeviceSince: d => "on this device since " + d,
+  months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], noMatches: "No matches.", loading: "Loading…", nothingYet: "Nothing here yet.",
   allLists: "All lists", toList: "To the list", showAll: v => "Show all “" + v + "”",
   noOtherPairs: "No other pairs.", sample: " · sample data",
   colQ: "Q", colA: "A", colLVL: "LVL", colCAT: "CAT", colSUB: "SUB", colTAG: "TAG", colRS: "RS", colID: "ID", colENT: "ENT",
@@ -604,6 +605,12 @@ function removeOwn(key){
   delete LISTS[key]; clearPool(key);
   try { localStorage.removeItem(VIEW_KEY(key)); } catch {}
   if (activeKey === key){ activeKey = null; pipe = []; deckScore = 0; deckDone = false; deckStarted = false; try { localStorage.removeItem(LIST_KEY); localStorage.removeItem(DECK_KEY); } catch {} }
+}
+/* The day a My list was imported (or last replaced): "6 Oct 2026". Months from T, so no locale surprises. */
+function ownSince(key){
+  const w = (readOwn()[key] || {}).when; if (!w) return "";
+  const d = new Date(w); if (isNaN(d)) return "";
+  return d.getDate() + " " + T.months[d.getMonth()] + " " + d.getFullYear();
 }
 function knownCount(key){
   const l = LISTS[key]; if (l && l.rows) return l.rows.length;
@@ -913,7 +920,8 @@ function renderList(){
         lv = lo > hi ? T.levelOne(lvlText.trim()) : lo === hi ? T.levelOne(lo) : T.levelSpan(lo, hi);
       } else lv = span.lo === span.hi ? T.levelOne(span.lo) : T.levelSpan(span.lo, span.hi);
     }
-    $("sub").textContent = [lv, nWords(rows.length), l.own ? T.onDevice : ""].filter(Boolean).join(" · ");
+    const since = l.own ? ownSince(viewKey) : "";
+    $("sub").textContent = [lv, nWords(rows.length), l.own ? (since ? T.onDeviceSince(since) : T.onDevice) : ""].filter(Boolean).join(" · ");
     if (sortKey) rows = [...rows].sort((x, y) => {
       const a = sortVal(x, sortKey, pool), b = sortVal(y, sortKey, pool);
       const c = (typeof a === "number" && typeof b === "number") ? a - b : String(a).localeCompare(String(b));
@@ -971,7 +979,9 @@ function renderSection(id, lists, unit){
     const tr = document.createElement("tr"); const n = knownCount(l.key);
     const tdN = document.createElement("td"); tdN.className = "b"; tdN.textContent = l.key;
     const tdW = document.createElement("td"); tdW.className = "id"; tdW.textContent = n ?? "·";
-    const tdS = document.createElement("td"); tdS.className = "now"; tdS.textContent = l.key === activeKey ? T.studyingNow : "";
+    const tdS = document.createElement("td"); tdS.className = "now";
+    if (l.key === activeKey) tdS.textContent = T.studyingNow;
+    else if (l.own){ tdS.textContent = ownSince(l.key); tdS.classList.add("dim"); }
     const tdA = document.createElement("td"); tdA.className = "act";
     if (l.rows){ const b = document.createElement("button"); b.className = "ib"; b.textContent = "↓"; b.title = T.excelOut(l.key);
       b.addEventListener("click", e => { e.stopPropagation(); exportList(l.key); }); tdA.appendChild(b); }
