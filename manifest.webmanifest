@@ -1,7 +1,7 @@
 {
   "name": "WordDock",
   "short_name": "WordDock",
-  "description": "Spaced-repetition vocabulary study. Your progress stays in your browser.",
+  "description": "WordDock is a web-based language learning tool: study published word lists or build your own.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

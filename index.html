@@ -3,7 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WordDock</title>
+<title>WordDock · Web-based language learning tool</title>
+<meta name="description" content="WordDock is a web-based language learning tool: study published word lists or build your own.">
+<!-- Link previews (WhatsApp, LinkedIn, mail) -->
+<meta property="og:title" content="WordDock · Web-based language learning tool">
+<meta property="og:description" content="Study published word lists or build your own, in any language pair.">
+<meta property="og:url" content="https://worddock.app/">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://worddock.app/">
+<!-- Structured data: tells search engines what WordDock is -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "WordDock",
+  "url": "https://worddock.app/",
+  "description": "Web-based language learning tool",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Any",
+  "inLanguage": "en"
+}
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#ffffff">
 <meta name="mobile-web-app-capable" content="yes">
@@ -11,7 +31,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.19.1 ─────────────────────────────────────────
+/* ── WordDock — v0.19.2 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on

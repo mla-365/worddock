@@ -1,0 +1,3 @@
+User-agent: *
+Disallow: /index_v26.html
+Disallow: /convert.html
