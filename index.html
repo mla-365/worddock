@@ -10,6 +10,10 @@
 <meta property="og:description" content="Study published word lists or build your own, in any language pair.">
 <meta property="og:url" content="https://worddock.app/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://worddock.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="WordDock · Web-based language learning tool">
 <link rel="canonical" href="https://worddock.app/">
 <!-- Structured data: tells search engines what WordDock is -->
 <script type="application/ld+json">
@@ -31,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.20 ─────────────────────────────────────────
+/* ── WordDock — v0.21 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -140,7 +144,11 @@ tr.detail td{white-space:normal;padding:2px 10px 14px;border-bottom:.5px solid v
 .det-pairs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:20px;row-gap:3px;font-size:14px}
 .det-pairs .dq{color:var(--q)}.det-pairs .da{font-weight:500}
 .det-none{color:var(--muted);font-size:13px}
-.det-tags{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.det-grid{display:grid;grid-template-columns:auto max-content minmax(0,1fr) minmax(0,1fr) auto;column-gap:10px;row-gap:3px;margin:2px 0 10px;align-items:start}
+.dg-h{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.02em}
+.dg-v{display:flex;flex-wrap:wrap;gap:4px;min-width:0;font-size:13px;color:var(--sec)}
+.dg-v .tag{background:var(--bg);white-space:normal}
+.dg-n{font-family:var(--mono);font-size:12px}
 
 /* ── LISTS: three zones — WD lists on top, My lists in the middle, the door in at the bottom ── */
 .cat{display:none;max-width:920px;margin:0 auto;padding:0 1.25rem;min-height:calc(100vh - 52px);min-height:calc(100dvh - 52px);
@@ -424,11 +432,15 @@ const T = {
   // <em>, <code>, <a>); a translation replaces the strings and keeps the tags.
   aboutLink: "About WordDock", aboutHeading: "About", aboutBack: "Back to the topics",
   aboutTopics: [
+    { id: "idea", title: "The idea", paras: [
+      "WordDock is a web-based language learning tool: study our published lists or build your own, in any language pair.",
+      "It always gives you your weakest words first, until they aren't weak any more. No streaks, no pressure, just steady progress." ] },
     { id: "studying", title: "Studying", paras: [
       "Enter or the space bar shows the answer; press it again to give the grade <em>Good</em> for the answer you had in mind, wrote down or said out loud. Tapping the card flips between Q and A. If your answer was wrong, tap <em>Again</em>.",
       "A deck is complete after ten clean passes, and the next deck is drawn from your lowest-scoring words." ] },
     { id: "progress", title: "Progress", paras: [
-      "Each time you complete a deck, the scores are updated in the list, in the RS column. A word counts as mastered once its score reaches 10." ] },
+      "Each time you complete a deck, the scores are updated in the list, in the RS column. A word counts as mastered once its score reaches 10.",
+      "Your scores live in this browser. Lose the browser and you lose them, unless sync is on: then your key brings them back on any device." ] },
     { id: "devices", title: "Devices and sync", paras: [
       "Your scores live in your browser, on your device. Sync makes a copy in the cloud under a random key - no account, no email, no password. Enter the same key on another device and both show the same progress, possibly with a small delay. Scores travel in both directions: a word you struggled with on your phone stays a word to repeat on your laptop.",
       "Your key is your way back. Lose your phone or wipe your browser? Enter your key on any device and your progress returns. Keep it somewhere outside your devices - written down, or in a message to yourself.",
@@ -825,26 +837,30 @@ function fillCell(td, r, k, pool){
   ts.forEach((t, i) => { if (i) td.appendChild(document.createTextNode("\u2009")); td.appendChild(tapSpan(t, t, "tag")); });
   td.title = ts.join(", ");
 }
-/* Row unfold: ID, ENT, then the other pairs. On a phone also what the columns hide. */
+/* Row unfold. PC: ID, ENT (the curator's references), then the other pairs.
+   Phone: a small table of what the columns hide — LVL | CAT | SUB | TAG | RS, heads above
+   values, CAT/SUB/TAG tappable as on a PC — then the other pairs. No ID, no ENT. */
 function detailRow(r, pool, span){
   const tr = document.createElement("tr"); tr.className = "detail";
   const td = document.createElement("td"); td.colSpan = span;
-  const meta = document.createElement("div"); meta.className = "det-meta";
-  const bits = [[T.colID, r.ID], [T.colENT, r.ENT || "·"]];
   if (isSmall()){
-    if (r.LVL != null) bits.unshift([T.colLVL, r.LVL]);
-    bits.push([T.colRS, pool[r.ID] === undefined ? "·" : pool[r.ID]]);
-  }
-  bits.forEach(([k, v]) => { const b = document.createElement("b"); b.textContent = (k ? k + " " : "") + v; meta.appendChild(b); });
-  td.appendChild(meta);
-  // Phone: the columns CAT, SUB, TAG live here, and a tap filters on the value, as on a PC.
-  if (isSmall()){
-    const vals = [r.CAT, ...toks(r.SUB), ...toks(r.TAG)].filter(Boolean);
-    if (vals.length){
-      const t = document.createElement("div"); t.className = "det-tags";
-      vals.forEach(v => t.appendChild(tapSpan(v, v, "tag")));
-      td.appendChild(t);
-    }
+    const g = document.createElement("div"); g.className = "det-grid";
+    const cell = (cls, kids) => { const d = document.createElement("div"); d.className = cls; kids.forEach(k => d.appendChild(typeof k === "string" ? document.createTextNode(k) : k)); return d; };
+    const tapsOr = vals => vals.length ? vals.map(v => tapSpan(v, v, "tag")) : ["·"];
+    const cols = [
+      [T.colLVL, [r.LVL != null ? String(r.LVL) : "·"]],
+      [T.colCAT, tapsOr(r.CAT ? [r.CAT] : [])],
+      [T.colSUB, tapsOr(toks(r.SUB))],
+      [T.colTAG, tapsOr(toks(r.TAG))],
+      [T.colRS,  [pool[r.ID] === undefined ? "·" : String(pool[r.ID])]]
+    ];
+    cols.forEach(([h]) => g.appendChild(cell("dg-h", [h])));
+    cols.forEach(([, v], i) => g.appendChild(cell("dg-v" + (i === 0 || i === 4 ? " dg-n" : ""), v)));
+    td.appendChild(g);
+  } else {
+    const meta = document.createElement("div"); meta.className = "det-meta";
+    [[T.colID, r.ID], [T.colENT, r.ENT || "·"]].forEach(([k, v]) => { const b = document.createElement("b"); b.textContent = k + " " + v; meta.appendChild(b); });
+    td.appendChild(meta);
   }
   const rest = r.pairs.slice(1);
   if (rest.length){
