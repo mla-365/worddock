@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.22.1 ─────────────────────────────────────────
+/* ── WordDock — v0.22.2 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -218,9 +218,9 @@ body.studying .top{position:relative;z-index:30}
   box-shadow:0 10px 36px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:center;
   padding:28px 40px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;
   transition:background-color .2s,border-color .2s;user-select:none}
-/* The pairs of one word, as dots just above the counter: done · current · still to come.
-   Only for a word with more than one pair; the row keeps its height, so the counter never jumps. */
-.card-dots{display:flex;justify-content:center;gap:6px;height:6px}
+/* The pairs of one word, as dots just under Again / Good: done · current · still to come.
+   Only for a word with more than one pair; the row keeps its height, so nothing jumps. */
+.card-dots{display:flex;justify-content:center;gap:6px;height:6px;margin-top:14px}
 .card-dots i{width:6px;height:6px;border-radius:50%;border:1px solid var(--line2);box-sizing:border-box}
 .card-dots i.done{background:var(--line2)}
 .card-dots i.now{background:var(--muted);border-color:var(--muted)}
@@ -257,13 +257,14 @@ body.studying .top{position:relative;z-index:30}
    buttons are centred in the room between the top line (52px) and the counter (~40px), and
    the card shrinks with that room, never below 80px and never above 150px. */
 @media (max-height:500px){
-  .study-block{top:calc(52px + (100dvh - 104px) / 2)}
-  .card{height:clamp(80px, calc(100dvh - 176px), 150px);padding:10px 24px}
+  .study-block{top:calc(52px + (100dvh - 92px) / 2)}
+  .card{height:clamp(80px, calc(100dvh - 180px), 150px);padding:10px 24px}
+  .card-dots{margin-top:8px}
   .card-tag{top:6px;font-size:10px}
   .card-text{font-size:22px}
   .actions{margin-top:8px}
   .btn{height:38px}
-  .pos{padding:6px 0 8px;gap:4px}
+  .pos{padding:6px 0 8px}
 }
 @media (max-width:640px){
   .top{padding:12px 12px 0}
@@ -351,6 +352,7 @@ body.studying .top{position:relative;z-index:30}
       <button class="btn btn-again" id="btnAgain" data-t="again"></button>
       <button class="btn btn-good" id="btnGood" data-t="good"></button>
     </div>
+    <div class="card-dots" id="cardDots" aria-hidden="true"></div>
   </div>
 </section>
 
@@ -1024,7 +1026,6 @@ function renderSection(id, lists, unit){
 function renderPos(){
   const pos = $("pos"); pos.innerHTML = "";
   if (level === "study"){
-    const d = document.createElement("div"); d.className = "card-dots"; d.id = "cardDots"; d.setAttribute("aria-hidden", "true"); pos.appendChild(d);
     const s = document.createElement("span"); s.id = "deckCount"; pos.appendChild(s); paintCounter();
   }
 }
