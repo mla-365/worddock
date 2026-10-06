@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.22.2 ─────────────────────────────────────────
+/* ── WordDock — v0.22.3 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -224,6 +224,13 @@ body.studying .top{position:relative;z-index:30}
 .card-dots i{width:6px;height:6px;border-radius:50%;border:1px solid var(--line2);box-sizing:border-box}
 .card-dots i.done{background:var(--line2)}
 .card-dots i.now{background:var(--muted);border-color:var(--muted)}
+/* A new word: the top-right corner of the card lifts a little, like a page being turned,
+   and lies flat again. Not on the next pair of the same word. Skipped for reduced motion. */
+.card::before{content:"";position:absolute;top:-1px;right:-1px;width:0;height:0;border-top-right-radius:18px;pointer-events:none;
+  background:linear-gradient(225deg,var(--bg) 0 50%,#d9d8d0 50% calc(50% + 1px),#efeee8 calc(50% + 1px) 100%);border-bottom-left-radius:3px}
+.card.turn::before{animation:turn .7s ease-out}
+@keyframes turn{0%{width:0;height:0}35%{width:26px;height:26px}100%{width:0;height:0}}
+@media (prefers-reduced-motion:reduce){.card.turn::before{animation:none}}
 .card-tag{position:absolute;top:16px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
 .card-text{font-size:28px;text-align:center;white-space:pre-line;word-break:break-word;max-height:100%;overflow-y:auto}
 .card-text.q{color:var(--q)}.card-text.a{color:var(--fg)}
@@ -1246,6 +1253,8 @@ function restoreDeck(rows){
   deckScore = countClean();
   return true;
 }
+let lastShownRow = null;
+$("card").addEventListener("animationend", () => $("card").classList.remove("turn"));
 function renderCard(){
   paintCounter();
   const card = $("card"), text = $("cardText"), tag = $("cardTag");
@@ -1254,6 +1263,11 @@ function renderCard(){
   card.classList.remove("done");
   if (!pipe.length){ tag.textContent = ""; text.textContent = "…"; return; }
   const s = cur(), f = s.row.pairs[s.fi], c = (s.row.CAT || "").toUpperCase(), sub = (s.row.SUB || "").trim().toUpperCase();
+  // A new word on the card (another row than the last one shown): turn the corner once.
+  if (s.row !== lastShownRow){
+    if (lastShownRow){ card.classList.remove("turn"); void card.offsetWidth; card.classList.add("turn"); }
+    lastShownRow = s.row;
+  }
   // Going horizontally: one dot per pair of this word.
   if (s.row.pairs.length > 1) s.row.pairs.forEach((_, i) => { const d = document.createElement("i"); d.className = i < s.fi ? "done" : i === s.fi ? "now" : ""; dots.appendChild(d); });
   tag.textContent = sub ? c + " · " + sub : c;
