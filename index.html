@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.24.2 ─────────────────────────────────────────
+/* ── WordDock — v0.25 ───────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -48,6 +48,7 @@
    table) · LISTS (three zones: Published WD Lists, My Lists on this device,
    the door in: + Add a list from an Excel sheet) · About ("About WordDock" on the
    bottom line of LISTS opens it: a rail of topics, the chosen topic's text; "All lists", Esc or back returns).
+   A link can open a WD list: worddock.app/?list=NL-LA lands on its table (read once at the boot, then wiped).
    Engine from v26.98 except the finish line. Writes RS only at deck completion. */
 :root{
   --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
@@ -1770,14 +1771,27 @@ setTimeout(bootDone, 5000);                      // a safety net: never stay hid
   // A reload keeps the screen the user was on (the browser keeps history.state across a
   // reload); a fresh open (new tab, the app icon) has no state and lands on the card.
   const back = history.state && history.state.wd && history.state.level !== "study" ? history.state : null;
+  // A link with a list in it — worddock.app/?list=NL-LA — opens that WD list's table and makes
+  // it the current list. The note is read once and wiped from the address bar, so a reload or
+  // a bookmark behaves as always. An unknown name is ignored. (The same trick serves ?key= later.)
+  let linked = null;
+  try {
+    const p = new URLSearchParams(location.search), raw = p.get("list");
+    if (raw !== null){
+      const k = canonKey(raw); if (WD_KEYS.includes(k)) linked = k;
+      p.delete("list"); const qs = p.toString();
+      history.replaceState(history.state, "", location.pathname + (qs ? "?" + qs : "") + location.hash);
+    }
+  } catch {}
   applyT();
   loadOwn();
   let wanted = null; try { wanted = localStorage.getItem(LIST_KEY); } catch {}
-  wanted = canonKey(wanted || (WD_KEYS.includes(FIRST_OPEN) ? FIRST_OPEN : WD_KEYS[0]));
+  wanted = canonKey(linked || wanted || (WD_KEYS.includes(FIRST_OPEN) ? FIRST_OPEN : WD_KEYS[0]));
   activeKey = wanted;
   let l = await ensureList(wanted);
   if (activeKey !== wanted){ wanted = activeKey; l = getList(wanted); }   // published wins: the copy moved to -OWN
   if (!l.rows && wanted !== WD_KEYS[0]){ wanted = WD_KEYS[0]; l = await ensureList(wanted); }
+  if (linked && wanted !== linked) linked = null;                          // the linked list didn't load: a normal open
   if (usingSample) document.title += T.sample;
   if (!l.rows){ activeKey = null; viewKey = wanted; level = "list"; show(); try { history.replaceState(navState(), ""); } catch {} syncCatchUp(); startSyncPullTimer(); bootDone(); return; }
   activeKey = wanted; viewKey = wanted;
@@ -1791,6 +1805,7 @@ setTimeout(bootDone, 5000);                      // a safety net: never stay hid
   syncPush();                                   // settle any debt, after the pull
   startSyncPullTimer();
   level = "list";
+  if (linked){ goList(linked, true); try { history.replaceState(navState(), ""); } catch {} bootDone(); return; }   // a link lands on the table, Study one tap away
   if (back){ resumeScreen(back); bootDone(); return; }
   try { history.replaceState(navState(), ""); } catch {}
   enterStudy();
