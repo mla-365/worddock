@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.23 ─────────────────────────────────────────
+/* ── WordDock — v0.23.1 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -156,12 +156,15 @@ tr.detail td{white-space:normal;padding:2px 10px 14px;border-bottom:.5px solid v
 body.cataloging .cat{display:grid}
 body.cataloging .wrap{display:none}
 .zone-mid{align-self:start;padding:2.75rem 0 1.25rem}   /* a fixed step under the WD lists, not centred in what is left */
-.zone-mid .add-row{display:flex;align-items:center;gap:8px;margin:0 0 .6rem}
+/* The Excel door: a dashed box with a faint green tint at the end of the My lists it feeds;
+   the whole box opens the file picker, the ? at its right opens the help. */
+.add-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:.9rem 0 0;padding:13px 16px;cursor:pointer;
+  border:1px dashed var(--line2);border-radius:12px;background:color-mix(in srgb,var(--green) 4%,transparent)}
+.add-row:hover{background:color-mix(in srgb,var(--green) 7%,transparent);border-color:var(--green2)}
 /* The ? beside the Excel line: a small round grey button, quiet until hovered. */
 .help{width:22px;height:22px;border-radius:50%;border:.5px solid var(--line2);background:none;color:var(--muted);font-size:13px;line-height:1;padding:0;cursor:pointer}
 .help:hover{color:var(--fg);border-color:var(--sec)}
-.cols-dl{display:grid;grid-template-columns:max-content 1fr;column-gap:12px;row-gap:4px;margin:0 0 14px;font-size:13px;color:var(--sec)}
-.cols-dl b{font-family:var(--mono);font-weight:500;font-size:12px;color:var(--fg)}
+
 .zone-bot{padding:.75rem 0 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 /* Sync: one small grey line at the bottom of LISTS; tap opens the dialog. */
 .sync-line{background:none;border:none;padding:6px 0;color:var(--muted);font-size:12px;cursor:pointer}
@@ -180,11 +183,12 @@ body.cataloging .wrap{display:none}
 .sec-h{font-size:20px;font-weight:600;margin:.5rem 0 0;line-height:1.3}
 .cat .controls{margin:.7rem 0 .25rem}
 .cat tbody tr{cursor:pointer}
+.cat col.c-n{width:14%}.cat col.c-s{width:22%}.cat col.c-a{width:14%}   /* words · status · ↓ × */
 td.act{text-align:right;white-space:nowrap}
 .ib{background:none;border:none;color:var(--sec);font-size:16px;line-height:1;cursor:pointer;padding:3px 7px;border-radius:7px}
 .ib:hover{background:var(--line);color:var(--fg)}
 .ib.x{font-size:15px;color:var(--muted)}
-.add{background:none;border:none;padding:6px 0;color:var(--green2);font-weight:500;font-size:14px;cursor:pointer}
+.add{background:none;border:none;padding:0;color:var(--green2);font-weight:500;font-size:15px;cursor:pointer;text-align:left}
 .add:hover{text-decoration:underline;text-underline-offset:3px}
 .dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px}
 .dlg input:focus{outline:none;border-color:var(--accent)}
@@ -282,6 +286,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .hide-s{display:none}
   input[type=search]{min-width:0;flex:1 1 150px}
   .study-btn{margin-left:0;flex:1 1 100%}   /* phone: Study always gets its own full line */
+  .cat col.c-n{width:36px}.cat col.c-s{width:104px}.cat col.c-a{width:76px}   /* room for "studying now", the date, and ↓ × */
   .card{height:200px;padding:24px 22px}
   .card-text{font-size:24px}
   .about{padding-left:12px;padding-right:12px}
@@ -324,19 +329,19 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
       <input type="search" id="wdQ" data-t-ph="search" data-t-aria="searchWdAria" autocomplete="off" spellcheck="false">
       <span class="pager"><button id="wdPrev" data-t-aria="prevPage">&#8249;</button><span class="count" id="wdCount"></span><button id="wdNext" data-t-aria="nextPage">&#8250;</button></span>
     </div>
-    <table><colgroup><col><col style="width:14%"><col style="width:22%"><col style="width:14%"></colgroup><tbody id="wdBody"></tbody></table>
+    <table><colgroup><col><col class="c-n"><col class="c-s"><col class="c-a"></colgroup><tbody id="wdBody"></tbody></table>
     <div class="empty" id="wdEmpty" hidden data-t="noMatches"></div>
   </section>
   <section class="zone-mid" id="secMy">
-    <div class="add-row"><button class="add" id="btnAdd" data-t="add"></button><button class="help" id="btnHelp" data-t-aria="excelHelpAria">?</button></div>
     <h2 class="sec-h" data-t="myHeading"></h2>
     <p class="sub" id="mySub"></p>
     <div class="controls" id="myCtl">
       <input type="search" id="myQ" data-t-ph="search" data-t-aria="searchMyAria" autocomplete="off" spellcheck="false">
       <span class="pager"><button id="myPrev" data-t-aria="prevPage">&#8249;</button><span class="count" id="myCount"></span><button id="myNext" data-t-aria="nextPage">&#8250;</button></span>
     </div>
-    <table><colgroup><col><col style="width:14%"><col style="width:22%"><col style="width:14%"></colgroup><tbody id="myBody"></tbody></table>
+    <table><colgroup><col><col class="c-n"><col class="c-s"><col class="c-a"></colgroup><tbody id="myBody"></tbody></table>
     <div class="empty" id="myEmpty" hidden data-t="noMatches"></div>
+    <div class="add-row" id="addRow"><button class="add" id="btnAdd" data-t="add"></button><button class="help" id="btnHelp" data-t-aria="excelHelpAria">?</button></div>
   </section>
   <section class="zone-bot">
     <button class="sync-line" id="syncLine"></button>
@@ -377,7 +382,6 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
     <button class="sync-x" id="helpX" data-t-aria="close">&times;</button>
     <h3 data-t="excelHelpTitle"></h3>
     <p class="sync-desc" data-t="excelHelp1"></p>
-    <div class="cols-dl" id="helpCols"></div>
     <p class="sync-desc" data-t="excelHelp2"></p>
     <div class="dlg-actions sync-actions"><button class="dlg-cancel" id="helpClose" data-t="close"></button><button class="dlg-ok" id="helpTpl" data-t="excelTemplate"></button></div>
   </div>
@@ -436,10 +440,16 @@ const T = {
   removeQ: k => "Remove " + k + " from this device?", progressGoes: "Its progress goes too.", remove: "Remove",
   // the Excel door: the ? beside the line
   excelHelpAria: "How to make a sheet", excelHelpTitle: "A list from an Excel sheet",
-  excelHelp1: "Name the columns in the first row, in any order. Only Q1 and A1 are required in a row; the rest may stay empty.",
-  excelCols: [["ENT", "the word itself (empty: A1 is taken)"], ["CAT", "word class"], ["SUB", "what the word is: m, f, irregular …"],
-    ["TAG", "where it belongs: a theme, a text …"], ["L", "level: A1 … C2, or A1.3 for a unit"], ["Q1 A1", "question and answer; Q2 … A10: more sides of the same word"]],
-  excelHelp2: "The file name becomes the list name, in capitals: NL-LA-Test.xlsx → NL-LA-TEST. The template has two rows: the shortest possible, and a full one.",
+  excelHelp1: "Download the template, fill it in, and save it under the name you want for the list: NL-LA-Test.xlsx → NL-LA-TEST. Only Q1 and A1 are required in a row.",
+  excelHelp2: "Try it first as it is: it becomes a two-word list you can study, and remove again with ×.",
+  // the template: a note on each header cell, and the same lines on a second sheet "Read me"
+  tplNotes: { ENT: "the word itself (empty: A1 is taken)", CAT: "word class", SUB: "what the word is: m, f, irregular …", TAG: "where it belongs: a theme, a text …",
+    L: "level: A1 … C2, or A1.3 for a unit", Q1: "the question", A1: "the answer", Q2: "more sides of the same word: a prompt (gen., mv. …)", A2: "… and its answer, up to Q10 · A10" },
+  tplReadme: ["WordDock — a list from an Excel sheet", "", "Name the columns in the first row: ENT · CAT · SUB · TAG · L · Q1 · A1 … Q10 · A10.",
+    "Only Q1 and A1 are required in a row; the rest may stay empty.", "", "@notes", "",
+    "The file name becomes the list name, in capitals: NL-LA-Test.xlsx → NL-LA-TEST.",
+    "Two example rows: the shortest possible (water · aqua), and a full one (rosa, with its ten pairs).",
+    "Try it as it is: it becomes a two-word list you can study, and remove again."],
   excelTemplate: "Download Template.xlsx",
   // sync: the bottom line of LISTS. "Sync is on" claims only what the page knows; a time
   // ("synced just now") would claim that this device is current, which it can't know.
@@ -733,7 +743,10 @@ function templateOut(){
   const ws = XLSX.utils.aoa_to_sheet([H, r1, r2]);
   for (const addr of Object.keys(ws)) if (addr[0] !== "!"){ ws[addr].t = "s"; ws[addr].v = String(ws[addr].v); ws[addr].z = "@"; }
   ws["!cols"] = H.map((h, i) => ({ wch: i < 5 ? 12 : 14 }));
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template");
+  H.forEach((h, i) => { const note = T.tplNotes[h]; if (!note) return; const cell = ws[XLSX.utils.encode_cell({ r: 0, c: i })]; cell.c = [{ a: "WordDock", t: note }]; cell.c.hidden = true; });
+  const readme = []; for (const line of T.tplReadme){ if (line === "@notes") for (const [k, v] of Object.entries(T.tplNotes)) readme.push([k, v]); else readme.push([line]); }
+  const rs = XLSX.utils.aoa_to_sheet(readme); rs["!cols"] = [{ wch: 10 }, { wch: 60 }];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template"); XLSX.utils.book_append_sheet(wb, rs, "Read me");
   XLSX.writeFile(wb, "Template.xlsx");
 }
 async function downloadTemplate(){
@@ -1697,7 +1710,8 @@ function promptDlg(title, body, value){
 $("btnStudy").addEventListener("click", onStudy);
 $("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
 $("syncLine").addEventListener("click", showSyncPanel);
-$("btnHelp").addEventListener("click", showHelp);
+$("btnHelp").addEventListener("click", e => { e.stopPropagation(); showHelp(); });
+$("addRow").addEventListener("click", e => { if (!e.target.closest("#btnAdd")) $("btnAdd").click(); });
 $("helpX").addEventListener("click", hideHelp); $("helpClose").addEventListener("click", hideHelp);
 $("helpBack").addEventListener("click", e => { if (e.target === $("helpBack")) hideHelp(); });
 $("helpTpl").addEventListener("click", downloadTemplate);
@@ -1749,7 +1763,6 @@ document.addEventListener("keydown", e => {
 const bootDone = () => document.body.classList.remove("booting");
 setTimeout(bootDone, 5000);                      // a safety net: never stay hidden
 (async () => {
-  const hc = $("helpCols"); for (const [k, v] of T.excelCols){ const b = document.createElement("b"); b.textContent = k; const d = document.createElement("span"); d.textContent = v; hc.append(b, d); }
   // A reload keeps the screen the user was on (the browser keeps history.state across a
   // reload); a fresh open (new tab, the app icon) has no state and lands on the card.
   const back = history.state && history.state.wd && history.state.level !== "study" ? history.state : null;
