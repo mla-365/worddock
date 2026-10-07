@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.23.1 ─────────────────────────────────────────
+/* ── WordDock — v0.24 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -511,7 +511,9 @@ const T = {
 };
 /* ── WD lists, published on this site: one line. A new WD list = one JSON file (lists/<NAME>.json)
    + its name here. ── */
-const WD_LISTS = ["NL-LA"];
+const WD_LISTS = ["NL-LA", "WORDDOCK"];
+/* A first visit (no list stored on this device) lands in the list that explains WordDock. */
+const FIRST_OPEN = "WORDDOCK";
 /* A list has one name, shown everywhere as it is: letters, digits and hyphens, in capitals
    (NL-RU, NL-LA-LIEVE, BIOLOGY). It names lists/<NAME>.json, the pool wd_rs_<NAME>, the view,
    the heading, the corner, the sheet. When it starts with two language codes, those become
@@ -1769,7 +1771,7 @@ setTimeout(bootDone, 5000);                      // a safety net: never stay hid
   applyT();
   loadOwn();
   let wanted = null; try { wanted = localStorage.getItem(LIST_KEY); } catch {}
-  wanted = canonKey(wanted || WD_KEYS[0]);
+  wanted = canonKey(wanted || (WD_KEYS.includes(FIRST_OPEN) ? FIRST_OPEN : WD_KEYS[0]));
   activeKey = wanted;
   let l = await ensureList(wanted);
   if (activeKey !== wanted){ wanted = activeKey; l = getList(wanted); }   // published wins: the copy moved to -OWN
