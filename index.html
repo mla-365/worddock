@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.24.1 ─────────────────────────────────────────
+/* ── WordDock — v0.24.2 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -999,8 +999,9 @@ function renderList(){
     // The line under the heading: which levels, how many words.
     let lv = "";
     if (span){
-      const sp = range && range !== "bad" ? levelSpan(rows) : span;
-      lv = !sp ? T.levelOne(lvlText.trim()) : sp.lo === sp.hi ? T.levelOne(sp.lo) : T.levelSpan(sp.lo, sp.hi);
+      // The levels of what the table shows (a search narrows them too); nothing shown → the typed level.
+      const sp = rows.length ? levelSpan(rows) : null;
+      lv = sp ? (sp.lo === sp.hi ? T.levelOne(sp.lo) : T.levelSpan(sp.lo, sp.hi)) : (range && range !== "bad" ? T.levelOne(lvlText.trim()) : "");
     }
     const since = l.own ? ownSince(viewKey) : "";
     $("sub").textContent = [lv, nWords(rows.length), l.own ? (since ? T.onDeviceSince(since) : T.onDevice) : ""].filter(Boolean).join(" · ");
