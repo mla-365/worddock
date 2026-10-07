@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.22.5 ─────────────────────────────────────────
+/* ── WordDock — v0.23 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -156,7 +156,12 @@ tr.detail td{white-space:normal;padding:2px 10px 14px;border-bottom:.5px solid v
 body.cataloging .cat{display:grid}
 body.cataloging .wrap{display:none}
 .zone-mid{align-self:start;padding:2.75rem 0 1.25rem}   /* a fixed step under the WD lists, not centred in what is left */
-.zone-mid .add{display:block;margin:0 0 .6rem}
+.zone-mid .add-row{display:flex;align-items:center;gap:8px;margin:0 0 .6rem}
+/* The ? beside the Excel line: a small round grey button, quiet until hovered. */
+.help{width:22px;height:22px;border-radius:50%;border:.5px solid var(--line2);background:none;color:var(--muted);font-size:13px;line-height:1;padding:0;cursor:pointer}
+.help:hover{color:var(--fg);border-color:var(--sec)}
+.cols-dl{display:grid;grid-template-columns:max-content 1fr;column-gap:12px;row-gap:4px;margin:0 0 14px;font-size:13px;color:var(--sec)}
+.cols-dl b{font-family:var(--mono);font-weight:500;font-size:12px;color:var(--fg)}
 .zone-bot{padding:.75rem 0 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 /* Sync: one small grey line at the bottom of LISTS; tap opens the dialog. */
 .sync-line{background:none;border:none;padding:6px 0;color:var(--muted);font-size:12px;cursor:pointer}
@@ -323,7 +328,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
     <div class="empty" id="wdEmpty" hidden data-t="noMatches"></div>
   </section>
   <section class="zone-mid" id="secMy">
-    <button class="add" id="btnAdd" data-t="add"></button>
+    <div class="add-row"><button class="add" id="btnAdd" data-t="add"></button><button class="help" id="btnHelp" data-t-aria="excelHelpAria">?</button></div>
     <h2 class="sec-h" data-t="myHeading"></h2>
     <p class="sub" id="mySub"></p>
     <div class="controls" id="myCtl">
@@ -364,6 +369,17 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   <div class="dlg" role="dialog" aria-modal="true">
     <h3 id="dlgTitle"></h3><p id="dlgBody"></p><input id="dlgInput" hidden autocomplete="off" spellcheck="false">
     <div class="dlg-actions"><button class="dlg-cancel" id="dlgCancel" data-t="cancel"></button><button class="dlg-ok" id="dlgOk" data-t="ok"></button></div>
+  </div>
+</div>
+
+<div class="dlg-back" id="helpBack" hidden>
+  <div class="dlg sync-dlg" role="dialog" aria-modal="true">
+    <button class="sync-x" id="helpX" data-t-aria="close">&times;</button>
+    <h3 data-t="excelHelpTitle"></h3>
+    <p class="sync-desc" data-t="excelHelp1"></p>
+    <div class="cols-dl" id="helpCols"></div>
+    <p class="sync-desc" data-t="excelHelp2"></p>
+    <div class="dlg-actions sync-actions"><button class="dlg-cancel" id="helpClose" data-t="close"></button><button class="dlg-ok" id="helpTpl" data-t="excelTemplate"></button></div>
   </div>
 </div>
 
@@ -418,6 +434,13 @@ const T = {
   replace: "Replace", addQ: k => "Add " + k + " to this device?", addBtn: "Add",
   cantKeep: "Could not keep this list", noRoom: "This browser has no room left for it.",
   removeQ: k => "Remove " + k + " from this device?", progressGoes: "Its progress goes too.", remove: "Remove",
+  // the Excel door: the ? beside the line
+  excelHelpAria: "How to make a sheet", excelHelpTitle: "A list from an Excel sheet",
+  excelHelp1: "Name the columns in the first row, in any order. Only Q1 and A1 are required in a row; the rest may stay empty.",
+  excelCols: [["ENT", "the word itself (empty: A1 is taken)"], ["CAT", "word class"], ["SUB", "what the word is: m, f, irregular …"],
+    ["TAG", "where it belongs: a theme, a text …"], ["L", "level: A1 … C2, or A1.3 for a unit"], ["Q1 A1", "question and answer; Q2 … A10: more sides of the same word"]],
+  excelHelp2: "The file name becomes the list name, in capitals: NL-LA-Test.xlsx → NL-LA-TEST. The template has two rows: the shortest possible, and a full one.",
+  excelTemplate: "Download Template.xlsx",
   // sync: the bottom line of LISTS. "Sync is on" claims only what the page knows; a time
   // ("synced just now") would claim that this device is current, which it can't know.
   keepSafe: "Keep progress safe", syncOn: "Sync is on", notSynced: "Not synced — will retry",
@@ -701,6 +724,23 @@ function sheetOut(l){
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, l.key.slice(0, 31));
   XLSX.writeFile(wb, l.key + ".xlsx");
 }
+/* The template: the header row, the shortest legitimate row (Q1 + A1 only), and a full one. */
+function templateOut(){
+  const H = ["ENT", "CAT", "SUB", "TAG", "L"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
+  const r1 = [null, null, null, null, null, "water", "aqua"];
+  const r2 = ["rosa", "subst", "f", "tuin, natuur", "A1.1", "roos", "rosa", "gen.", "rosae", "dat.", "rosae", "acc.", "rosam", "abl.", "rosā",
+    "nom. mv.", "rosae", "gen. mv.", "rosārum", "dat. mv.", "rosīs", "acc. mv.", "rosās", "abl. mv.", "rosīs"];
+  const ws = XLSX.utils.aoa_to_sheet([H, r1, r2]);
+  for (const addr of Object.keys(ws)) if (addr[0] !== "!"){ ws[addr].t = "s"; ws[addr].v = String(ws[addr].v); ws[addr].z = "@"; }
+  ws["!cols"] = H.map((h, i) => ({ wch: i < 5 ? 12 : 14 }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template");
+  XLSX.writeFile(wb, "Template.xlsx");
+}
+async function downloadTemplate(){
+  try { await loadXLSX(); templateOut(); } catch (e) { await confirmDlg(T.noWriter, e.message, T.ok, T.close); }
+}
+function showHelp(){ $("helpBack").hidden = false; }
+function hideHelp(){ $("helpBack").hidden = true; }
 async function exportList(key){
   const l = getList(key); if (!l.rows) return;
   try { await loadXLSX(); sheetOut(l); } catch (e) { await confirmDlg(T.noWriter, e.message, T.ok, T.close); }
@@ -1657,6 +1697,10 @@ function promptDlg(title, body, value){
 $("btnStudy").addEventListener("click", onStudy);
 $("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
 $("syncLine").addEventListener("click", showSyncPanel);
+$("btnHelp").addEventListener("click", showHelp);
+$("helpX").addEventListener("click", hideHelp); $("helpClose").addEventListener("click", hideHelp);
+$("helpBack").addEventListener("click", e => { if (e.target === $("helpBack")) hideHelp(); });
+$("helpTpl").addEventListener("click", downloadTemplate);
 $("syncX").addEventListener("click", hideSyncPanel);
 $("syncBack").addEventListener("click", e => { if (e.target === $("syncBack")) hideSyncPanel(); });
 $("fileIn").addEventListener("change", () => { const f = $("fileIn").files[0]; if (f) importSheet(f); });
@@ -1684,6 +1728,7 @@ $("btnAgain").addEventListener("click", e => { gradeAgain(); e.currentTarget.blu
 document.addEventListener("keydown", e => {
   if (!$("dlgBack").hidden) return;
   if (!$("syncBack").hidden){ if (e.key === "Escape") hideSyncPanel(); return; }
+  if (!$("helpBack").hidden){ if (e.key === "Escape") hideHelp(); return; }
   if (level === "about"){ if (e.key === "Escape"){ e.preventDefault(); closeAbout(); } return; }
   if (level !== "study"){
     if (document.activeElement && ["INPUT","SELECT"].includes(document.activeElement.tagName)) return;
@@ -1704,6 +1749,7 @@ document.addEventListener("keydown", e => {
 const bootDone = () => document.body.classList.remove("booting");
 setTimeout(bootDone, 5000);                      // a safety net: never stay hidden
 (async () => {
+  const hc = $("helpCols"); for (const [k, v] of T.excelCols){ const b = document.createElement("b"); b.textContent = k; const d = document.createElement("span"); d.textContent = v; hc.append(b, d); }
   // A reload keeps the screen the user was on (the browser keeps history.state across a
   // reload); a fresh open (new tab, the app icon) has no state and lands on the card.
   const back = history.state && history.state.wd && history.state.level !== "study" ? history.state : null;
