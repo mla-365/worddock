@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.22.4 ─────────────────────────────────────────
+/* ── WordDock — v0.22.5 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -218,12 +218,13 @@ body.studying .top{position:relative;z-index:30}
   box-shadow:0 10px 36px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:center;
   padding:28px 40px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;
   transition:background-color .2s,border-color .2s;user-select:none}
-/* The pairs of one word, as dots just under Again / Good: done · current · still to come.
-   Only for a word with more than one pair; the row keeps its height, so nothing jumps. */
-.card-dots{display:flex;justify-content:center;gap:6px;height:6px;margin-top:14px}
-.card-dots i{width:6px;height:6px;border-radius:50%;border:1px solid var(--line2);box-sizing:border-box}
-.card-dots i.done{background:var(--line2)}
-.card-dots i.now{background:var(--muted);border-color:var(--muted)}
+/* An elaboration pair (the 2nd, 3rd … pair of a word): this card lies on top of the lemma's
+   card, whose edge peeks out above it — one edge on the 2nd pair, two from the 3rd on. It says
+   "same word, deeper", nothing more. Static and soft: a short fade in, nothing else moves. */
+.card::before,.card::after{content:"";position:absolute;left:8px;right:8px;top:-5px;height:40px;background:#fff;
+  border:1px solid var(--line2);border-radius:16px;z-index:-1;opacity:0;transition:opacity .25s;pointer-events:none}
+.card::after{top:-10px;left:16px;right:16px;border-color:var(--line)}
+.card.s1::before,.card.s2::after{opacity:1}
 /* While the page starts, the list surfaces stay hidden: no flash of the list before the card. */
 body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 .card-tag{position:absolute;top:16px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
@@ -260,8 +261,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
    the card shrinks with that room, never below 80px and never above 150px. */
 @media (max-height:500px){
   .study-block{top:calc(52px + (100dvh - 92px) / 2)}
-  .card{height:clamp(80px, calc(100dvh - 180px), 150px);padding:10px 24px}
-  .card-dots{margin-top:8px}
+  .card{height:clamp(80px, calc(100dvh - 164px), 150px);padding:10px 24px}
   .card-tag{top:6px;font-size:10px}
   .card-text{font-size:22px}
   .actions{margin-top:8px}
@@ -354,7 +354,6 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
       <button class="btn btn-again" id="btnAgain" data-t="again"></button>
       <button class="btn btn-good" id="btnGood" data-t="good"></button>
     </div>
-    <div class="card-dots" id="cardDots" aria-hidden="true"></div>
   </div>
 </section>
 
@@ -1251,13 +1250,13 @@ function restoreDeck(rows){
 function renderCard(){
   paintCounter();
   const card = $("card"), text = $("cardText"), tag = $("cardTag");
-  const dots = $("cardDots") || document.createElement("div"); dots.innerHTML = "";
+  card.classList.remove("s1", "s2");
   if (deckDone){ card.classList.add("done"); tag.textContent = ""; text.textContent = T.deckDone; text.className = "card-text a"; return; }
   card.classList.remove("done");
   if (!pipe.length){ tag.textContent = ""; text.textContent = "…"; return; }
   const s = cur(), f = s.row.pairs[s.fi], c = (s.row.CAT || "").toUpperCase(), sub = (s.row.SUB || "").trim().toUpperCase();
-  // Going horizontally: one dot per pair of this word.
-  if (s.row.pairs.length > 1) s.row.pairs.forEach((_, i) => { const d = document.createElement("i"); d.className = i < s.fi ? "done" : i === s.fi ? "now" : ""; dots.appendChild(d); });
+  // An elaboration pair: the lemma's card(s) peek out above this one.
+  card.classList.toggle("s1", s.fi >= 1); card.classList.toggle("s2", s.fi >= 2);
   tag.textContent = sub ? c + " · " + sub : c;
   const showQ = !showingA || peeking;
   text.textContent = showQ ? f.q : f.a; text.className = "card-text " + (showQ ? "q" : "a");
