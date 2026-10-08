@@ -20,6 +20,6 @@ Live app: **[worddock.app](https://worddock.app)**
 
 Copyright © 2026 The WordDock authors.
 
-The WordDock app is free software, released under the GNU Affero General Public License v3.0 (AGPL-3.0) — see [LICENSE](LICENSE) for details.
+The WordDock app is free software, released under the GNU Affero General Public License v3.0 (AGPL-3.0) - see [LICENSE](LICENSE) for details.
 
 Word lists published in this repository are dedicated to the public domain under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), unless a list states otherwise.
