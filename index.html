@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.25 ───────────────────────────────────────────
+/* ── WordDock — v0.25.1 ─────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -49,6 +49,7 @@
    the door in: + Add a list from an Excel sheet) · About ("About WordDock" on the
    bottom line of LISTS opens it: a rail of topics, the chosen topic's text; "All lists", Esc or back returns).
    A link can open a WD list: worddock.app/?list=NL-LA lands on its table (read once at the boot, then wiped).
+   Sync and the service worker run on the live site only (LIVE_HOSTS): a copy on another address has neither.
    Engine from v26.98 except the finish line. Writes RS only at deck completion. */
 :root{
   --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
@@ -1341,11 +1342,15 @@ function generateSyncKey(){
 function formatSyncKey(raw){ return raw.slice(0,4) + "-" + raw.slice(4,8); }
 function normalizeSyncKey(input){ return (input || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
 function isValidSyncKey(raw){ return raw.length === SYNC_KEY_LEN && [...raw].every(c => KEY_ALPHABET.includes(c)); }
-function getSyncKey(){ try { return localStorage.getItem(SYNC_KEY_STORE) || null; } catch { return null; } }
+function getSyncKey(){ if (!SYNC_API) return null; try { return localStorage.getItem(SYNC_KEY_STORE) || null; } catch { return null; } }
 function setSyncKey(raw){ try { localStorage.setItem(SYNC_KEY_STORE, raw); } catch {} }
 function clearSyncKey(){ try { localStorage.removeItem(SYNC_KEY_STORE); } catch {} }
 
-const SYNC_API = "https://sync.worddock.app";
+/* Sync exists on the live site only. Any other address — a beta copy, a local test — has no sync:
+   no key (getSyncKey is null), no push, no pull, no sync line; nothing reaches the worker. */
+const LIVE_HOSTS = ["worddock.app", "www.worddock.app"];
+const IS_LIVE = LIVE_HOSTS.includes(location.hostname);
+const SYNC_API = IS_LIVE ? "https://sync.worddock.app" : "";
 const SYNC_DIRTY_KEY = "wd_sync_dirty";     // "1" while a finished deck is unpushed
 const SYNC_LASTPUSH_KEY = "wd_sync_lastpush";
 const SYNC_PULL_INTERVAL = 60 * 60 * 1000;  // hourly, foreground only
@@ -1682,6 +1687,7 @@ function hideSyncPanel(){ $("syncBack").hidden = true; }
    after a request that got no answer. */
 function renderSyncLine(){
   const a = $("syncLine"); if (!a) return;
+  if (!SYNC_API){ a.hidden = true; return; }
   if (!getSyncKey()){ a.textContent = T.keepSafe; a.classList.remove("fail"); return; }
   a.classList.toggle("fail", syncFailed);
   a.textContent = syncFailed ? T.notSynced : T.syncOn;
@@ -1822,7 +1828,7 @@ function resumeScreen(s){
 <script>
 /* Register the service worker (sw.js): what makes WordDock installable and openable
    with no connection. Copied from v26.98: after 'load', silent on failure. */
-if ("serviceWorker" in navigator){
+if ("serviceWorker" in navigator && IS_LIVE){   // the live site only: a copy elsewhere runs without one
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   });
