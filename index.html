@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.25.1 ─────────────────────────────────────────
+/* ── WordDock — v0.26 ───────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -43,9 +43,9 @@
              A list has one name, shown everywhere: NL-RU, NL-LA-LIEVE.
    · view  = what the table shows: a level range and a word, per list.
    · deck  = the ten lowest-RS words of the view; finish line: all ten clean.
-   Surfaces: study (card + Again / Good, the name in the corner is the door
-   into the list) · list (heading with ▾, search · Level · pager · Study, the
-   table) · LISTS (three zones: Published WD Lists, My Lists on this device,
+   Surfaces: study (card + Again / Good; the pale pill at the top is the door
+   into the list) · list ("All lists" top-left, the green pill = Study, heading,
+   search · Level · pager, the table) · LISTS (three zones: Published WD Lists, My Lists on this device,
    the door in: + Add a list from an Excel sheet) · About ("About WordDock" on the
    bottom line of LISTS opens it: a rail of topics, the chosen topic's text; "All lists", Esc or back returns).
    A link can open a WD list: worddock.app/?list=NL-LA lands on its table (read once at the boot, then wiped).
@@ -104,11 +104,26 @@ input[type=search].on{border-color:var(--fg)}
 .pager button:hover:not([disabled]){background:var(--card);color:var(--fg)}
 .pager button[disabled]{color:var(--line2);cursor:default}
 .pager button[hidden]{display:none}
-.study-btn{height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:14px;
-  font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.study-btn:hover{background:var(--green2)}
-.study-btn[disabled]{opacity:.4;cursor:default}
-.study-btn[hidden]{display:none}
+/* The pill: one button on the top line, the same place in both modes — a coin with two sides.
+   List side: the Study button ("Study 10 · NL-LA", "Resume …"; disabled when the view is empty).
+   Card side: the coin turned over, pale ("Studying 10 · NL-LA"): tap = to the list. A hover tilts it
+   (pointer devices only), the flip takes .6 s, none with reduced motion. The flip follows the
+   state (body.studying), so a cancelled dialog never flips it. */
+.pillw{position:absolute;left:50%;top:8px;transform:translateX(-50%);height:36px;max-width:calc(100% - 200px);padding:0;
+  border:none;background:none;perspective:600px;cursor:pointer;font:inherit;color:#fff}
+.pillw[hidden]{display:none}
+.pillw[disabled]{opacity:.4;cursor:default}
+.flip{display:grid;height:100%;max-width:100%;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.4,1.4,.5,1)}
+.face{grid-area:1/1;min-width:0;display:block;height:36px;line-height:36px;padding:0 16px;border-radius:8px;background:var(--green);
+  font-size:14px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backface-visibility:hidden}
+.f-card{transform:rotateX(180deg);background:color-mix(in srgb,var(--green) 42%,#fff)}
+.pillw:not([disabled]):hover .f-list{background:var(--green2)}
+body.studying .flip{transform:rotateX(180deg)}
+@media (hover:hover){
+  .pillw:not([disabled]):hover .flip{transform:rotateX(-20deg)}
+  body.studying .pillw:hover .flip{transform:rotateX(160deg)}
+}
+@media (prefers-reduced-motion:reduce){ .flip{transition:none} }
 table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
 td,th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tbody tr{height:38px}
@@ -287,7 +302,8 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .h{font-size:20px}.sec-h{font-size:18px}
   .hide-s{display:none}
   input[type=search]{min-width:0;flex:1 1 150px}
-  .study-btn{margin-left:0;flex:1 1 100%}   /* phone: Study always gets its own full line */
+  .pillw{left:auto;right:12px;transform:none;max-width:calc(100% - 136px)}   /* phone, list: to the right of "All lists" */
+  body.studying .pillw{left:50%;right:auto;transform:translateX(-50%);max-width:calc(100% - 100px)}
   .cat col.c-n{width:36px}.cat col.c-s{width:104px}.cat col.c-a{width:76px}   /* room for "studying now", the date, and ↓ × */
   .card{height:200px;padding:24px 22px}
   .card-text{font-size:24px}
@@ -308,6 +324,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 <header class="top">
   <div class="mark badge" aria-hidden="true">W</div>
   <div class="top-in"><nav class="crumbs" id="crumbs"></nav></div>
+  <button class="pillw" id="pill" hidden><span class="flip"><span class="face f-list" id="pillList"></span><span class="face f-card" id="pillCard"></span></span></button>
 </header>
 
 <main class="wrap" id="listSurface">
@@ -317,7 +334,6 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
     <input type="search" id="q" data-t-ph="search" data-t-aria="search" autocomplete="off" spellcheck="false">
     <label class="lvl-f" id="lvlBox"><span data-t="level"></span><input type="search" id="lvl" data-t-aria="levelAria" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
     <span class="pager"><button id="pgPrev" data-t-aria="prevPage">&#8249;</button><span class="count" id="count"></span><button id="pgNext" data-t-aria="nextPage">&#8250;</button></span>
-    <button class="study-btn" id="btnStudy" data-t="study"></button>
   </div>
   <table id="table"><colgroup id="cols"></colgroup><thead id="thead"></thead><tbody id="tbody"></tbody></table>
   <div class="empty" id="empty" hidden data-t="noMatches"></div>
@@ -421,7 +437,7 @@ const T = {
   excelOut: k => "Excel: " + k + ".xlsx", removeHere: "Remove from this device",
   // study
   deckDone: "One More WordDeck Done!",
-  studyN: (n, k) => "Study " + T.words(n) + " · " + k, studyK: k => "Study " + k,
+  studyN: (n, k) => "Study " + n + " · " + k, studyK: k => "Study " + k, studying: (n, k) => "Studying " + n + " · " + k,
   resume: (k, s, n) => "Resume " + k + " · " + s + "/" + n,
   switchQ: k => "Switch to studying " + k + "?", leaving: k => "You're leaving " + k + ".",
   unfinished: " Unfinished decks lose progress.", keepStudying: k => "Keep studying " + k,
@@ -895,8 +911,7 @@ const visibleRows = () => { const rows = viewRows(); if (!rows) return []; const
 function renderCrumbs(){
   const c = $("crumbs"); c.innerHTML = "";
   const b = document.createElement("button"); b.className = "crumb";
-  if (level === "study" && activeKey){ b.textContent = activeKey; b.title = T.toList; b.addEventListener("click", () => goList(activeKey)); }
-  else if (level === "list"){ b.textContent = T.allLists; b.addEventListener("click", () => goCatalog()); }
+  if (level === "list"){ b.textContent = T.allLists; b.addEventListener("click", () => goCatalog()); }
   else if (level === "about"){ b.textContent = T.allLists; b.addEventListener("click", () => closeAbout()); }
   else return;
   c.appendChild(b);
@@ -971,7 +986,6 @@ function renderList(){
   renderHeading();
   let pages = 1, total = 0;
   const l = getList(viewKey), rowsAll = viewRows();
-  $("btnStudy").hidden = false;
   if (!rowsAll){
     $("lvlBox").hidden = true;
     $("sub").textContent = "";
@@ -1094,12 +1108,12 @@ function paintCounter(){ const el = $("deckCount"); if (el) el.textContent = dec
 /* ── The Study action: studies what the table shows ── */
 const midDeck = () => deckStarted && !deckDone;
 function renderStudyBtn(){
-  const b = $("btnStudy"), t = viewKey;
+  const b = $("pill"), f = $("pillList"), t = viewKey;
   const vis = visibleRows();
   b.disabled = !vis.length;
-  if (!vis.length){ b.textContent = T.studyK(t); return; }
-  if (viewKey === activeKey && midDeck() && sigOf(vis) === deckSig) b.textContent = T.resume(t, deckScore, pipe.length);
-  else b.textContent = T.studyN(vis.length, t);
+  const resume = viewKey === activeKey && midDeck() && sigOf(vis) === deckSig, n = resume ? pipe.length : Math.min(DECK_SIZE, vis.length);
+  f.textContent = !vis.length ? T.studyK(t) : resume ? T.resume(t, deckScore, pipe.length) : T.studyN(n, t);   // the deck's size, not the view's
+  $("pillCard").textContent = T.studying(n, t);   // the back face is written too: the coin keeps one width through the flip
 }
 async function onStudy(){
   const src = visibleRows(); if (!src.length) return;
@@ -1128,8 +1142,15 @@ function pushNav(fromPop){
   if (h && h.wd && h.level === s.level && h.k === s.k) return;
   try { history.pushState(s, ""); } catch {}
 }
+/* The pill follows the level: list → the Study button's text and state; study → "Studying n · list". */
+function renderPill(){
+  const b = $("pill");
+  if (level === "list"){ b.hidden = false; b.title = ""; renderStudyBtn(); return; }
+  if (level === "study" && activeKey){ b.hidden = false; b.disabled = false; b.title = T.toList; $("pillCard").textContent = T.studying(pipe.length, activeKey); return; }
+  b.hidden = true;
+}
 function show(){
-  renderCrumbs();
+  renderCrumbs(); renderPill();
   document.body.classList.toggle("cataloging", level === "catalog");
   if (level === "study") renderPos(); else render();
 }
@@ -1718,7 +1739,7 @@ function promptDlg(title, body, value){
 }
 
 /* ── Input ── */
-$("btnStudy").addEventListener("click", onStudy);
+$("pill").addEventListener("click", () => { if (level === "study") goList(activeKey); else onStudy(); });
 $("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
 $("syncLine").addEventListener("click", showSyncPanel);
 $("btnHelp").addEventListener("click", e => { e.stopPropagation(); showHelp(); });
