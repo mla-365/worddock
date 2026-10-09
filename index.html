@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.26.1 ─────────────────────────────────────────
+/* ── WordDock — v0.27 ───────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -43,11 +43,13 @@
              A list has one name, shown everywhere: NL-RU, NL-LA-LIEVE.
    · view  = what the table shows: a level range and a word, per list.
    · deck  = the ten lowest-RS words of the view; finish line: all ten clean.
-   Surfaces: study (card + Again / Good; the top line, centred: W + the list's name, the door
-   into the list) · list (heading with ▾, search · Level · pager · Study, the
-   table) · LISTS (three zones: Published WD Lists, My Lists on this device,
-   the door in: + Add a list from an Excel sheet) · About ("About WordDock" on the
-   bottom line of LISTS opens it: a rail of topics, the chosen topic's text; "All lists", Esc or back returns).
+   Two places. The WORK is the list being studied, with two faces: the card (Again / Good,
+   the counter "NL-LA · 3/10" on the top line) and the table (heading, search · Level · pager);
+   the toggle Study | List on the bottom bar switches faces. The SHELF is everything else:
+   LISTS (Published WD Lists, My Lists on this device, the Excel door, the sync line; the green
+   button Resume / Study leads back to the work) and About, a drawer of the shelf ("About
+   WordDock" on its bottom line). The W top-left is the only door to the shelf; on the shelf
+   it rests (from About it leads back to LISTS). Esc and the browser's back work as before.
    A link can open a WD list: worddock.app/?list=NL-LA lands on its table (read once at the boot, then wiped).
    Sync and the service worker run on the live site only (LIVE_HOSTS): a copy on another address has neither.
    Engine from v26.98 except the finish line. Writes RS only at deck completion. */
@@ -63,22 +65,32 @@ body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSyst
 button,select,input{font-family:inherit}
 
 /* ── top line: the W; in study the list's title, small and regular ── */
-/* The top line: the W and the door (the list's name on the card, "All lists" on the list) sit together in
-   the centre, where the eye is — not in the corner (v0.26.1). */
-.top{height:52px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 16px}
-.top-in{display:flex;align-items:center;min-width:0;max-width:calc(100% - 40px)}
-.mark{flex:none;user-select:none}
+/* The top line: the W, top-left, is the door to the shelf (LISTS) from the work and from About; on
+   LISTS it rests. On the card the counter sits in the middle of this line. */
+.top{position:relative;height:52px}
+.mark{position:absolute;left:16px;top:14px;user-select:none;border:none;padding:0;cursor:pointer}
 .mark.badge{width:24px;height:24px;border-radius:7px;background:var(--green);color:#fff;display:flex;align-items:center;
   justify-content:center;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:15px}
-/* The W is the door to About (and back out of it). */
-.crumbs{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap}
-/* The door from study into the list: the list's title, nothing more. */
-.crumb{background:none;border:none;padding:3px 8px;border-radius:6px;color:var(--fg);cursor:pointer;font-size:13px;line-height:1.4;
-  overflow:hidden;text-overflow:ellipsis}
-.crumb:hover{background:var(--card)}
+.mark:hover{background:var(--green2)}
+body.cataloging .mark{cursor:default}body.cataloging .mark:hover{background:var(--green)}
+/* The bottom bar of the work: the toggle Study | List, the same spot on both faces. The filled half
+   is where you are; the other half is the way to the other face. Nothing moves. */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:40;height:56px;display:flex;justify-content:center;align-items:center;
+  background:var(--bg);padding-bottom:env(safe-area-inset-bottom)}
+.bar[hidden]{display:none}
+.seg{height:34px;min-width:88px;padding:0 18px;border:1px solid var(--green);background:#fff;color:var(--green);font-size:14px;
+  font-weight:600;cursor:pointer}
+.seg:first-child{border-radius:8px 0 0 8px}
+.seg:last-child{border-radius:0 8px 8px 0;border-left:none}
+.seg:hover{background:color-mix(in srgb,var(--green) 8%,#fff)}
+.seg.on,.seg.on:hover{background:var(--green);color:#fff;cursor:default}
+.seg[disabled]{opacity:.4;cursor:default}
+/* The shelf's way back to the work: Resume NL-LA · 3/10, on the heading line of LISTS. */
+.cat{position:relative}
+.cat-study{position:absolute;right:1.25rem;top:0;margin:0}
 
 /* ── list surface ── */
-.wrap{max-width:920px;margin:0 auto;padding:.25rem 1.25rem 1.5rem}
+.wrap{max-width:920px;margin:0 auto;padding:.25rem 1.25rem 4.5rem}
 .h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3}
 .h button{background:none;border:none;padding:2px 8px;margin-left:-8px;border-radius:8px;font:inherit;color:inherit;cursor:pointer;text-align:left}
 .h button:hover{background:var(--card)}
@@ -107,7 +119,7 @@ input[type=search].on{border-color:var(--fg)}
 .pager button[disabled]{color:var(--line2);cursor:default}
 .pager button[hidden]{display:none}
 .study-btn{height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:14px;
-  font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .study-btn:hover{background:var(--green2)}
 .study-btn[disabled]{opacity:.4;cursor:default}
 .study-btn[hidden]{display:none}
@@ -253,8 +265,8 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 .btn-again:hover{background:#fbf2f2}.btn-good:hover{background:#f1f8f1}
 
 /* ── bottom line: the counter, only in study ── */
-.pos{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;
-  padding:10px 0 16px;font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--bg);pointer-events:none}
+.pos{position:fixed;left:56px;right:56px;top:0;height:52px;z-index:40;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;
+  padding:0;font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--bg);pointer-events:none}
 .pos:empty{display:none}
 .pos > *{pointer-events:auto}
 
@@ -273,21 +285,19 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
    buttons are centred in the room between the top line (52px) and the counter (~40px), and
    the card shrinks with that room, never below 80px and never above 150px. */
 @media (max-height:500px){
-  .study-block{top:calc(52px + (100dvh - 92px) / 2)}
-  .card{height:clamp(80px, calc(100dvh - 164px), 150px);padding:10px 24px}
+  .study-block{top:calc(52px + (100dvh - 108px) / 2)}
+  .card{height:clamp(80px, calc(100dvh - 180px), 150px);padding:10px 24px}
   .card-tag{top:6px;font-size:10px}
   .card-text{font-size:22px}
   .actions{margin-top:8px}
   .btn{height:38px}
-  .pos{padding:6px 0 8px}
 }
 @media (max-width:640px){
-  .top{padding:0 12px}
+  .mark{left:12px}
   .wrap,.cat{padding-left:12px;padding-right:12px}
   .h{font-size:20px}.sec-h{font-size:18px}
   .hide-s{display:none}
   input[type=search]{min-width:0;flex:1 1 150px}
-  .study-btn{margin-left:0;flex:1 1 100%}   /* phone: Study always gets its own full line */
   .cat col.c-n{width:36px}.cat col.c-s{width:104px}.cat col.c-a{width:76px}   /* room for "studying now", the date, and ↓ × */
   .card{height:200px;padding:24px 22px}
   .card-text{font-size:24px}
@@ -306,8 +316,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 <body class="booting">
 
 <header class="top">
-  <div class="mark badge" aria-hidden="true">W</div>
-  <div class="top-in"><nav class="crumbs" id="crumbs"></nav></div>
+  <button class="mark badge" id="wBtn" data-t-aria="wAria">W</button>
 </header>
 
 <main class="wrap" id="listSurface">
@@ -317,13 +326,13 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
     <input type="search" id="q" data-t-ph="search" data-t-aria="search" autocomplete="off" spellcheck="false">
     <label class="lvl-f" id="lvlBox"><span data-t="level"></span><input type="search" id="lvl" data-t-aria="levelAria" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
     <span class="pager"><button id="pgPrev" data-t-aria="prevPage">&#8249;</button><span class="count" id="count"></span><button id="pgNext" data-t-aria="nextPage">&#8250;</button></span>
-    <button class="study-btn" id="btnStudy" data-t="study"></button>
   </div>
   <table id="table"><colgroup id="cols"></colgroup><thead id="thead"></thead><tbody id="tbody"></tbody></table>
   <div class="empty" id="empty" hidden data-t="noMatches"></div>
 </main>
 
 <main class="cat" id="catalog">
+  <button class="study-btn cat-study" id="catStudy" hidden></button>
   <section class="zone-top" id="secWd">
     <h2 class="sec-h" data-t="wdHeading"></h2>
     <p class="sub" id="wdSub"></p>
@@ -370,6 +379,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 </section>
 
 <footer class="pos" id="pos"></footer>
+<nav class="bar" id="bar" hidden><button class="seg" id="segStudy" data-t="segStudy"></button><button class="seg" id="segList" data-t="segList"></button></nav>
 <input type="file" id="fileIn" accept=".xlsx,.xlsm,.xls,.csv" hidden>
 
 <div class="dlg-back" id="dlgBack" hidden>
@@ -413,7 +423,7 @@ const T = {
   levelOne: n => "Level " + n, levelSpan: (lo, hi) => "Level " + lo + "–" + hi,
   onDevice: "on this device", onDeviceSince: d => "on this device since " + d,
   months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], noMatches: "No matches.", loading: "Loading…", nothingYet: "Nothing here yet.",
-  allLists: "All lists", toList: "To the list", showAll: v => "Show all “" + v + "”",
+  wAria: "All lists", segStudy: "Study", segList: "List", showAll: v => "Show all “" + v + "”",
   noOtherPairs: "No other pairs.", sample: " · sample data",
   colQ: "Q", colA: "A", colL: "L", colCAT: "CAT", colSUB: "SUB", colTAG: "TAG", colRS: "RS", colID: "ID", colENT: "ENT",
   // LISTS
@@ -421,7 +431,7 @@ const T = {
   excelOut: k => "Excel: " + k + ".xlsx", removeHere: "Remove from this device",
   // study
   deckDone: "One More WordDeck Done!",
-  studyN: (n, k) => "Study " + T.words(n) + " · " + k, studyK: k => "Study " + k,
+  studyK: k => "Study " + k,
   resume: (k, s, n) => "Resume " + k + " · " + s + "/" + n,
   switchQ: k => "Switch to studying " + k + "?", leaving: k => "You're leaving " + k + ".",
   unfinished: " Unfinished decks lose progress.", keepStudying: k => "Keep studying " + k,
@@ -541,7 +551,7 @@ function fitPage(){
   const first = tb.querySelector("tr:not(.detail)");
   const rowH = first ? first.getBoundingClientRect().height : ROW_H;
   const top = tb.getBoundingClientRect().top + window.scrollY;
-  const n = Math.floor((window.innerHeight - top - 24) / rowH);
+  const n = Math.floor((window.innerHeight - top - 24 - 56) / rowH);   // the bottom bar
   const next = Math.max(5, Math.min(20, n));
   if (next !== PAGE){ const f = page * PAGE; PAGE = next; page = Math.floor(f / PAGE); return true; }
   return false;
@@ -892,21 +902,26 @@ const visibleRows = () => { const rows = viewRows(); if (!rows) return []; const
 /* ── Top line: in study, the list's title = the door into the list; otherwise nothing ── */
 /* The top line is the way one level up: on the card the list's name (→ the list),
    in the list "All lists" (→ LISTS). LISTS is the top: nothing. */
-function renderCrumbs(){
-  const c = $("crumbs"); c.innerHTML = "";
-  const b = document.createElement("button"); b.className = "crumb";
-  if (level === "study" && activeKey){ b.textContent = activeKey; b.title = T.toList; b.addEventListener("click", () => goList(activeKey)); }
-  else if (level === "list"){ b.textContent = T.allLists; b.addEventListener("click", () => goCatalog()); }
-  else if (level === "about"){ b.textContent = T.allLists; b.addEventListener("click", () => closeAbout()); }
-  else return;
-  c.appendChild(b);
+/* The gates. The bottom bar shows on the two faces of the work; the filled half is the face you are on,
+   the other half is greyed when there is nothing to study (an empty view). On LISTS the green
+   button leads back to the deck in progress. */
+function renderBar(){
+  const onCard = level === "study", work = onCard || level === "list";
+  $("bar").hidden = !work;
+  if (work){
+    $("segStudy").classList.toggle("on", onCard); $("segList").classList.toggle("on", !onCard);
+    $("segStudy").disabled = !onCard && !visibleRows().length;
+  }
+  const cs = $("catStudy");
+  if (level === "catalog" && activeKey && getList(activeKey).rows){ cs.hidden = false; cs.textContent = midDeck() ? T.resume(activeKey, deckScore, pipe.length) : T.studyK(activeKey); }
+  else cs.hidden = true;
 }
 
 /* ── The list surface ── */
 const listKeys = () => [...new Set([...WD_KEYS, ...Object.keys(LISTS).filter(k => LISTS[k].own)])];
 function renderHeading(){
   const h = $("h"); h.innerHTML = "";
-  h.textContent = viewKey;          // just the name: the way up is "All lists" on the top line
+  h.textContent = viewKey;          // just the name
 }
 function paged(rows){
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
@@ -971,7 +986,6 @@ function renderList(){
   renderHeading();
   let pages = 1, total = 0;
   const l = getList(viewKey), rowsAll = viewRows();
-  $("btnStudy").hidden = false;
   if (!rowsAll){
     $("lvlBox").hidden = true;
     $("sub").textContent = "";
@@ -1026,7 +1040,7 @@ function renderList(){
       if (openId === r.ID) tbody.appendChild(detailRow(r, pool, shown));
     }
   }
-  renderStudyBtn();
+  renderBar();
   renderPager(pages, total);
   renderPos();
   if (fitPage()) renderList();
@@ -1089,18 +1103,10 @@ function renderPos(){
     const s = document.createElement("span"); s.id = "deckCount"; pos.appendChild(s); paintCounter();
   }
 }
-function paintCounter(){ const el = $("deckCount"); if (el) el.textContent = deckScore + "/" + pipe.length + (deckDone ? " ✓" : ""); }
+function paintCounter(){ const el = $("deckCount"); if (el) el.textContent = activeKey + " · " + deckScore + "/" + pipe.length + (deckDone ? " ✓" : ""); }
 
 /* ── The Study action: studies what the table shows ── */
 const midDeck = () => deckStarted && !deckDone;
-function renderStudyBtn(){
-  const b = $("btnStudy"), t = viewKey;
-  const vis = visibleRows();
-  b.disabled = !vis.length;
-  if (!vis.length){ b.textContent = T.studyK(t); return; }
-  if (viewKey === activeKey && midDeck() && sigOf(vis) === deckSig) b.textContent = T.resume(t, deckScore, pipe.length);
-  else b.textContent = T.studyN(vis.length, t);
-}
 async function onStudy(){
   const src = visibleRows(); if (!src.length) return;
   if (viewKey !== activeKey){
@@ -1129,7 +1135,7 @@ function pushNav(fromPop){
   try { history.pushState(s, ""); } catch {}
 }
 function show(){
-  renderCrumbs();
+  renderBar();
   document.body.classList.toggle("cataloging", level === "catalog");
   if (level === "study") renderPos(); else render();
 }
@@ -1197,7 +1203,7 @@ function openAbout(fromPop, pane){
     leaveStudy(); document.body.classList.remove("cataloging");
     level = "about"; aboutTopicId = T.aboutTopics[0].id;
     document.body.classList.add("abouting");
-    renderCrumbs(); renderPos(); window.scrollTo(0, 0);
+    renderBar(); renderPos(); window.scrollTo(0, 0);
     if (document.activeElement) document.activeElement.blur();
   }
   aboutPane = pane || "rail";
@@ -1718,7 +1724,10 @@ function promptDlg(title, body, value){
 }
 
 /* ── Input ── */
-$("btnStudy").addEventListener("click", onStudy);
+$("segStudy").addEventListener("click", () => { if (level === "list") onStudy(); });
+$("segList").addEventListener("click", () => { if (level === "study") goList(activeKey); });
+$("catStudy").addEventListener("click", () => enterStudy());
+$("wBtn").addEventListener("click", () => { if (level === "about") closeAbout(); else if (level !== "catalog") goCatalog(); });
 $("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
 $("syncLine").addEventListener("click", showSyncPanel);
 $("btnHelp").addEventListener("click", e => { e.stopPropagation(); showHelp(); });
