@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.28 ───────────────────────────────────────────
+/* ── WordDock — v0.29 ───────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -43,13 +43,14 @@
              A list has one name, shown everywhere: NL-RU, NL-LA-LIEVE.
    · view  = what the table shows: a level range and a word, per list.
    · deck  = the ten lowest-RS words of the view; finish line: all ten clean.
-   Four pages, one bar (the top line), the W fixed in its centre as the anchor on every page:
-     card    NL-LA · W · 3/10            the name opens the table; the counter is text
-     table   All lists · W · [Study 10 · NL-LA]   the green button deals the deck (Resume mid-deck)
-     LISTS   About · W · [Resume NL-LA · 3/10]     the same button, the same place, back to the deck
-     About   · W ·
-   The W means one thing everywhere: All lists (from About the way back; on LISTS it rests).
-   The texts hug the W; on phones the button drops the list's name. Esc and back work as before.
+   Two places. The WORK is the list being studied, with two faces: the card (Again / Good,
+   the counter "NL-LA · 3/10" on the top line) and the table (heading, search · Level · pager);
+   the toggle Study | List on the bottom bar switches faces. The SHELF is everything else:
+   LISTS (Published WD Lists, My Lists on this device, the Excel door, the sync line; the green
+   button Resume / Study leads back to the work) and About, a drawer of the shelf ("About
+   WordDock" on its bottom line). The door to the shelf is a small "All lists" top-left of the
+   table (and of About, as the way back); the card has no door but the toggle. No W on the
+   pages (v0.29): the attention stays at the top, where the work is. Esc and back work as before.
    A link can open a WD list: worddock.app/?list=NL-LA lands on its table (read once at the boot, then wiped).
    Sync and the service worker run on the live site only (LIVE_HOSTS): a copy on another address has neither.
    Engine from v26.98 except the finish line. Writes RS only at deck completion. */
@@ -64,24 +65,32 @@ body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSyst
   line-height:1.5;-webkit-font-smoothing:antialiased}
 button,select,input{font-family:inherit}
 
-/* ── the top line: one bar on all four pages (see the header). Three slots; the W stays in the exact
-   centre whatever the texts' widths (equal side columns), and the texts hug it. ── */
-.top{height:52px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;padding:0 16px;z-index:40}
-.t-left{justify-self:end;min-width:0;display:flex;justify-content:flex-end}.t-right{justify-self:start;min-width:0;display:flex;align-items:center}
-.crumb{background:none;border:none;padding:3px 8px;border-radius:6px;color:var(--fg);cursor:pointer;font-size:13px;line-height:1.4;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.crumb:hover{background:var(--card)}
+/* ── top line: the W; in study the list's title, small and regular ── */
+/* The top line: on the table (and on About) a small "All lists" top-left, the door to the shelf; on the
+   card the counter sits in the middle of this line and nothing else. */
+.top{position:relative;height:52px}
+.crumb{position:absolute;left:8px;top:11px;background:none;border:none;padding:3px 8px;border-radius:6px;color:var(--sec);cursor:pointer;
+  font-size:13px;line-height:1.4;white-space:nowrap}
+.crumb:hover{background:var(--card);color:var(--fg)}
 .crumb[hidden]{display:none}
-.mark{user-select:none;border:none;padding:0;cursor:pointer}
-.mark.badge{width:24px;height:24px;border-radius:7px;background:var(--green);color:#fff;display:flex;align-items:center;
-  justify-content:center;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:15px}
-.mark:hover{background:var(--green2)}
-body.cataloging .mark{cursor:default}body.cataloging .mark:hover{background:var(--green)}
-.t-right .study-btn{height:32px;font-size:13px;padding:0 14px}
-.t-right .study-btn[hidden]{display:none}
+/* The bottom bar of the work: the toggle Study | List, the same spot on both faces. The filled half
+   is where you are; the other half is the way to the other face. Nothing moves. */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:40;height:56px;display:flex;justify-content:center;align-items:center;
+  background:var(--bg);padding-bottom:env(safe-area-inset-bottom)}
+.bar[hidden]{display:none}
+.seg{height:32px;min-width:84px;padding:0 16px;border:1px solid color-mix(in srgb,var(--green) 40%,#fff);background:#fff;color:var(--green);
+  font-size:13px;font-weight:600;cursor:pointer}
+.seg:first-child{border-radius:8px 0 0 8px}
+.seg:last-child{border-radius:0 8px 8px 0;border-left:none}
+.seg:hover{background:color-mix(in srgb,var(--green) 8%,#fff)}
+.seg.on,.seg.on:hover{background:color-mix(in srgb,var(--green) 13%,#fff);color:var(--green);cursor:default}
+.seg[disabled]{opacity:.4;cursor:default}
+/* The shelf's way back to the work: Resume NL-LA · 3/10, on the heading line of LISTS. */
+.cat{position:relative}
+.cat-study{position:absolute;right:1.25rem;top:0;margin:0}
 
 /* ── list surface ── */
-.wrap{max-width:920px;margin:0 auto;padding:.25rem 1.25rem 1.5rem}
+.wrap{max-width:920px;margin:0 auto;padding:.25rem 1.25rem 4.5rem}
 .h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3}
 .h button{background:none;border:none;padding:2px 8px;margin-left:-8px;border-radius:8px;font:inherit;color:inherit;cursor:pointer;text-align:left}
 .h button:hover{background:var(--card)}
@@ -256,8 +265,10 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 .btn-again:hover{background:#fbf2f2}.btn-good:hover{background:#f1f8f1}
 
 /* ── bottom line: the counter, only in study ── */
-.pos{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.pos{position:fixed;left:56px;right:56px;top:0;height:52px;z-index:40;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;
+  padding:0;font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--bg);pointer-events:none}
 .pos:empty{display:none}
+.pos > *{pointer-events:auto}
 
 /* ── dialog ── */
 .dlg-back{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;padding:24px}
@@ -282,7 +293,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .btn{height:38px}
 }
 @media (max-width:640px){
-  .mark{left:12px}
+  .crumb{left:4px}
   .wrap,.cat{padding-left:12px;padding-right:12px}
   .h{font-size:20px}.sec-h{font-size:18px}
   .hide-s{display:none}
@@ -305,9 +316,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 <body class="booting">
 
 <header class="top">
-  <div class="t-left"><button class="crumb" id="tLeft" hidden></button></div>
-  <button class="mark badge" id="wBtn" data-t-aria="wAria">W</button>
-  <div class="t-right"><button class="study-btn" id="tStudy" hidden></button><span class="pos" id="pos"></span></div>
+  <button class="crumb" id="tLeft" hidden></button>
 </header>
 
 <main class="wrap" id="listSurface">
@@ -323,6 +332,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 </main>
 
 <main class="cat" id="catalog">
+  <button class="study-btn cat-study" id="catStudy" hidden></button>
   <section class="zone-top" id="secWd">
     <h2 class="sec-h" data-t="wdHeading"></h2>
     <p class="sub" id="wdSub"></p>
@@ -346,6 +356,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   </section>
   <section class="zone-bot">
     <button class="sync-line" id="syncLine"></button>
+    <button class="sync-line" id="aboutLink" data-t="aboutLink"></button>
   </section>
 </main>
 
@@ -367,6 +378,8 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   </div>
 </section>
 
+<footer class="pos" id="pos"></footer>
+<nav class="bar" id="bar" hidden><button class="seg" id="segStudy" data-t="segStudy"></button><button class="seg" id="segList" data-t="segList"></button></nav>
 <input type="file" id="fileIn" accept=".xlsx,.xlsm,.xls,.csv" hidden>
 
 <div class="dlg-back" id="dlgBack" hidden>
@@ -410,8 +423,7 @@ const T = {
   levelOne: n => "Level " + n, levelSpan: (lo, hi) => "Level " + lo + "–" + hi,
   onDevice: "on this device", onDeviceSince: d => "on this device since " + d,
   months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], noMatches: "No matches.", loading: "Loading…", nothingYet: "Nothing here yet.",
-  wAria: "All lists", allLists: "All lists", aboutShort: "About", studyN: (n, k) => "Study " + n + " · " + k, studyShort: n => "Study " + n,
-  resumeShort: (s, n) => "Resume " + s + "/" + n, showAll: v => "Show all “" + v + "”",
+  allLists: "All lists", segStudy: "Study", segList: "List", showAll: v => "Show all “" + v + "”",
   noOtherPairs: "No other pairs.", sample: " · sample data",
   colQ: "Q", colA: "A", colL: "L", colCAT: "CAT", colSUB: "SUB", colTAG: "TAG", colRS: "RS", colID: "ID", colENT: "ENT",
   // LISTS
@@ -485,7 +497,7 @@ const T = {
   syncNoSuchKey: "This key doesn't exist. Check the 8 characters and try again.",
   // About: the W opens it. Six topics, in this order. The paragraphs are HTML (only
   // <em>, <code>, <a>); a translation replaces the strings and keeps the tags.
-  aboutHeading: "About", aboutBack: "Back to the topics",
+  aboutLink: "About WordDock", aboutHeading: "About", aboutBack: "Back to the topics",
   aboutTopics: [
     { id: "idea", title: "The idea", paras: [
       "WordDock is a web-based language learning tool. You can study and build your own lists, in any language pair, or study our published lists.",
@@ -539,7 +551,7 @@ function fitPage(){
   const first = tb.querySelector("tr:not(.detail)");
   const rowH = first ? first.getBoundingClientRect().height : ROW_H;
   const top = tb.getBoundingClientRect().top + window.scrollY;
-  const n = Math.floor((window.innerHeight - top - 24) / rowH);
+  const n = Math.floor((window.innerHeight - top - 24 - 56) / rowH);   // the bottom bar
   const next = Math.max(5, Math.min(20, n));
   if (next !== PAGE){ const f = page * PAGE; PAGE = next; page = Math.floor(f / PAGE); return true; }
   return false;
@@ -893,29 +905,17 @@ const visibleRows = () => { const rows = viewRows(); if (!rows) return []; const
 /* The gates. The bottom bar shows on the two faces of the work; the filled half is the face you are on,
    the other half is greyed when there is nothing to study (an empty view). On LISTS the green
    button leads back to the deck in progress. */
-/* The bar, page by page (see the header). On phones the green button drops the list's name: the
-   table's heading and the shelf's "studying now" already carry it. */
 function renderBar(){
-  const L = $("tLeft"), S = $("tStudy"), short = isSmall();
-  L.hidden = true; S.hidden = true;
-  if (level === "study" && activeKey){ L.hidden = false; L.textContent = activeKey; L.onclick = () => goList(activeKey); return; }
-  if (level === "list"){
-    L.hidden = false; L.textContent = T.allLists; L.onclick = () => goCatalog();
-    const vis = visibleRows(), n = Math.min(DECK_SIZE, vis.length), resume = viewKey === activeKey && midDeck() && sigOf(vis) === deckSig;
-    S.hidden = false; S.disabled = !vis.length;
-    S.textContent = !vis.length ? (short ? T.study : T.studyK(viewKey))
-                  : resume ? (short ? T.resumeShort(deckScore, pipe.length) : T.resume(viewKey, deckScore, pipe.length))
-                  : (short ? T.studyShort(n) : T.studyN(n, viewKey));
-    S.onclick = onStudy; return;
+  const onCard = level === "study", work = onCard || level === "list";
+  const L = $("tLeft"); L.hidden = !(level === "list" || level === "about"); L.textContent = T.allLists;
+  $("bar").hidden = !work;
+  if (work){
+    $("segStudy").classList.toggle("on", onCard); $("segList").classList.toggle("on", !onCard);
+    $("segStudy").disabled = !onCard && !visibleRows().length;
   }
-  if (level === "catalog"){
-    L.hidden = false; L.textContent = T.aboutShort; L.onclick = () => openAbout();
-    if (activeKey && getList(activeKey).rows){
-      S.hidden = false; S.disabled = false;
-      S.textContent = midDeck() ? (short ? T.resumeShort(deckScore, pipe.length) : T.resume(activeKey, deckScore, pipe.length)) : (short ? T.study : T.studyK(activeKey));
-      S.onclick = () => enterStudy();
-    }
-  }
+  const cs = $("catStudy");
+  if (level === "catalog" && activeKey && getList(activeKey).rows){ cs.hidden = false; cs.textContent = midDeck() ? T.resume(activeKey, deckScore, pipe.length) : T.studyK(activeKey); }
+  else cs.hidden = true;
 }
 
 /* ── The list surface ── */
@@ -1104,7 +1104,7 @@ function renderPos(){
     const s = document.createElement("span"); s.id = "deckCount"; pos.appendChild(s); paintCounter();
   }
 }
-function paintCounter(){ const el = $("deckCount"); if (el) el.textContent = deckScore + "/" + pipe.length + (deckDone ? " ✓" : ""); }
+function paintCounter(){ const el = $("deckCount"); if (el) el.textContent = activeKey + " · " + deckScore + "/" + pipe.length + (deckDone ? " ✓" : ""); }
 
 /* ── The Study action: studies what the table shows ── */
 const midDeck = () => deckStarted && !deckDone;
@@ -1166,8 +1166,8 @@ function enterStudy(fromPop){
 }
 
 /* ── About: copied from v26.98 (aboutTopics, #aboutbrowser, #aboutRail, #aboutContent).
-   "About" on the top line of LISTS opens it; the first topic is selected on open.
-   Back — the W on the top line, Esc, or the browser's back — returns to LISTS,
+   "About WordDock" on the bottom line of LISTS opens it; the first topic is selected on open.
+   Back — "All lists" top-left, Esc, or the browser's back — returns to LISTS,
    through the history: About is one entry on top of that place (two on a phone once a
    topic is open), so leaving pops those entries and the place below takes over. ── */
 let aboutTopicId = T.aboutTopics[0].id, aboutPane = "rail";
@@ -1226,6 +1226,7 @@ function returnFromAbout(s){
   else if (canonKey(s.k || viewKey) !== viewKey) goList(s.k, true);
   else { level = "list"; show(); }
 }
+$("aboutLink").addEventListener("click", e => { e.currentTarget.blur(); openAbout(); });
 $("aboutHead").addEventListener("click", () => {
   if (aboutPane !== "detail") return;
   const h = history.state;
@@ -1724,7 +1725,10 @@ function promptDlg(title, body, value){
 }
 
 /* ── Input ── */
-$("wBtn").addEventListener("click", () => { if (level === "about") closeAbout(); else if (level !== "catalog") goCatalog(); });
+$("segStudy").addEventListener("click", () => { if (level === "list") onStudy(); });
+$("segList").addEventListener("click", () => { if (level === "study") goList(activeKey); });
+$("catStudy").addEventListener("click", () => enterStudy());
+$("tLeft").addEventListener("click", () => { if (level === "about") closeAbout(); else goCatalog(); });
 $("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
 $("syncLine").addEventListener("click", showSyncPanel);
 $("btnHelp").addEventListener("click", e => { e.stopPropagation(); showHelp(); });
