@@ -35,12 +35,12 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.30 ───────────────────────────────────────────
+/* ── WordDock — v0.30.1 ───────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
              the WD_LISTS line); a My list lives on this device, from a sheet.
-             A list has one name, shown everywhere: NL-RU, NL-LA-LIEVE.
+             A list has one name, shown everywhere: NL-RU, NL-LA-L.
    · view  = what the table shows: a level range and a word, per list.
    · deck  = the ten lowest-RS words of the view; finish line: all ten clean.
    Four pages, one rule (M's notes, 10 Oct): the way to the card is the green button, the way
@@ -425,7 +425,7 @@ const T = {
   cantRead: "Could not read this file", noHeader: "No header row with Q1 and A1",
   noHeaderBody: "Name the columns in the first row: ENT, CAT, SUB, TAG, L, Q1, A1 …",
   nothing: "Nothing to import", nothingBody: "No row has both Q1 and A1.",
-  giveName: "Give a NAME for this list", giveNameBody: "Letters, digits and hyphens: NL-LA-LIEVE, BIOLOGY.",
+  giveName: "Give a NAME for this list", giveNameBody: "Letters, digits and hyphens: NL-LA-L, BIOLOGY.",
   isWd: k => k + " is a WD list and can't be replaced.", nameYours: k => "Name yours " + k + "?",
   skipped: n => " · " + n + " skipped",
   replaceQ: (k, o, w) => "Replace " + k + " (" + o + ") with this file (" + w + ")?", progressStays: "Your progress stays.",
@@ -440,7 +440,7 @@ const T = {
   // the template: a note on each header cell, and the same lines on a second sheet "Read me"
   tplNotes: { ENT: "the word itself (empty: A1 is taken)", CAT: "word class", SUB: "what the word is: m, f, irregular …", TAG: "where it belongs: a theme, a text …",
     L: "level: A1 … C2, or A1.3 for a unit", Q1: "the question", A1: "the answer", Q2: "more sides of the same word: a prompt (gen., mv. …)", A2: "… and its answer, up to Q10 · A10" },
-  tplReadme: ["WordDock — a list from an Excel sheet", "", "Name the columns in the first row: ENT · CAT · SUB · TAG · L · Q1 · A1 … Q10 · A10.",
+  tplReadme: ["WordDock: a list from an Excel sheet", "", "Name the columns in the first row: ENT · CAT · SUB · TAG · L · Q1 · A1 … Q10 · A10.",
     "Only Q1 and A1 are required in a row; the rest may stay empty.", "", "@notes", "",
     "The file name becomes the list name, in capitals: NL-LA-Test.xlsx → NL-LA-TEST.",
     "Two example rows: the shortest possible (water · aqua), and a full one (rosa, with its ten pairs).",
@@ -448,7 +448,7 @@ const T = {
   excelTemplate: "Download Template.xlsx",
   // sync: the bottom line of LISTS. "Sync is on" claims only what the page knows; a time
   // ("synced just now") would claim that this device is current, which it can't know.
-  keepSafe: "Keep progress safe", syncOn: "Sync is on", notSynced: "Not synced — will retry",
+  keepSafe: "Keep progress safe", syncOn: "Sync is on", notSynced: "Not synced. Will retry",
   // sync: the dialog (the dark page's texts)
   syncOffTitleMain: "Sync is off", syncOffDesc: "Your progress lives only in this browser.",
   syncHaveKey: "I have a key", syncCreateKey: "Create a key",
@@ -501,7 +501,7 @@ const T = {
     { id: "mylists", title: "My lists", paras: [
       "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>ENT · CAT · SUB · TAG · L · Q1 · A1 … Q10 · A10</code>. Only Q1 and A1 are required in each row." ] },
     { id: "contact", title: "Contact", paras: [
-      "Working together through exchange is one of the main purposes of WordDock. If you'd like to take part, write to michel@worddock.app.",
+      "Working together through exchange is one of the main purposes of WordDock. If you'd like to take part, write to info@worddock.app.",
       "More on the specifics: <a class=\"soon\" aria-disabled=\"true\" title=\"Page to come\">WordDock for Insiders</a> (page to come)." ] }
   ]
 };
@@ -511,7 +511,7 @@ const WD_LISTS = ["NL-LA", "WORDDOCK", "ROME"];
 /* A first visit (no list stored on this device) lands in the list that explains WordDock. */
 const FIRST_OPEN = "WORDDOCK";
 /* A list has one name, shown everywhere as it is: letters, digits and hyphens, in capitals
-   (NL-RU, NL-LA-LIEVE, BIOLOGY). It names lists/<NAME>.json, the pool wd_rs_<NAME>, the view,
+   (NL-RU, NL-LA-L, BIOLOGY). It names lists/<NAME>.json, the pool wd_rs_<NAME>, the view,
    the heading, the corner, the sheet. When it starts with two language codes, those become
    the column labels: NL | LA. Otherwise Q | A. */
 const canonKey = n => String(n || "").trim().toUpperCase();
@@ -1681,7 +1681,7 @@ function showSyncPanel(){ _syncState = "main"; renderSyncPanelBody(); $("syncBac
 function hideSyncPanel(){ $("syncBack").hidden = true; }
 
 /* The bottom line of LISTS: small, grey, one line of truth; tap opens the dialog.
-   No key: "Keep progress safe". A key: "Sync is on", or "Not synced — will retry"
+   No key: "Keep progress safe". A key: "Sync is on", or "Not synced. Will retry"
    after a request that got no answer. */
 function renderSyncLine(){
   const a = $("syncLine"); if (!a) return;
