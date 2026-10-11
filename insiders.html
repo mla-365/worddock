@@ -84,7 +84,7 @@ ul.plain li::marker{color:var(--muted)}
 .planned li{font-size:13.5px;color:var(--sec);background:var(--card);border:.5px dashed var(--line2);border-radius:999px;padding:3px 10px;line-height:1.4}
 .addr{font-family:var(--mono);font-size:13px;color:var(--fg);user-select:all}
 
-/* ── the twelve points: a label, the rule, the reason ── */
+/* ── the fourteen points: a label, the rule, the reason ── */
 .rules{list-style:none;margin:.4rem 0 .9rem;padding:0;display:grid;gap:15px}
 .rules li{display:grid;grid-template-columns:2.8rem minmax(0,1fr);column-gap:8px;scroll-margin-top:12px}
 .pn{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--green);padding-top:3px}
@@ -121,7 +121,7 @@ td:first-child{white-space:nowrap;color:var(--fg)}
 
   <p class="lede">For people who make lists, not only study them: teachers, curators, reviewers, and anyone who wants to try this for a language of their own. Started 11 October 2026 by M and C; a living page. The learner's side is in the app itself: the <em>WORDDOCK</em> list and <em>About</em>.</p>
 
-  <div class="keep"><b>How this page is kept.</b> The source is one file, <code>v27/insiders.md</code>, in the WordDock project; the published page is <code>worddock.app/insiders.html</code> (a draft, not indexed), made from it by the cockpit. Ideas come from M (and from L, S, anyone who builds a list); the cockpit writes them in; a point becomes a rule when M says so. House style: short sentences, simple English, no long dash in a sentence.<br><br><b>To review:</b> take one section at a time, give your changes in the cockpit, and the page is made again from the source. The small label next to each section number says how far it is: <span class="chip">draft</span> is written and waits for your reading, <span class="chip prop">proposal</span> needs your decision, <span class="chip done">decided</span> is settled, <span class="chip todo">to write</span> is only a plan.</div>
+  <div class="keep"><b>How this page is kept.</b> The source is one file, <code>v27/insiders.md</code>, in the WordDock project; the published page is <code>worddock.app/insiders.html</code> (a draft, not indexed), made from it by the cockpit. Ideas come from M (and from L, S, anyone who builds a list); the cockpit writes them in; a point becomes a rule when M says so. House style: short sentences, simple English, no long dash in a sentence. <b>No personal names of contributors in anything published: initials only (L, S).</b> The page is not linked from the app.<br><br><b>To review:</b> take one section at a time, give your changes in the cockpit, and the page is made again from the source. The small label next to each section number says how far it is: <span class="chip">draft</span> is written and waits for your reading, <span class="chip prop">proposal</span> needs your decision, <span class="chip done">decided</span> is settled, <span class="chip todo">to write</span> is only a plan.</div>
 
   <div class="panes">
     <nav class="rail" aria-label="Contents">
@@ -167,7 +167,7 @@ td:first-child{white-space:nowrap;color:var(--fg)}
       </section>
 
       <section class="sec" id="s2">
-        <div class="sec-top"><span class="num">Section 2</span><span class="chip">draft · 12 points</span></div>
+        <div class="sec-top"><span class="num">Section 2</span><span class="chip">draft · 14 points</span></div>
         <h2>The protocol: how a list is made</h2>
         <p>The rules, as decided so far. Each has a short reason; a rule without a reason is a habit.</p>
         <ol class="rules">
@@ -181,10 +181,10 @@ td:first-child{white-space:nowrap;color:var(--fg)}
             <p class="rule"><strong>The language of CAT, SUB and TAG is the reader's language.</strong> The reader is the learner, who reads the question side. In a Dutch-to-Latin list they are Dutch (<code>zn</code>, <code>ww</code>, <code>vrouwelijk</code>); in an English master file they are English. CAT is one value from a closed set per reader language (see section 7); SUB and TAG are free but short.</p>
             <p class="why"><b>Reason</b> a class label the learner cannot read is noise on the card; a label in the target language gives away or confuses.</p></div></li>
           <li id="p4"><span class="pn">P4</span><div>
-            <p class="rule"><strong>A note names a class, never a rule, and never the answer.</strong> SUB is shown on the card before the answer: <code>de</code>, <code>f</code>, <code>-la / -le</code> are fine; "o = he / she / it" is not, and neither is a sentence.</p>
+            <p class="rule"><strong>A note names a class, never a rule, and never the answer.</strong> CAT and SUB are shown on the card before the answer, so neither may give it away: <code>de</code>, <code>f</code>, <code>-la / -le</code> are fine; "o = he / she / it" is not, and neither is a sentence.</p>
             <p class="why"><b>Reason</b> show first, explain later; and the card must not leak.</p></div></li>
           <li id="p5"><span class="pn">P5</span><div>
-            <p class="rule"><strong>Lemma clean, answers marked.</strong> Stress marks (Russian), macrons (Latin) and the like go in the answers, which the learner sees; the entry (<code>ENT</code>) is the bare word.</p>
+            <p class="rule"><strong>The entry is naked, the first answer may carry more.</strong> <code>ENT</code> is the most naked dictionary form: infinitive, nominative singular, masculine, no marks. The first answer adds what has to be learned with the word: stress marks (Russian), macrons and principal parts (Latin), an aspect pair.</p>
             <p class="why"><b>Reason</b> the entry is the handle and the search key; the answer is what has to be learned.</p></div></li>
           <li id="p6"><span class="pn">P6</span><div>
             <p class="rule"><strong>Replace the long dash, never delete it.</strong> No long dash (—) in a sentence of WordDock material; Dutch takes a spaced short dash, English a comma, a colon or a full stop; in Russian the dash is grammar and stays as a spaced short dash.</p>
@@ -196,8 +196,8 @@ td:first-child{white-space:nowrap;color:var(--fg)}
             <p class="rule"><strong>Short, concrete, one idea.</strong> A pair's sentence is 2 to 6 words, says one thing, and the second sentence puts the word in another position. One-syllable words first; long words and exceptions in later units.</p>
             <p class="why"><b>Reason</b> the mechanics of memory; see the hub charter, rule 0.</p></div></li>
           <li id="p9"><span class="pn">P9</span><div>
-            <p class="rule"><strong>Culture-neutral in shared material.</strong> A master that will be translated carries no city, dish or custom that does not travel.</p>
-            <p class="why"><b>Reason</b> <em>"Türk kahvaltısı çok zengin"</em> is true and useless in Lingala.</p></div></li>
+            <p class="rule"><strong>Easy to translate.</strong> In a master that every language translates, beginner words stay close to concepts every language has a word for: <em>tea, house, friend, good</em>. A place name is fine (<em>Moscow, Kinshasa</em>). A word that needs a sentence to explain in another language is not, at least not at the start.</p>
+            <p class="why"><b>Reason</b> every language has to say the same line, so a beginner line should cost the translator no explaining.</p></div></li>
           <li id="p10"><span class="pn">P10</span><div>
             <p class="rule"><strong>Provenance and copyright are transparent.</strong> Every published list says who made it, from what, and under which licence; a list made from a book needs the rights settled before it is published. The metadata will live in the sheet itself, on its first sheet (to design).</p>
             <p class="why"><b>Reason</b> the shelf is public; a learner picks a list by trusting its origin.</p></div></li>
@@ -207,6 +207,12 @@ td:first-child{white-space:nowrap;color:var(--fg)}
           <li id="p12"><span class="pn">P12</span><div>
             <p class="rule"><strong>A reviewer, not a rule, promotes a list.</strong> Machine-made material is beta until one person who knows the language has read it.</p>
             <p class="why"><b>Reason</b> the bottleneck is people, and that is the right bottleneck.</p></div></li>
+          <li id="p13"><span class="pn">P13</span><div>
+            <p class="rule"><strong>One layer at a time.</strong> Complexity comes gradually and openly: first the masculine singular, later the plural, never mixed with gender in one cue. A form that is its own dictionary word is its own row: <em>vriend</em> and <em>vriendin</em> are two words, as что the conjunction and что the question word are two, even when English has one word (<em>friend</em>) for both. Adjectives are the exception: <em>goed</em> may show <em>goede</em> in a later pair. Fixed phrases (<em>goedendag</em>) are their own row.</p>
+            <p class="why"><b>Reason</b> a learner who meets two layers at once learns neither; and "two words that look alike" is itself a lesson.</p></div></li>
+          <li id="p14"><span class="pn">P14</span><div>
+            <p class="rule"><strong>A row's identity is ENT · CAT · SUB, not ENT alone.</strong> Two entries that look alike are two words when their class differs: Russian нет the particle (<em>nee</em>) and нет the predicative (<em>er is geen</em>) are two rows; so are что and что. Gender splits a word only where the language has two words: German <em>Kollege</em> and <em>Kollegin</em> are two rows, Dutch <em>collega</em> is one word (SUB m. / v.) and is repeated in the feminine row, so a Dutch-German pair still plays <em>Kollegin</em>. A form of the same lemma is not a new word: Dutch <em>ze</em> is the unstressed <em>zij</em>, so it stays inside <em>zij</em>'s row or comes in a later layer.</p>
+            <p class="why"><b>Reason</b> the learner's score hangs on the row; one row per real word, no more and no fewer.</p></div></li>
         </ol>
       </section>
 
@@ -325,12 +331,12 @@ td:first-child{white-space:nowrap;color:var(--fg)}
         <ol class="toc">
           <li><strong>Introduction: the bottleneck is the material, not the schedule.</strong> Most tools optimise when a card returns; few say what a card may contain. The question: can a plain table, with rules, be the unit of exchange between teachers?</li>
           <li><strong>The schema: a list as a minimal data structure.</strong> Rows, pairs, levels, IDs; one space per list; comparison with flashcard formats (Anki notes, CSV decks).</li>
-          <li><strong>The protocol: the twelve rules and their grounding</strong> (section 2 of this page).</li>
+          <li><strong>The protocol: the fourteen rules and their grounding</strong> (section 2 of this page).</li>
           <li><strong>The engine:</strong> a deck of ten, dirty passes, redemption, the score at completion (section 8). What it deliberately does not do: no timing model, no due dates.</li>
           <li><strong>Didactic principles:</strong> show first, explain later; the half-pyramid (i+1, the zone of proximal development); one-syllable words first; re-entry rows (the spiral curriculum).</li>
           <li><strong>Lexicon:</strong> lemma and form; "same word, deeper"; collocations and fixed expressions as rows; frequency and coverage.</li>
           <li><strong>Syntax and grammar inside a word list:</strong> a class label, not a rule; the note on the card; focus on form without explanation; the Russian dash as grammar.</li>
-          <li><strong>Linguistic diversity:</strong> the hub, one file per language; culture-neutral masters; stress marks and macrons; what one story in eight languages reveals (Mister X).</li>
+          <li><strong>Linguistic diversity:</strong> the hub, one file per language; masters that are easy to translate; stress marks and macrons; what one story in eight languages reveals (Mister X).</li>
           <li><strong>Learning psychology:</strong> retrieval practice, spacing, desirable difficulties, cognitive load; the counter as feedback; why the score is slow.</li>
           <li><strong>Social design:</strong> cathedral and bazaar; tiers; provenance and licences; the reviewer as the right bottleneck.</li>
           <li><strong>Evaluation:</strong> what to measure (the pool over time, re-entry rows, a reviewer's corrections); a first study design with the NL-LA list.</li>
