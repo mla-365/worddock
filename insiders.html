@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="description" content="WordDock for Insiders: the schema and the protocol, for people who make lists.">
+<link rel="icon" href="icon-192.png">
+<title>WordDock for Insiders</title>
+<style>html{font-size:14px}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<style>
+:root{
+  --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
+  --card:#f6f5ef;--accent:#185fa5;--green:#006600;--on-green:#fff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161614;--fg:#ecebe4;--muted:#8a8980;--sec:#b4b3aa;--line:#2b2b27;--line2:#45453f;
+    --card:#22221f;--accent:#7fb3ea;--green:#3f9a4f;--on-green:#fff;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161614;--fg:#ecebe4;--muted:#8a8980;--sec:#b4b3aa;--line:#2b2b27;--line2:#45453f;
+  --card:#22221f;--accent:#7fb3ea;--green:#3f9a4f;--on-green:#fff;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding-inline:20px;padding-block:1.1rem 4rem}
+
+/* ── head, as the app's table head: one 22 px heading, one grey sub-line ── */
+.h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3;text-wrap:balance}
+.sub{color:var(--sec);font-size:13px;margin:2px 0 0}
+.lede{color:var(--sec);font-size:15px;line-height:1.65;margin:1rem 0 0;max-width:640px}
+.lede em{color:var(--fg)}
+.keep{background:var(--card);border:.5px solid var(--line);border-radius:10px;padding:12px 14px;margin:1.1rem 0 0;font-size:14px;color:var(--sec);line-height:1.6;max-width:640px}
+.keep b{color:var(--fg);font-weight:600}
+
+/* ── two panes, as About: a rail of topics at the left, the text at the right ── */
+.panes{display:grid;grid-template-columns:220px minmax(0,1fr);column-gap:32px;margin-top:1.4rem}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;border-right:.5px solid var(--line2);padding:.25rem 14px .25rem 0}
+.rail-h{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px 12px}
+.topic{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;background:none;border:none;padding:8px 12px;margin:0 0 3px;border-radius:8px;
+  color:var(--sec);font-size:14px;line-height:1.35;text-decoration:none;cursor:pointer}
+.topic:hover{background:var(--card);color:var(--fg)}
+.topic.active{background:var(--green);color:var(--on-green)}
+.topic .n{font-family:var(--mono);font-size:11.5px;color:var(--muted);flex:none;width:1.1em}
+.topic.active .n{color:var(--on-green);opacity:.8}
+.t-short{display:none}
+.content{max-width:640px;min-width:0}
+
+/* ── sections: a number, a state, a heading; a hairline between them ── */
+.sec{padding:1.5rem 0 1rem;border-top:.5px solid var(--line);scroll-margin-top:12px}
+.sec:first-child{border-top:none;padding-top:.6rem}
+.sec-top{display:flex;align-items:center;gap:10px;margin:0 0 .35rem}
+.num{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.chip{font-size:11.5px;line-height:1.4;padding:1px 8px;border-radius:999px;border:.5px solid var(--line2);color:var(--sec);white-space:nowrap}
+.chip.todo{border-style:dashed;color:var(--muted)}
+.chip.prop{border-color:var(--accent);color:var(--accent)}
+.chip.done{border-color:var(--green);color:var(--green)}
+.refs{margin:0 0 .85rem;padding-left:1.1rem}
+.refs li{font-size:14px;line-height:1.55;margin:0 0 .4rem;color:var(--sec)}
+.refs li::marker{color:var(--muted)}
+.toc{margin:.2rem 0 1rem;padding-left:1.4rem}
+.toc li{margin:0 0 .5rem}
+.toc li::marker{color:var(--muted);font-family:var(--mono);font-size:12.5px}
+.sub-h{margin:1.3rem 0 .4rem}
+.ref-group{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:1rem 0 .4rem}
+h2{font-size:20px;font-weight:600;margin:0 0 .7rem;line-height:1.3;text-wrap:balance}
+h3{font-size:15px;font-weight:600;margin:1.1rem 0 .4rem;line-height:1.35}
+p,li{color:var(--sec);font-size:15px;line-height:1.65}
+p{margin:0 0 .85rem}
+strong,b{color:var(--fg);font-weight:600}
+em{color:var(--fg);font-style:italic}
+code{font-family:var(--mono);font-size:12.5px;background:var(--card);border:.5px solid var(--line);padding:1px 5px;border-radius:4px;color:var(--fg);white-space:nowrap;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+ul.plain{margin:0 0 .85rem;padding-left:1.1rem}
+ul.plain li{margin:0 0 .45rem}
+ul.plain li::marker{color:var(--muted)}
+.note{font-size:14px;color:var(--muted);font-style:italic;margin:0 0 .85rem}
+.note b{color:var(--sec);font-style:normal}
+.planned{list-style:none;margin:0 0 .85rem;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.planned li{font-size:13.5px;color:var(--sec);background:var(--card);border:.5px dashed var(--line2);border-radius:999px;padding:3px 10px;line-height:1.4}
+.addr{font-family:var(--mono);font-size:13px;color:var(--fg);user-select:all}
+
+/* ── the twelve points: a label, the rule, the reason ── */
+.rules{list-style:none;margin:.4rem 0 .9rem;padding:0;display:grid;gap:15px}
+.rules li{display:grid;grid-template-columns:2.8rem minmax(0,1fr);column-gap:8px;scroll-margin-top:12px}
+.pn{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--green);padding-top:3px}
+.rule{margin:0 0 .25rem}
+.why{margin:0;font-size:14px;line-height:1.55;color:var(--muted);font-style:italic}
+.why b{font-style:normal;font-weight:600;color:var(--sec);margin-right:4px}
+.why em{color:var(--sec)}
+
+/* ── tables ── */
+.tbl{overflow-x:auto;margin:0 0 .85rem}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:.5px solid var(--line);vertical-align:top;color:var(--sec)}
+th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+td:first-child{white-space:nowrap;color:var(--fg)}
+.set{display:flex;flex-wrap:wrap;gap:5px}
+.set code{font-size:12.5px}
+
+@media (max-width:700px){
+  .wrap{padding-inline:16px}
+  .h{font-size:20px}
+  .panes{grid-template-columns:1fr;margin-top:1rem}
+  .rail{position:static;border-right:0;padding:0 0 10px;border-bottom:.5px solid var(--line2);display:flex;flex-wrap:wrap;gap:6px}
+  .rail-h{display:none}
+  .topic{width:auto;padding:5px 10px;margin:0;font-size:13px;gap:6px}
+  .t-long{display:none}
+  .t-short{display:inline}
+  .rules li{grid-template-columns:2.4rem minmax(0,1fr)}
+}
+</style>
+
+<div class="wrap">
+  <h1 class="h">WordDock for Insiders</h1>
+  <p class="sub">The schema and the protocol · draft for review · 11 October 2026</p>
+
+  <p class="lede">For people who make lists, not only study them: teachers, curators, reviewers, and anyone who wants to try this for a language of their own. Started 11 October 2026 by M and C; a living page. The learner's side is in the app itself: the <em>WORDDOCK</em> list and <em>About</em>.</p>
+
+  <div class="keep"><b>How this page is kept.</b> The source is one file, <code>v27/insiders.md</code>, in the WordDock project; the published page is <code>worddock.app/insiders.html</code> (a draft, not indexed), made from it by the cockpit. Ideas come from M (and from Lieve, Svetlana, anyone who builds a list); the cockpit writes them in; a point becomes a rule when M says so. House style: short sentences, simple English, no long dash in a sentence.<br><br><b>To review:</b> take one section at a time, give your changes in the cockpit, and the page is made again from the source. The small label next to each section number says how far it is: <span class="chip">draft</span> is written and waits for your reading, <span class="chip prop">proposal</span> needs your decision, <span class="chip done">decided</span> is settled, <span class="chip todo">to write</span> is only a plan.</div>
+
+  <div class="panes">
+    <nav class="rail" aria-label="Contents">
+      <p class="rail-h">Contents</p>
+      <a class="topic" href="#s0"><span class="n">0</span><span class="t-long">What WordDock is, in one page</span><span class="t-short">One page</span></a>
+      <a class="topic" href="#s1"><span class="n">1</span><span class="t-long">The schema: what a list is</span><span class="t-short">Schema</span></a>
+      <a class="topic" href="#s2"><span class="n">2</span><span class="t-long">The protocol: how a list is made</span><span class="t-short">Protocol</span></a>
+      <a class="topic" href="#s3"><span class="n">3</span><span class="t-long">Kinds of lists, and their names</span><span class="t-short">Names</span></a>
+      <a class="topic" href="#s4"><span class="n">4</span><span class="t-long">The hub: one file per language</span><span class="t-short">Hub</span></a>
+      <a class="topic" href="#s5"><span class="n">5</span><span class="t-long">Working together</span><span class="t-short">Together</span></a>
+      <a class="topic" href="#s6"><span class="n">6</span><span class="t-long">Stories from the workshop</span><span class="t-short">Stories</span></a>
+      <a class="topic" href="#s7"><span class="n">7</span><span class="t-long">Reference: columns, CAT sets, L scheme</span><span class="t-short">Reference</span></a>
+      <a class="topic" href="#s8"><span class="n">8</span><span class="t-long">Code logic: the engine</span><span class="t-short">Engine</span></a>
+      <a class="topic" href="#s9"><span class="n">9</span><span class="t-long">A paper, one day</span><span class="t-short">Paper</span></a>
+    </nav>
+
+    <div class="content">
+
+      <section class="sec" id="s0">
+        <div class="sec-top"><span class="num">Section 0</span><span class="chip">draft</span></div>
+        <h2>What WordDock is, in one page</h2>
+        <p>WordDock is a web-based language learning tool: you study published word lists or build your own. It gives steady progress: small decks of ten words, on your phone or your desktop, your progress remembered. The efficiency gain lets you engage with the language itself: reading, listening, speaking, with the docked words in your memory.</p>
+        <p>Technically it is two things:</p>
+        <ul class="plain">
+          <li><strong>a schema</strong>: a plain table that any teacher can fill in Excel, with a fixed set of columns, that becomes a list the app can deal cards from;</li>
+          <li><strong>a protocol</strong>: the rules for filling that table so the list teaches well, travels across languages, and can be checked by someone else.</li>
+        </ul>
+        <p>Everything below is one of the two.</p>
+      </section>
+
+      <section class="sec" id="s1">
+        <div class="sec-top"><span class="num">Section 1</span><span class="chip">draft</span><span class="chip todo">to complete</span></div>
+        <h2>The schema: what a list is</h2>
+        <ul class="plain">
+          <li>A <strong>list</strong> is one space: its rows, its IDs, its pool of scores. Nothing is shared across lists. A list has one name.</li>
+          <li>A <strong>row</strong> is one word as it is introduced at one place in the curriculum: its entry, its class, its level, and its pairs. The first pair is the word; the pairs after it are the same word, deeper.</li>
+          <li>A <strong>view</strong> is what the table shows: a level range and a search, per list.</li>
+          <li>A <strong>deck</strong> is the ten lowest-scoring words of the view; the finish line is all ten clean.</li>
+          <li>The columns: <code>ENT</code> · <code>CAT</code> · <code>SUB</code> · <code>TAG</code> · <code>L</code> · <code>Q1 A1 … Q10 A10</code>. Only <code>Q1</code> and <code>A1</code> are required.</li>
+          <li>IDs are stamped at publishing from the row's place and never move again: publish = freeze.</li>
+        </ul>
+        <p class="note"><b>Still to come:</b> the full text, written from <code>columns.md</code> and from "the three words" in <code>build.md</code>.</p>
+      </section>
+
+      <section class="sec" id="s2">
+        <div class="sec-top"><span class="num">Section 2</span><span class="chip">draft · 12 points</span></div>
+        <h2>The protocol: how a list is made</h2>
+        <p>The rules, as decided so far. Each has a short reason; a rule without a reason is a habit.</p>
+        <ol class="rules">
+          <li id="p1"><span class="pn">P1</span><div>
+            <p class="rule"><strong>One row, one word, one place.</strong> A word that comes back later in the curriculum is a new row.</p>
+            <p class="why"><b>Reason</b> scores hang on rows; a word met twice is learned twice, in two contexts.</p></div></li>
+          <li id="p2"><span class="pn">P2</span><div>
+            <p class="rule"><strong>Q1 and A1 are the word; the pairs after it are the same word, deeper.</strong> Q2 … A10 are elaboration: a form, a sentence, a pattern.</p>
+            <p class="why"><b>Reason</b> the card shows the lemma's edge on pair 2 and later: "same word, deeper", never a new word in disguise.</p></div></li>
+          <li id="p3"><span class="pn">P3</span><div>
+            <p class="rule"><strong>The language of CAT, SUB and TAG is the reader's language.</strong> The reader is the learner, who reads the question side. In a Dutch-to-Latin list they are Dutch (<code>zn</code>, <code>ww</code>, <code>vrouwelijk</code>); in an English master file they are English. CAT is one value from a closed set per reader language (see section 7); SUB and TAG are free but short.</p>
+            <p class="why"><b>Reason</b> a class label the learner cannot read is noise on the card; a label in the target language gives away or confuses.</p></div></li>
+          <li id="p4"><span class="pn">P4</span><div>
+            <p class="rule"><strong>A note names a class, never a rule, and never the answer.</strong> SUB is shown on the card before the answer: <code>de</code>, <code>f</code>, <code>-la / -le</code> are fine; "o = he / she / it" is not, and neither is a sentence.</p>
+            <p class="why"><b>Reason</b> show first, explain later; and the card must not leak.</p></div></li>
+          <li id="p5"><span class="pn">P5</span><div>
+            <p class="rule"><strong>Lemma clean, answers marked.</strong> Stress marks (Russian), macrons (Latin) and the like go in the answers, which the learner sees; the entry (<code>ENT</code>) is the bare word.</p>
+            <p class="why"><b>Reason</b> the entry is the handle and the search key; the answer is what has to be learned.</p></div></li>
+          <li id="p6"><span class="pn">P6</span><div>
+            <p class="rule"><strong>Replace the long dash, never delete it.</strong> No long dash (—) in a sentence of WordDock material; Dutch takes a spaced short dash, English a comma, a colon or a full stop; in Russian the dash is grammar and stays as a spaced short dash.</p>
+            <p class="why"><b>Reason</b> house style; and in Russian the dash carries meaning.</p></div></li>
+          <li id="p7"><span class="pn">P7</span><div>
+            <p class="rule"><strong>The half-pyramid for lesson lists.</strong> A sentence in unit n uses only words and patterns of units up to n.</p>
+            <p class="why"><b>Reason</b> a sentence the learner cannot yet read teaches nothing; the first deck plays in order.</p></div></li>
+          <li id="p8"><span class="pn">P8</span><div>
+            <p class="rule"><strong>Short, concrete, one idea.</strong> A pair's sentence is 2 to 6 words, says one thing, and the second sentence puts the word in another position. One-syllable words first; long words and exceptions in later units.</p>
+            <p class="why"><b>Reason</b> the mechanics of memory; see the hub charter, rule 0.</p></div></li>
+          <li id="p9"><span class="pn">P9</span><div>
+            <p class="rule"><strong>Culture-neutral in shared material.</strong> A master that will be translated carries no city, dish or custom that does not travel.</p>
+            <p class="why"><b>Reason</b> <em>"Türk kahvaltısı çok zengin"</em> is true and useless in Lingala.</p></div></li>
+          <li id="p10"><span class="pn">P10</span><div>
+            <p class="rule"><strong>Provenance and copyright are transparent.</strong> Every published list says who made it, from what, and under which licence; a list made from a book needs the rights settled before it is published. The metadata will live in the sheet itself, on its first sheet (to design).</p>
+            <p class="why"><b>Reason</b> the shelf is public; a learner picks a list by trusting its origin.</p></div></li>
+          <li id="p11"><span class="pn">P11</span><div>
+            <p class="rule"><strong>Publish = freeze.</strong> A published row keeps its ID and its meaning forever; a correction of the text is allowed, a change of meaning is a new row at the end. Before the first publish on the live site, anything may move.</p>
+            <p class="why"><b>Reason</b> the learner's scores hang on the ID.</p></div></li>
+          <li id="p12"><span class="pn">P12</span><div>
+            <p class="rule"><strong>A reviewer, not a rule, promotes a list.</strong> Machine-made material is beta until one person who knows the language has read it.</p>
+            <p class="why"><b>Reason</b> the bottleneck is people, and that is the right bottleneck.</p></div></li>
+        </ol>
+      </section>
+
+      <section class="sec" id="s3">
+        <div class="sec-top"><span class="num">Section 3</span><span class="chip">draft</span></div>
+        <h2>Kinds of lists, and their names</h2>
+        <ul class="plain">
+          <li><strong>My list</strong>: an Excel sheet added on one device; private; the file name is the list name.</li>
+          <li><strong>WD list</strong>: published on the site; one JSON file plus one name on the app's list.</li>
+          <li><strong>Hub pair</strong>: made in the browser from two language files; its name is the two codes, <code>NL-TR</code>.</li>
+          <li><strong>The naming law</strong>: two-code names belong to the hub; a curated pair list carries a third segment that says its angle: <code>NL-LA-PHOENIX</code>, <code>NL-RU-SVETLANA</code>, <code>NL-IT-LEARNAMO</code>. Many lists per pair are welcome; the app orders nothing across them.</li>
+          <li><strong>Tiers</strong>: <em>beta</em> (machine-made, unchecked) · <em>published</em> (read by one reviewer) · <em>curated</em> (a named curator, the full protocol).</li>
+          <li><strong>The provenance line</strong> on the shelf: source · curator · tier · level span. <span class="chip todo">to build</span></li>
+        </ul>
+      </section>
+
+      <section class="sec" id="s4">
+        <div class="sec-top"><span class="num">Section 4</span><span class="chip todo">to write</span></div>
+        <h2>The hub: one file per language</h2>
+        <p>From <code>hub.md</code> §2. Planned contents:</p>
+        <ul class="planned"><li>the charter in short</li><li>how to add a language</li><li>the row shape</li><li>review = promotion</li></ul>
+      </section>
+
+      <section class="sec" id="s5">
+        <div class="sec-top"><span class="num">Section 5</span><span class="chip todo">to write</span></div>
+        <h2>Working together: proposing, reviewing, publishing</h2>
+        <p>Planned contents:</p>
+        <ul class="planned"><li>how to propose a list</li><li>the template and its <code>?</code></li><li>who reviews what</li><li>the notes page</li><li>contact</li></ul>
+        <p>Contact: <span class="addr">michel@worddock.app</span></p>
+      </section>
+
+      <section class="sec" id="s6">
+        <div class="sec-top"><span class="num">Section 6</span><span class="chip todo">to write</span></div>
+        <h2>Stories from the workshop</h2>
+        <ul class="plain">
+          <li>How Lieve and Michel built NL-LA <span class="chip todo">after Thursday 16 October</span></li>
+          <li>Mister X: how fifty rows became forty-two pairs in an afternoon <span class="chip todo">to write</span></li>
+        </ul>
+      </section>
+
+      <section class="sec" id="s7">
+        <div class="sec-top"><span class="num">Section 7</span><span class="chip done">7.2 Dutch decided</span><span class="chip prop">7.2 English open</span></div>
+        <h2>Reference</h2>
+
+        <h3>7.1 The columns</h3>
+        <p>See <code>columns.md</code>; to be merged here.</p>
+
+        <h3>7.2 CAT, the closed set</h3>
+        <p>Short labels, because CAT shows on the card. Dutch decided on 11 October; the English set is still open.</p>
+        <div class="tbl"><table>
+          <thead><tr><th>Reader language</th><th>Values</th></tr></thead>
+          <tbody>
+            <tr><td>Dutch</td><td><div class="set"><code>zn</code><code>ww</code><code>bn</code><code>bw</code><code>vnw</code><code>telw</code><code>vw</code><code>vz</code><code>lidw</code><code>tw</code><code>part</code><code>uitdr</code></div></td></tr>
+            <tr><td>English (hub master)</td><td><div class="set"><code>noun</code><code>verb</code><code>adjective</code><code>adverb</code><code>pronoun</code><code>numeral</code><code>conjunction</code><code>preposition</code><code>article</code><code>interjection</code><code>particle</code><code>phrase</code></div></td></tr>
+          </tbody>
+        </table></div>
+        <p class="note">The Dutch set follows the school abbreviations: zelfstandig naamwoord, werkwoord, bijvoeglijk naamwoord, bijwoord, voornaamwoord, telwoord, voegwoord, voorzetsel, lidwoord, tussenwerpsel, partikel, uitdrukking. A postposition (Turkish) is <code>vz</code>; the note goes in SUB.</p>
+        <p class="note"><b>Open for M:</b> should the English set be short too, for the same reason? <code>n</code> · <code>v</code> · <code>adj</code> · <code>adv</code> · <code>pron</code> · <code>num</code> · <code>conj</code> · <code>prep</code> · <code>art</code> · <code>interj</code> · <code>part</code> · <code>phr</code></p>
+
+        <h3>7.3 The L scheme</h3>
+        <p><code>BAND</code> or <code>BAND.UNIT</code>: bands <code>A1</code> … <code>C2</code> or plain numbers, units 1 to 99. Filters: <code>A1</code>, <code>A1.3</code>, <code>A1-A2</code>, <code>-B1</code>, <code>B1-</code>. See <code>columns.md</code> §3.</p>
+      </section>
+
+      <section class="sec" id="s8">
+        <div class="sec-top"><span class="num">Section 8</span><span class="chip">draft</span></div>
+        <h2>Code logic: the engine</h2>
+        <p>What the app does with a list, as the code does it (<code>index.html</code> v0.30). For the curious, and for whoever checks a build.</p>
+
+        <h3 class="sub-h">8.1 One file</h3>
+        <p>The app is one HTML file. A published list is one JSON file under <code>lists/</code>. A My list is read from its Excel file in the browser and kept on the device. On the live site a service worker keeps a copy for offline use, and a small sync worker keeps the scores; a copy of the app on another address (the beta) has neither.</p>
+
+        <h3 class="sub-h">8.2 Reading a sheet</h3>
+        <p>The columns are found by their names, in any order, on the first sheet that has <code>Q1</code> and <code>A1</code>. A row needs <code>Q1</code> and <code>A1</code>; the rest may be empty; an empty <code>ENT</code> takes <code>A1</code>. Up to ten pairs per row. In a My list the ID is the row's place (<code>0001</code>, <code>0002</code> …); in a published list the ID is in the file.</p>
+
+        <h3 class="sub-h">8.3 What the device stores</h3>
+        <p>Per list one pool of scores, <code>wd_rs_&lt;NAME&gt;</code>: ID to number. Per list the view (level range and search). The list last studied, the deck in progress, the My lists, and the sync key and stamps. Nothing else; no account.</p>
+
+        <h3 class="sub-h">8.4 The view</h3>
+        <p>The table shows the rows that pass two filters: the level range (<code>A1</code>, <code>A1.3</code>, <code>A1-A2</code>, <code>-B1</code>, <code>B1-</code>; a list without levels ignores it) and the search. A search that is exactly a CAT, SUB or TAG value filters on that value; any other text searches the whole row, with case and accents folded ("amicus" finds "amīcus"). Rows per page: as many as fit the screen, never a scrollbar.</p>
+
+        <h3 class="sub-h">8.5 The deck</h3>
+        <p>Study takes the visible rows, sorts them by score (lowest first) and then by ID, and takes the first ten. So a fresh list plays in order, and later the weakest come first. Each card in the deck remembers: its row, a finger on the current pair, whether this pass is dirty, whether it owes a redemption pass, how many times it was dirty, and whether it is clean.</p>
+
+        <h3 class="sub-h">8.6 The pipe</h3>
+        <p>The deck is a queue; the card at the front is the one shown. Tap: the answer; tap again: a peek at the question. Then <em>Again</em> or <em>Good</em>.</p>
+        <ul class="plain">
+          <li><em>Again</em>: the card stays at the front; the pass is now dirty (counted once per pass); the card is not clean.</li>
+          <li><em>Good</em>: on to the next pair of the same card. After the last pair:
+            <ul class="plain">
+              <li>if the pass was dirty: the card owes a redemption pass; it stays at the front and plays again from pair 1;</li>
+              <li>if that was the redemption pass: the card goes to position 3, still not counted;</li>
+              <li>otherwise: the card is clean, goes to the back, and is counted.</li>
+            </ul></li>
+          <li>The counter at the top is "clean cards / cards in the deck". Done when every card is clean.</li>
+        </ul>
+
+        <h3 class="sub-h">8.7 The score</h3>
+        <p>Only at the end of a deck does a score change: +1 for a card that was never dirty, −1 for a card dirty once, −2 for a card dirty more than once. Nothing is written during a deck. The score has no clock: it says how often a word came back clean, not when it is due.</p>
+
+        <h3 class="sub-h">8.8 Resume</h3>
+        <p>The deck in progress is saved after every grade. On reopening, the same deck comes back if it is the same list and the same view (the signature is the IDs of the visible rows); otherwise a new deck.</p>
+
+        <h3 class="sub-h">8.9 Sync</h3>
+        <p>At the end of a deck: pull, merge, push. Merge, per ID: present on both sides, the higher score wins; present on one side, taken. The cloud stores a key and pools of numbers, never who you are.</p>
+
+        <h3 class="sub-h">8.10 Names</h3>
+        <p>A list has one name: capitals, digits, hyphens. It names the file, the pool, the view, the heading. A My list with the name of a published list gets <code>-OWN</code>; the published list keeps the name.</p>
+      </section>
+
+      <section class="sec" id="s9">
+        <div class="sec-top"><span class="num">Section 9</span><span class="chip prop">proposal</span></div>
+        <h2>A paper, one day</h2>
+        <p>A table of contents for an academic paper on the principles, and a first reference list. Working title: <em>Show first, explain later: a schema and a protocol for shareable word lists</em>. Alternative: <em>WordDock: weakest-first vocabulary practice on a plain table</em>.</p>
+
+        <h3 class="sub-h">Table of contents</h3>
+        <ol class="toc">
+          <li><strong>Introduction: the bottleneck is the material, not the schedule.</strong> Most tools optimise when a card returns; few say what a card may contain. The question: can a plain table, with rules, be the unit of exchange between teachers?</li>
+          <li><strong>The schema: a list as a minimal data structure.</strong> Rows, pairs, levels, IDs; one space per list; comparison with flashcard formats (Anki notes, CSV decks).</li>
+          <li><strong>The protocol: the twelve rules and their grounding</strong> (section 2 of this page).</li>
+          <li><strong>The engine:</strong> a deck of ten, dirty passes, redemption, the score at completion (section 8). What it deliberately does not do: no timing model, no due dates.</li>
+          <li><strong>Didactic principles:</strong> show first, explain later; the half-pyramid (i+1, the zone of proximal development); one-syllable words first; re-entry rows (the spiral curriculum).</li>
+          <li><strong>Lexicon:</strong> lemma and form; "same word, deeper"; collocations and fixed expressions as rows; frequency and coverage.</li>
+          <li><strong>Syntax and grammar inside a word list:</strong> a class label, not a rule; the note on the card; focus on form without explanation; the Russian dash as grammar.</li>
+          <li><strong>Linguistic diversity:</strong> the hub, one file per language; culture-neutral masters; stress marks and macrons; what one story in eight languages reveals (Mister X).</li>
+          <li><strong>Learning psychology:</strong> retrieval practice, spacing, desirable difficulties, cognitive load; the counter as feedback; why the score is slow.</li>
+          <li><strong>Social design:</strong> cathedral and bazaar; tiers; provenance and licences; the reviewer as the right bottleneck.</li>
+          <li><strong>Evaluation:</strong> what to measure (the pool over time, re-entry rows, a reviewer's corrections); a first study design with the NL-LA list.</li>
+          <li><strong>Limitations and future work.</strong></li>
+        </ol>
+
+        <h3 class="sub-h">References, a first list</h3>
+        <p class="note">To verify and extend before writing; grouped by theme.</p>
+
+        <p class="ref-group">Memory and practice</p>
+        <ul class="refs">
+          <li>Ebbinghaus, H. (1885). <em>Über das Gedächtnis.</em> Leipzig: Duncker &amp; Humblot.</li>
+          <li>Leitner, S. (1972). <em>So lernt man lernen.</em> Freiburg: Herder.</li>
+          <li>Pimsleur, P. (1967). A memory schedule. <em>Modern Language Journal</em>, 51(2), 73–75.</li>
+          <li>Bjork, R. A. (1994). Memory and metamemory considerations in the training of human beings. In J. Metcalfe &amp; A. Shimamura (Eds.), <em>Metacognition: Knowing about knowing</em> (pp. 185–205). MIT Press.</li>
+          <li>Roediger, H. L., &amp; Karpicke, J. D. (2006). Test-enhanced learning: Taking memory tests improves long-term retention. <em>Psychological Science</em>, 17(3), 249–255.</li>
+          <li>Cepeda, N. J., Pashler, H., Vul, E., Wixted, J. T., &amp; Rohrer, D. (2006). Distributed practice in verbal recall tasks: A review and quantitative synthesis. <em>Psychological Bulletin</em>, 132(3), 354–380.</li>
+          <li>Karpicke, J. D., &amp; Roediger, H. L. (2008). The critical importance of retrieval for learning. <em>Science</em>, 319(5865), 966–968.</li>
+          <li>Dunlosky, J., Rawson, K. A., Marsh, E. J., Nathan, M. J., &amp; Willingham, D. T. (2013). Improving students' learning with effective learning techniques. <em>Psychological Science in the Public Interest</em>, 14(1), 4–58.</li>
+          <li>Bahrick, H. P. (1984). Semantic memory content in permastore: Fifty years of memory for Spanish learned in school. <em>Journal of Experimental Psychology: General</em>, 113(1), 1–29.</li>
+          <li>Wozniak, P. A., &amp; Gorzelanczyk, E. J. (1994). Optimization of repetition spacing in the practice of learning. <em>Acta Neurobiologiae Experimentalis</em>, 54, 59–62.</li>
+          <li>Settles, B., &amp; Meeder, B. (2016). A trainable spaced repetition model for language learning. <em>Proceedings of ACL 2016</em>, 1848–1858.</li>
+          <li>Sweller, J. (1988). Cognitive load during problem solving: Effects on learning. <em>Cognitive Science</em>, 12(2), 257–285.</li>
+          <li>Mayer, R. E. (2009). <em>Multimedia learning</em> (2nd ed.). Cambridge University Press.</li>
+        </ul>
+
+        <p class="ref-group">Vocabulary</p>
+        <ul class="refs">
+          <li>Nation, I. S. P. (2013). <em>Learning vocabulary in another language</em> (2nd ed.). Cambridge University Press.</li>
+          <li>Nation, I. S. P. (2006). How large a vocabulary is needed for reading and listening? <em>Canadian Modern Language Review</em>, 63(1), 59–82.</li>
+          <li>Schmitt, N. (2010). <em>Researching vocabulary: A vocabulary research manual.</em> Palgrave Macmillan.</li>
+          <li>Laufer, B., &amp; Hulstijn, J. (2001). Incidental vocabulary acquisition in a second language: The construct of task-induced involvement. <em>Applied Linguistics</em>, 22(1), 1–26.</li>
+          <li>Webb, S., &amp; Nation, P. (2017). <em>How vocabulary is learned.</em> Oxford University Press.</li>
+          <li>Nakata, T. (2011). Computer-assisted second language vocabulary learning in a paired-associate paradigm: A critical investigation of flashcard software. <em>Computer Assisted Language Learning</em>, 24(1), 17–38.</li>
+          <li>Nakata, T. (2015). Effects of expanding and equal spacing on second language vocabulary learning. <em>Studies in Second Language Acquisition</em>, 37(4), 677–711.</li>
+        </ul>
+
+        <p class="ref-group">Grammar, usage, lexicon and syntax</p>
+        <ul class="refs">
+          <li>Krashen, S. D. (1985). <em>The input hypothesis: Issues and implications.</em> Longman.</li>
+          <li>Schmidt, R. (1990). The role of consciousness in second language learning. <em>Applied Linguistics</em>, 11(2), 129–158.</li>
+          <li>Long, M. H. (1991). Focus on form: A design feature in language teaching methodology. In K. de Bot, R. Ginsberg &amp; C. Kramsch (Eds.), <em>Foreign language research in cross-cultural perspective</em> (pp. 39–52). John Benjamins.</li>
+          <li>Ellis, N. C. (2002). Frequency effects in language processing. <em>Studies in Second Language Acquisition</em>, 24(2), 143–188.</li>
+          <li>Ellis, R. (2006). Current issues in the teaching of grammar: An SLA perspective. <em>TESOL Quarterly</em>, 40(1), 83–107.</li>
+          <li>Tomasello, M. (2003). <em>Constructing a language: A usage-based theory of language acquisition.</em> Harvard University Press.</li>
+          <li>Lewis, M. (1993). <em>The lexical approach.</em> Language Teaching Publications.</li>
+          <li>Sinclair, J. (1991). <em>Corpus, concordance, collocation.</em> Oxford University Press.</li>
+          <li>Wray, A. (2002). <em>Formulaic language and the lexicon.</em> Cambridge University Press.</li>
+          <li>DeKeyser, R. (Ed.) (2007). <em>Practice in a second language.</em> Cambridge University Press.</li>
+          <li>Ørberg, H. H. (1991). <em>Lingua Latina per se illustrata. Pars I: Familia Romana.</em> Domus Latina.</li>
+        </ul>
+
+        <p class="ref-group">Pedagogy and curriculum</p>
+        <ul class="refs">
+          <li>Bruner, J. S. (1960). <em>The process of education.</em> Harvard University Press.</li>
+          <li>Vygotsky, L. S. (1978). <em>Mind in society.</em> Harvard University Press.</li>
+          <li>Council of Europe (2001). <em>Common European Framework of Reference for Languages.</em> Cambridge University Press; and (2020) <em>Companion volume.</em> Council of Europe Publishing.</li>
+          <li>Kwakernaak, E. (2009). <em>Didactiek van het vreemdetalenonderwijs.</em> Coutinho.</li>
+        </ul>
+
+        <p class="ref-group">Commons and collaboration</p>
+        <ul class="refs">
+          <li>Raymond, E. S. (1999). <em>The cathedral and the bazaar.</em> O'Reilly.</li>
+          <li>Creative Commons. <em>CC0 1.0 Universal.</em> <span class="addr">creativecommons.org/publicdomain/zero/1.0</span></li>
+        </ul>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var topics = Array.prototype.slice.call(document.querySelectorAll('.topic'));
+  var secs = Array.prototype.slice.call(document.querySelectorAll('.sec'));
+  function setActive(id){
+    topics.forEach(function(t){ t.classList.toggle('active', t.getAttribute('href') === '#' + id); });
+  }
+  topics.forEach(function(t){
+    t.addEventListener('click', function(){ setActive(t.getAttribute('href').slice(1)); });
+  });
+  var start = (location.hash || '').replace('#','');
+  if (start && document.getElementById(start)) {
+    var el = document.getElementById(start);
+    var sec = el.closest ? el.closest('.sec') : null;
+    setActive(sec ? sec.id : start);
+  } else setActive('s0');
+  if ('IntersectionObserver' in window) {
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ visible[e.target.id] = e.isIntersecting ? e.intersectionRatio : 0; });
+      var best = null, bestV = 0;
+      secs.forEach(function(s){ if ((visible[s.id] || 0) > bestV) { bestV = visible[s.id]; best = s.id; } });
+      if (best) setActive(best);
+    }, { rootMargin: '-10% 0px -55% 0px', threshold: [0, .1, .25, .5, .75, 1] });
+    secs.forEach(function(s){ io.observe(s); });
+  }
+})();
+</script>
+
+</body>
+</html>
