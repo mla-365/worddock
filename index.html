@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.31 ───────────────────────────────────────────
+/* ── WordDock — v0.31.1 ───────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -91,17 +91,27 @@ button,select,input{font-family:inherit}
 .pill.blue{background:var(--accent);border-color:var(--accent)}
 .pill.blue:hover{background:#134f8a;border-color:#134f8a}
 body.booting .pills{visibility:hidden}
-/* The sync line: alone, small and grey, bottom left of All lists. */
-.bar{position:fixed;left:0;bottom:0;z-index:40;padding:0 16px;padding-bottom:env(safe-area-inset-bottom);max-width:100%}
-.bar .sync-line{display:block;background:var(--bg);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* v0.31.1: the table's way out, "All lists", in the top left corner of the column. */
+.top-in{max-width:920px;margin:0 auto;padding:0 1.25rem;height:52px;display:flex;align-items:center}
+.corner{background:none;border:none;padding:0 2px;color:var(--muted);font-size:12px;cursor:pointer;white-space:nowrap}
+.corner:hover{color:var(--fg);text-decoration:underline;text-underline-offset:3px}
+.corner[hidden]{display:none}
+/* All lists only: the sync line bottom left, About WordDock bottom right, both on the column's edges,
+   a little above the bottom of the screen. */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bg);padding:6px 0 calc(18px + env(safe-area-inset-bottom))}
+.bar[hidden]{display:none}
+.bar-in{max-width:920px;margin:0 auto;padding:0 1.25rem;display:flex;align-items:center;gap:16px}
+.bar .sync-line{display:block;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar .sync-line[hidden]{display:none}
+.about-link{margin-left:auto;background:none;border:none;padding:6px 0;color:var(--muted);font-size:12px;cursor:pointer;white-space:nowrap}
+.about-link:hover{color:var(--sec);text-decoration:underline;text-underline-offset:3px}
 
 /* ── list surface ── */
 .wrap{max-width:920px;margin:0 auto;padding:.25rem 1.25rem 4rem}
 .h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .h button{background:none;border:none;padding:2px 8px;margin-left:-8px;border-radius:8px;font:inherit;color:inherit;cursor:pointer;text-align:left}
 .h button:hover{background:var(--card)}
-.sub{color:var(--sec);font-size:13px;margin:2px 0 0;min-height:19.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:140px}   /* one line: the door sits at its right */
+.sub{color:var(--sec);font-size:13px;margin:2px 0 0;min-height:19.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:.9rem 0 .75rem}
 .controls[hidden]{display:none}
 input[type=search]{flex:1;min-width:170px;height:36px;padding:0 12px;border:.5px solid var(--line2);border-radius:8px;
@@ -298,7 +308,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .pill{flex:1 1 0;min-width:0}
   .pill.blue{flex:0 0 auto}   /* the blue takes its own width, the green the rest: the counter never gets cut */
   #controls,#wdCtl{margin-top:calc(.9rem + 46px)}
-  .sub{padding-right:110px}
+  .top-in,.bar-in{padding:0 12px}
   .hide-s{display:none}
   input[type=search]{min-width:0;flex:1 1 150px}
   .cat col.c-n{width:36px}.cat col.c-s{width:104px}.cat col.c-a{width:76px}   /* room for "studying now", the date, and ↓ × */
@@ -318,7 +328,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 </head>
 <body class="booting">
 
-<header class="top"></header>
+<header class="top"><div class="top-in"><button class="corner" id="corner" hidden></button></div></header>
 <div class="pills" id="pills"><div class="pills-in">
   <button class="door" id="door" hidden></button>
   <div class="pill-row" id="pillRow"><button class="pill blue" id="pillStudy" hidden></button><button class="pill" id="pill" hidden></button></div>
@@ -378,7 +388,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   </div>
 </section>
 
-<nav class="bar" id="bar"><button class="sync-line" id="syncLine" hidden></button></nav>
+<nav class="bar" id="bar" hidden><div class="bar-in"><button class="sync-line" id="syncLine" hidden></button><button class="about-link" id="aboutLink" data-t="aboutLink"></button></div></nav>
 <input type="file" id="fileIn" accept=".xlsx,.xlsm,.xls,.csv" hidden>
 
 <div class="dlg-back" id="dlgBack" hidden>
@@ -910,10 +920,11 @@ const visibleRows = () => { const rows = viewRows(); if (!rows) return []; const
 function renderBar(){
   const d = $("door"), s = $("syncLine");
   s.hidden = level !== "catalog" || !SYNC_API;
-  if (level === "list"){ d.hidden = false; d.textContent = T.allLists; d.onclick = () => goCatalog(); }
-  else if (level === "catalog"){ d.hidden = false; d.textContent = T.aboutLink; d.onclick = () => openAbout(); }
-  else if (level === "about"){ d.hidden = false; d.textContent = T.allLists; d.onclick = () => closeAbout(); }
-  else { d.hidden = true; d.textContent = ""; d.onclick = null; }
+  // v0.31.1: no door above the pill. The table's way out is the corner; All lists has its bottom line;
+  // About has none (Esc and the browser's back still lead to All lists).
+  d.hidden = true; d.textContent = ""; d.onclick = null;
+  const c = $("corner"); c.hidden = level !== "list"; c.textContent = T.allLists;
+  $("bar").hidden = level !== "catalog";
   renderPills();
 }
 function renderPills(){
@@ -1744,6 +1755,8 @@ function promptDlg(title, body, value){
 /* ── Input ── */
 $("pill").addEventListener("click", () => { if (!activeKey) return; if (level === "study") goList(activeKey); else enterStudy(); });
 $("pillStudy").addEventListener("click", onStudy);
+$("corner").addEventListener("click", () => goCatalog());
+$("aboutLink").addEventListener("click", () => openAbout());
 $("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
 $("syncLine").addEventListener("click", showSyncPanel);
 $("btnHelp").addEventListener("click", e => { e.stopPropagation(); showHelp(); });
