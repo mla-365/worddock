@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.30.1 ───────────────────────────────────────────
+/* ── WordDock — v0.31 ───────────────────────────────────────────
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -43,14 +43,16 @@
              A list has one name, shown everywhere: NL-RU, NL-LA-L.
    · view  = what the table shows: a level range and a word, per list.
    · deck  = the ten lowest-RS words of the view; finish line: all ten clean.
-   Four pages, one rule (M's notes, 10 Oct): the way to the card is the green button, the way
-   outward is one small door on the bottom line, centred.
-     card      counter "3/10" on the top line · bottom door: the list's name (to the table)
-     table     heading · search · Level · pager · [Study 10 · NL-LA] · bottom door: All lists
-     All lists the same heading size and the same green button in the same place
-               ([Resume NL-LA · 3/10], back to the deck) · bottom line: sync status, About WordDock
-     About     bottom door: All lists
-   The table and All lists share one top (52 px), one heading size, one controls row. No W.
+   v0.31: one pill, four pages. The pill is the deck in progress, "NL-LA · 3/10" ("10/10 ✓" when
+   done), the same size in the same spot on every page: the right end of the controls row (phones:
+   a full line under the heading). Above it, small and grey, one door.
+     card      the pill, pale (#fafaf8): a tap opens the table of that list · no door
+     table     green pill (to the card) · left of it the blue [Study 10] when a tap would deal another
+               deck (another list, another view, or the deck is done) · door: All lists
+     All lists green pill · door: About WordDock · the sync line alone, bottom left
+     About     green pill · door: All lists
+   No bottom bar, no counter on the top line. The table and All lists share one top (52 px), one
+   heading size, one controls row; the pills sit at that row's height on all four pages.
    A link can open a WD list: worddock.app/?list=NL-LA lands on its table (read once at the boot, then wiped).
    Sync and the service worker run on the live site only (LIVE_HOSTS): a copy on another address has neither.
    Engine from v26.98 except the finish line. Writes RS only at deck completion. */
@@ -68,21 +70,38 @@ button,select,input{font-family:inherit}
 /* ── the top line: empty, except on the card, where the counter sits in its middle. One height on
    every page, so the headings of the table and of All lists sit at the same y. ── */
 .top{position:relative;height:52px}
-/* ── the bottom line: one small door, centred, on every page — card: the list's name (to the table);
-   table: All lists; All lists: About WordDock, with the sync status at the left; About: All lists. ── */
-.bar{position:fixed;left:0;right:0;bottom:0;z-index:40;height:48px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-  align-items:center;padding:0 16px;padding-bottom:env(safe-area-inset-bottom);background:var(--bg)}
-.door{grid-column:2;background:none;border:none;padding:4px 10px;border-radius:6px;color:var(--sec);font-size:13px;line-height:1.4;cursor:pointer;white-space:nowrap}
-.door:hover{background:var(--card);color:var(--fg)}
-.bar .sync-line{grid-column:1;justify-self:start;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ── the pills: one layer over every page, the column's width, its right end at the controls row.
+   --pill-top is the y of that row on the table and on All lists (52 top + heading + sub line + the
+   row's margin); the card and About put the pills at the same y. A door sits just above them. ── */
+:root{--pill-top:128.5px}
+.pills{position:absolute;left:0;right:0;top:calc(var(--pill-top) - 24px);z-index:35;pointer-events:none}
+.pills[hidden]{display:none}
+.pills-in{max-width:920px;margin:0 auto;padding:0 1.25rem;display:flex;flex-direction:column;align-items:flex-end}
+.door{height:20px;background:none;border:none;padding:0 2px;margin:0 0 4px;color:var(--muted);font-size:12px;line-height:20px;cursor:pointer;white-space:nowrap;pointer-events:auto}
+.door:hover{color:var(--fg);text-decoration:underline;text-underline-offset:3px}
+.door[hidden]{visibility:hidden;display:block}
+.pill-row{display:flex;gap:10px;justify-content:flex-end;max-width:100%}
+.pill{height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--green);background:var(--green);color:#fff;font-size:14px;
+  font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;pointer-events:auto;font-variant-numeric:tabular-nums}
+.pill:hover{background:var(--green2);border-color:var(--green2)}
+.pill[hidden]{display:none}
+.pill.pale{background:#fafaf8;border-color:var(--line2);color:var(--muted)}
+.pill.pale:hover{background:var(--card)}
+.pill.pale .pc{color:var(--fg)}
+.pill.blue{background:var(--accent);border-color:var(--accent)}
+.pill.blue:hover{background:#134f8a;border-color:#134f8a}
+body.booting .pills{visibility:hidden}
+/* The sync line: alone, small and grey, bottom left of All lists. */
+.bar{position:fixed;left:0;bottom:0;z-index:40;padding:0 16px;padding-bottom:env(safe-area-inset-bottom);max-width:100%}
+.bar .sync-line{display:block;background:var(--bg);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar .sync-line[hidden]{display:none}
 
 /* ── list surface ── */
 .wrap{max-width:920px;margin:0 auto;padding:.25rem 1.25rem 4rem}
-.h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3}
+.h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .h button{background:none;border:none;padding:2px 8px;margin-left:-8px;border-radius:8px;font:inherit;color:inherit;cursor:pointer;text-align:left}
 .h button:hover{background:var(--card)}
-.sub{color:var(--sec);font-size:13px;margin:2px 0 0}
+.sub{color:var(--sec);font-size:13px;margin:2px 0 0;min-height:19.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:140px}   /* one line: the door sits at its right */
 .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:.9rem 0 .75rem}
 .controls[hidden]{display:none}
 input[type=search]{flex:1;min-width:170px;height:36px;padding:0 12px;border:.5px solid var(--line2);border-radius:8px;
@@ -106,13 +125,6 @@ input[type=search].on{border-color:var(--fg)}
 .pager button:hover:not([disabled]){background:var(--card);color:var(--fg)}
 .pager button[disabled]{color:var(--line2);cursor:default}
 .pager button[hidden]{display:none}
-/* The green button: the way to the card. The same button, the same place, on the table and on All lists:
-   the right end of the controls row (on phones a full line of its own). */
-.study-btn{height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:14px;
-  font-weight:600;cursor:pointer;white-space:nowrap;margin-left:auto;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.study-btn:hover{background:var(--green2)}
-.study-btn[disabled]{opacity:.4;cursor:default}
-.study-btn[hidden]{display:none}
 table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
 td,th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tbody tr{height:38px}
@@ -205,7 +217,7 @@ body.abouting .about{display:block}
 body.abouting .wrap,body.abouting .cat{display:none}
 .about-h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3}
 .about-h button{background:none;border:none;padding:2px 8px;margin-left:-8px;border-radius:8px;font:inherit;color:inherit;cursor:default;text-align:left}
-.about-panes{display:grid;grid-template-columns:220px minmax(0,1fr);column-gap:32px;margin-top:1rem}
+.about-panes{display:grid;grid-template-columns:220px minmax(0,1fr);column-gap:32px;margin-top:calc(var(--pill-top) - 44px)}   /* under the pills */
 .about-rail{border-right:.5px solid var(--line2);padding-right:14px;align-self:start}
 .about-topic{display:block;width:100%;text-align:left;background:none;border:none;padding:9px 12px;margin:0 0 3px;border-radius:8px;
   font-size:14px;color:var(--sec);cursor:pointer;line-height:1.35}
@@ -222,7 +234,7 @@ body.abouting .wrap,body.abouting .cat{display:none}
 /* ── study: the list is gone; card + Again / Good ── */
 .study{position:fixed;inset:0;z-index:20;background:var(--bg);display:none;flex-direction:column;
   align-items:center;padding:0 16px}
-.study-block{position:absolute;left:16px;right:16px;top:42%;transform:translateY(-50%);
+.study-block{position:absolute;left:16px;right:16px;top:max(42%, calc(var(--pill-top) + 56px + 138px));transform:translateY(-50%);   /* the card stays clear of the pills */
   display:flex;flex-direction:column;align-items:center}
 body.studying .study{display:flex}
 body.studying .wrap{display:none}
@@ -252,12 +264,6 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 .btn-good{border:1px solid color-mix(in srgb,var(--good) 55%,#fff);color:var(--good-ink)}
 .btn-again:hover{background:#fbf2f2}.btn-good:hover{background:#f1f8f1}
 
-/* ── bottom line: the counter, only in study ── */
-.pos{position:fixed;left:56px;right:56px;top:0;height:52px;z-index:40;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;
-  padding:0;font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--bg);pointer-events:none}
-.pos:empty{display:none}
-.pos > *{pointer-events:auto}
-
 /* ── dialog ── */
 .dlg-back{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;padding:24px}
 .dlg-back[hidden]{display:none}
@@ -273,8 +279,9 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
    buttons are centred in the room between the top line (52px) and the counter (~40px), and
    the card shrinks with that room, never below 80px and never above 150px. */
 @media (max-height:500px){
-  .study-block{top:calc(52px + (100dvh - 100px) / 2)}
-  .card{height:clamp(80px, calc(100dvh - 172px), 150px);padding:10px 24px}
+  /* the card and its buttons centred in the room under the pills; the card shrinks with that room */
+  .study-block{top:calc(var(--pill-top) + 56px + (100dvh - var(--pill-top) - 56px) / 2)}
+  .card{height:clamp(56px, calc(100dvh - var(--pill-top) - 56px - 70px), 150px);padding:10px 24px}
   .card-tag{top:6px;font-size:10px}
   .card-text{font-size:22px}
   .actions{margin-top:8px}
@@ -283,7 +290,15 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 @media (max-width:640px){
   .wrap,.cat{padding-left:12px;padding-right:12px}
   .h,.sec-h,.add{font-size:20px}
-  .study-btn{margin-left:0;flex:1 1 100%}   /* phone: the green button on a full line of its own */
+  /* phone: the pills on a full line of their own under the heading; the controls row moves down under them */
+  :root{--pill-top:126px}
+  .pills-in{padding:0 12px;align-items:stretch}
+  .door{align-self:flex-end}
+  .pill-row{width:100%}
+  .pill{flex:1 1 0;min-width:0}
+  .pill.blue{flex:0 0 auto}   /* the blue takes its own width, the green the rest: the counter never gets cut */
+  #controls,#wdCtl{margin-top:calc(.9rem + 46px)}
+  .sub{padding-right:110px}
   .hide-s{display:none}
   input[type=search]{min-width:0;flex:1 1 150px}
   .cat col.c-n{width:36px}.cat col.c-s{width:104px}.cat col.c-a{width:76px}   /* room for "studying now", the date, and ↓ × */
@@ -291,7 +306,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .card-text{font-size:24px}
   .about{padding-left:12px;padding-right:12px}
   .about-h{font-size:20px}
-  .about-panes{grid-template-columns:1fr;margin-top:.75rem}
+  .about-panes{grid-template-columns:1fr;margin-top:calc(var(--pill-top) - 44px)}
   .about-rail{border-right:none;padding-right:0}
   .about.show-detail .about-rail,.about.show-rail .about-content{display:none}
   .about.show-detail .about-h button{cursor:pointer;color:var(--sec)}
@@ -304,6 +319,10 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 <body class="booting">
 
 <header class="top"></header>
+<div class="pills" id="pills"><div class="pills-in">
+  <button class="door" id="door" hidden></button>
+  <div class="pill-row" id="pillRow"><button class="pill blue" id="pillStudy" hidden></button><button class="pill" id="pill" hidden></button></div>
+</div></div>
 
 <main class="wrap" id="listSurface">
   <h1 class="h" id="h"></h1>
@@ -312,7 +331,6 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
     <input type="search" id="q" data-t-ph="search" data-t-aria="search" autocomplete="off" spellcheck="false">
     <label class="lvl-f" id="lvlBox"><span data-t="level"></span><input type="search" id="lvl" data-t-aria="levelAria" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
     <span class="pager"><button id="pgPrev" data-t-aria="prevPage">&#8249;</button><span class="count" id="count"></span><button id="pgNext" data-t-aria="nextPage">&#8250;</button></span>
-    <button class="study-btn" id="btnStudy"></button>
   </div>
   <table id="table"><colgroup id="cols"></colgroup><thead id="thead"></thead><tbody id="tbody"></tbody></table>
   <div class="empty" id="empty" hidden data-t="noMatches"></div>
@@ -325,7 +343,6 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
     <div class="controls" id="wdCtl">
       <input type="search" id="wdQ" data-t-ph="search" data-t-aria="searchWdAria" autocomplete="off" spellcheck="false">
       <span class="pager"><button id="wdPrev" data-t-aria="prevPage">&#8249;</button><span class="count" id="wdCount"></span><button id="wdNext" data-t-aria="nextPage">&#8250;</button></span>
-      <button class="study-btn" id="catStudy" hidden></button>
     </div>
     <table><colgroup><col><col class="c-n"><col class="c-s"><col class="c-a"></colgroup><tbody id="wdBody"></tbody></table>
     <div class="empty" id="wdEmpty" hidden data-t="noMatches"></div>
@@ -361,8 +378,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   </div>
 </section>
 
-<footer class="pos" id="pos"></footer>
-<nav class="bar" id="bar"><button class="sync-line" id="syncLine" hidden></button><button class="door" id="door"></button></nav>
+<nav class="bar" id="bar"><button class="sync-line" id="syncLine" hidden></button></nav>
 <input type="file" id="fileIn" accept=".xlsx,.xlsm,.xls,.csv" hidden>
 
 <div class="dlg-back" id="dlgBack" hidden>
@@ -414,6 +430,10 @@ const T = {
   excelOut: k => "Excel: " + k + ".xlsx", removeHere: "Remove from this device",
   // study
   deckDone: "One More WordDeck Done!",
+  // the pills (v0.31): the deck in progress, and the blue one that deals a new deck
+  pillCount: (s, n, done) => s + "/" + n + (done ? " ✓" : ""), pillSep: " · ",
+  pillToCard: k => "Back to the deck of " + k, pillToList: k => "Open the list " + k,
+  studyCount: n => "Study " + n,
   studyK: k => "Study " + k,
   resume: (k, s, n) => "Resume " + k + " · " + s + "/" + n,
   switchQ: k => "Switch to studying " + k + "?", leaving: k => "You're leaving " + k + ".",
@@ -534,7 +554,7 @@ function fitPage(){
   const first = tb.querySelector("tr:not(.detail)");
   const rowH = first ? first.getBoundingClientRect().height : ROW_H;
   const top = tb.getBoundingClientRect().top + window.scrollY;
-  const n = Math.floor((window.innerHeight - top - 24 - 48) / rowH);   // the bottom line
+  const n = Math.floor((window.innerHeight - top - 24) / rowH);
   const next = Math.max(5, Math.min(20, n));
   if (next !== PAGE){ const f = page * PAGE; PAGE = next; page = Math.floor(f / PAGE); return true; }
   return false;
@@ -882,32 +902,43 @@ function matcherFor(rows){
 }
 const visibleRows = () => { const rows = viewRows(); if (!rows) return []; const ok = matcherFor(rows); return rows.filter(ok); };
 
-/* ── Top line: in study, the list's title = the door into the list; otherwise nothing ── */
-/* The top line is the way one level up: on the card the list's name (→ the list),
-   in the list "All lists" (→ LISTS). LISTS is the top: nothing. */
-/* The gates. The bottom bar shows on the two faces of the work; the filled half is the face you are on,
-   the other half is greyed when there is nothing to study (an empty view). On LISTS the green
-   button leads back to the deck in progress. */
-/* The bottom door and the green buttons, by level (see the header). */
+/* ── The gates (v0.31). One pill, the same spot on all four pages: the deck in progress,
+   "NL-LA · 3/10". Green on the table, All lists and About (a tap: back to the card); pale on the card
+   (a tap: the table of that list). On the table only, the blue [Study 10] at its left, when a tap would
+   deal another deck: another list, another view, or the deck is done. Above the pill, one small door:
+   table → All lists, All lists → About WordDock, About → All lists; none on the card. ── */
 function renderBar(){
   const d = $("door"), s = $("syncLine");
   s.hidden = level !== "catalog" || !SYNC_API;
-  if (level === "study" && activeKey){ d.textContent = activeKey; d.onclick = () => goList(activeKey); }
-  else if (level === "list"){ d.textContent = T.allLists; d.onclick = () => goCatalog(); }
-  else if (level === "catalog"){ d.textContent = T.aboutLink; d.onclick = () => openAbout(); }
-  else if (level === "about"){ d.textContent = T.allLists; d.onclick = () => closeAbout(); }
-  if (level === "list") renderStudyBtn();
-  const cs = $("catStudy");
-  if (level === "catalog" && activeKey && getList(activeKey).rows){ cs.hidden = false; cs.textContent = midDeck() ? T.resume(activeKey, deckScore, pipe.length) : T.studyK(activeKey); }
-  else cs.hidden = true;
+  if (level === "list"){ d.hidden = false; d.textContent = T.allLists; d.onclick = () => goCatalog(); }
+  else if (level === "catalog"){ d.hidden = false; d.textContent = T.aboutLink; d.onclick = () => openAbout(); }
+  else if (level === "about"){ d.hidden = false; d.textContent = T.allLists; d.onclick = () => closeAbout(); }
+  else { d.hidden = true; d.textContent = ""; d.onclick = null; }
+  renderPills();
 }
-/* The table's green button: what Study will deal — the deck's size out of the view ("Study 8 · NL-LA"
-   after a search), Resume mid-deck, greyed when the view is empty. */
-function renderStudyBtn(){
-  const b = $("btnStudy"), vis = visibleRows(), n = Math.min(DECK_SIZE, vis.length);
-  const resume = viewKey === activeKey && midDeck() && sigOf(vis) === deckSig;
-  b.disabled = !vis.length;
-  b.textContent = !vis.length ? T.studyK(viewKey) : resume ? T.resume(viewKey, deckScore, pipe.length) : T.studyN(n, viewKey);
+function renderPills(){
+  const g = $("pill"), b = $("pillStudy");
+  const has = !!activeKey && pipe.length > 0, onCard = level === "study";
+  g.hidden = !has;
+  if (has){
+    g.innerHTML = "";
+    const k = document.createElement("span"); k.className = "pk"; k.textContent = activeKey;
+    const c = document.createElement("span"); c.className = "pc"; c.textContent = T.pillCount(deckScore, pipe.length, deckDone);
+    g.append(k, document.createTextNode(T.pillSep), c);
+    g.classList.toggle("pale", onCard);
+    g.setAttribute("aria-label", onCard ? T.pillToList(activeKey) : T.pillToCard(activeKey));
+  }
+  // The blue pill: what Study would deal, only when that is not the deck in progress.
+  let blue = false;
+  if (level === "list"){
+    const vis = visibleRows();
+    blue = vis.length > 0 && (viewKey !== activeKey || sigOf(vis) !== deckSig || deckDone || !has);
+    if (blue) b.textContent = T.studyCount(Math.min(DECK_SIZE, vis.length));
+  }
+  b.hidden = !blue;
+  // PC: the controls rows of the table and of All lists leave room at their right end for the pills.
+  const w = isSmall() ? 0 : $("pillRow").getBoundingClientRect().width;
+  for (const id of ["controls", "wdCtl"]) $(id).style.paddingRight = w ? Math.ceil(w + 12) + "px" : "";
 }
 
 /* ── The list surface ── */
@@ -1089,14 +1120,9 @@ function renderSection(id, lists, unit){
   $(id + "Prev").disabled = S.page === 0; $(id + "Next").disabled = S.page >= pages - 1;
 }
 
-/* ── Bottom line ── */
-function renderPos(){
-  const pos = $("pos"); pos.innerHTML = "";
-  if (level === "study"){
-    const s = document.createElement("span"); s.id = "deckCount"; pos.appendChild(s); paintCounter();
-  }
-}
-function paintCounter(){ const el = $("deckCount"); if (el) el.textContent = deckScore + "/" + pipe.length + (deckDone ? " ✓" : ""); }
+/* ── The counter: in the pill ── */
+function renderPos(){ renderPills(); }
+function paintCounter(){ renderPills(); }   // the counter lives in the pill
 
 /* ── The Study action: studies what the table shows ── */
 const midDeck = () => deckStarted && !deckDone;
@@ -1150,8 +1176,8 @@ function goList(raw, fromPop){
 }
 function enterStudy(fromPop){
   if (viewKey !== activeKey){ viewKey = activeKey; loadView(activeKey); }
-  level = "study";
-  document.body.classList.remove("cataloging");
+  level = "study"; window.scrollTo(0, 0);
+  document.body.classList.remove("cataloging", "abouting");
   document.body.classList.add("studying"); $("study").setAttribute("aria-hidden", "false");
   document.activeElement && document.activeElement.blur();
   show(); renderCard(); pushNav(fromPop);
@@ -1716,8 +1742,8 @@ function promptDlg(title, body, value){
 }
 
 /* ── Input ── */
-$("btnStudy").addEventListener("click", onStudy);
-$("catStudy").addEventListener("click", () => enterStudy());
+$("pill").addEventListener("click", () => { if (!activeKey) return; if (level === "study") goList(activeKey); else enterStudy(); });
+$("pillStudy").addEventListener("click", onStudy);
 $("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
 $("syncLine").addEventListener("click", showSyncPanel);
 $("btnHelp").addEventListener("click", e => { e.stopPropagation(); showHelp(); });
