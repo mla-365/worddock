@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231f3f8f'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.31.3 ───────────────────────────────────────────
+/* ── WordDock — v0.31.4 ───────────────────────────────────────────
    v0.31.2 (from the beta): one door at the bottom centre, the beta's look (13 px, grey, light grey on hover),
    its middle 42 px above the screen's foot. Table: All lists · All lists: About WordDock · About: the sync
    line (same words, same dialog) · card: none. The card's pill is a very light green, kin to the green ones.
@@ -59,12 +59,12 @@
    A link can open a WD list: worddock.app/?list=NL-LA lands on its table (read once at the boot, then wiped).
    Sync and the service worker run on the live site only (LIVE_HOSTS): a copy on another address has neither.
    v0.31.3: the app's colour is lapis (--green holds #1f3f8f, the Van Eyck blue; the name stays for the code's sake).
-   Green (--go) is kept only where it means good: the Good button, the finished deck, "studying now".
+   v0.31.4: no green left. Good, the finished deck, "studying now" and every hover are lapis too; only Again keeps its red.
    Engine from v26.98 except the finish line. Writes RS only at deck completion. */
 :root{
   --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
-  --card:#f6f5ef;--accent:#185fa5;--green:#1f3f8f;--green2:#2a52b3;--go:#006600;--go2:#0a7a0a;--q:#6b6a64;
-  --again:#b44a4a;--again-ink:#6e1010;--good:#3f8a4f;--good-ink:#0a5a0a;
+  --card:#f6f5ef;--accent:#185fa5;--green:#1f3f8f;--green2:#2a52b3;--q:#6b6a64;
+  --again:#b44a4a;--again-ink:#6e1010;--good:#1f3f8f;--good-ink:#1f3f8f;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -91,7 +91,7 @@ button,select,input{font-family:inherit}
 .pill:hover{background:var(--green2);border-color:var(--green2)}
 .pill[hidden]{display:none}
 .pill.pale{background:#eef1f9;border-color:#c9d3ec;color:var(--sec)}   /* a very light lapis, kin to the lapis pills */
-.pill.pale:hover{background:#e2efe2;border-color:#b9d8b9}
+.pill.pale:hover{background:#e3e9f6;border-color:#b3c2e6}
 .pill.pale .pc{color:var(--fg)}
 .pill.blue{background:var(--accent);border-color:var(--accent)}
 .pill.blue:hover{background:#134f8a;border-color:#134f8a}
@@ -158,7 +158,7 @@ tbody tr.link{cursor:pointer}
 .tag{font-size:12px;background:var(--card);padding:2px 8px;border-radius:8px;color:var(--sec);white-space:nowrap}
 .rs{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center}
 .dim{color:var(--muted)}
-.now{font-size:12px;color:var(--go2);white-space:nowrap;text-align:right}
+.now{font-size:12px;color:var(--green2);white-space:nowrap;text-align:right}
 .empty{padding:2rem;text-align:center;color:var(--muted);font-size:14px}
 .empty[hidden]{display:none}
 /* Values you can tap: they land in the search box. */
@@ -270,14 +270,14 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 .card-tag{position:absolute;top:16px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
 .card-text{font-size:28px;text-align:center;white-space:pre-line;word-break:break-word;max-height:100%;overflow-y:auto}
 .card-text.q{color:var(--q)}.card-text.a{color:var(--fg)}
-.card.done{background:#f1f8f1;border-color:#b9dcbc}
+.card.done{background:#eef1f9;border-color:#c9d3ec}
 .card.done .card-text{color:var(--good-ink)}
 .actions{display:flex;gap:10px;margin-top:14px}
 .btn{width:120px;height:42px;border-radius:10px;background:#fff;font-size:15px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .btn:focus{outline:none}
 .btn-again{border:1px solid color-mix(in srgb,var(--again) 55%,#fff);color:var(--again-ink)}
 .btn-good{border:1px solid color-mix(in srgb,var(--good) 55%,#fff);color:var(--good-ink)}
-.btn-again:hover{background:#fbf2f2}.btn-good:hover{background:#f1f8f1}
+.btn-again:hover{background:#fbf2f2}.btn-good:hover{background:#eef1f9}
 
 /* ── dialog ── */
 .dlg-back{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;padding:24px}
