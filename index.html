@@ -35,7 +35,10 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.31.1 ───────────────────────────────────────────
+/* ── WordDock — v0.31.2 ───────────────────────────────────────────
+   v0.31.2 (from the beta): one door at the bottom centre, the beta's look (13 px, grey, light grey on hover),
+   its middle 42 px above the screen's foot. Table: All lists · All lists: About WordDock · About: the sync
+   line (same words, same dialog) · card: none. The card's pill is a very light green, kin to the green ones.
    Words: v27/build.md ("the three words"); columns: v27/columns.md.
    · list  = one space: its rows, its IDs, its pool (wd_rs_<key>). Nothing is
              shared across lists. A WD list is published (lists/<NAME>.json, on
@@ -85,8 +88,8 @@ button,select,input{font-family:inherit}
   font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;pointer-events:auto;font-variant-numeric:tabular-nums}
 .pill:hover{background:var(--green2);border-color:var(--green2)}
 .pill[hidden]{display:none}
-.pill.pale{background:#fafaf8;border-color:var(--line2);color:var(--muted)}
-.pill.pale:hover{background:var(--card)}
+.pill.pale{background:#eef6ee;border-color:#cfe3cf;color:var(--sec)}   /* v0.31.2: a very light green, kin to the green pills */
+.pill.pale:hover{background:#e2efe2;border-color:#b9d8b9}
 .pill.pale .pc{color:var(--fg)}
 .pill.blue{background:var(--accent);border-color:var(--accent)}
 .pill.blue:hover{background:#134f8a;border-color:#134f8a}
@@ -98,13 +101,13 @@ body.booting .pills{visibility:hidden}
 .corner[hidden]{display:none}
 /* All lists only: the sync line bottom left, About WordDock bottom right, both on the column's edges,
    a little above the bottom of the screen. */
-.bar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bg);padding:6px 0 calc(18px + env(safe-area-inset-bottom))}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:40;height:66px;background:var(--bg);padding:0 0 calc(18px + env(safe-area-inset-bottom))}
 .bar[hidden]{display:none}
-.bar-in{max-width:920px;margin:0 auto;padding:0 1.25rem;display:flex;align-items:center;gap:16px}
-.bar .sync-line{display:block;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bar .sync-line[hidden]{display:none}
-.about-link{margin-left:auto;background:none;border:none;padding:6px 0;color:var(--muted);font-size:12px;cursor:pointer;white-space:nowrap}
-.about-link:hover{color:var(--sec);text-decoration:underline;text-underline-offset:3px}
+.bar-in{height:48px;display:flex;align-items:center;justify-content:center;padding:0 1.25rem}
+.bar .door-b{background:none;border:none;padding:4px 10px;border-radius:6px;color:var(--sec);font-size:13px;line-height:1.4;cursor:pointer;
+  white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;text-decoration:none}
+.bar .door-b:hover{background:var(--card);color:var(--fg);text-decoration:none}
+.bar .door-b[hidden]{display:none}
 
 /* ── list surface ── */
 .wrap{max-width:920px;margin:0 auto;padding:.25rem 1.25rem 4rem}
@@ -388,7 +391,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   </div>
 </section>
 
-<nav class="bar" id="bar" hidden><div class="bar-in"><button class="sync-line" id="syncLine" hidden></button><button class="about-link" id="aboutLink" data-t="aboutLink"></button></div></nav>
+<nav class="bar" id="bar" hidden><div class="bar-in"><button class="door-b" id="listsLink" data-t="allLists" hidden></button><button class="door-b" id="aboutLink" data-t="aboutLink" hidden></button><button class="door-b sync-line" id="syncLine" hidden></button></div></nav>
 <input type="file" id="fileIn" accept=".xlsx,.xlsm,.xls,.csv" hidden>
 
 <div class="dlg-back" id="dlgBack" hidden>
@@ -564,7 +567,7 @@ function fitPage(){
   const first = tb.querySelector("tr:not(.detail)");
   const rowH = first ? first.getBoundingClientRect().height : ROW_H;
   const top = tb.getBoundingClientRect().top + window.scrollY;
-  const n = Math.floor((window.innerHeight - top - 24) / rowH);
+  const n = Math.floor((window.innerHeight - top - 24 - 66) / rowH);   // the bottom door
   const next = Math.max(5, Math.min(20, n));
   if (next !== PAGE){ const f = page * PAGE; PAGE = next; page = Math.floor(f / PAGE); return true; }
   return false;
@@ -919,12 +922,13 @@ const visibleRows = () => { const rows = viewRows(); if (!rows) return []; const
    table → All lists, All lists → About WordDock, About → All lists; none on the card. ── */
 function renderBar(){
   const d = $("door"), s = $("syncLine");
-  s.hidden = level !== "catalog" || !SYNC_API;
+  s.hidden = level !== "about" || !SYNC_API;               // v0.31.2: the sync line lives on About
+  $("listsLink").hidden = level !== "list"; $("aboutLink").hidden = level !== "catalog";
   // v0.31.1: no door above the pill. The table's way out is the corner; All lists has its bottom line;
   // About has none (Esc and the browser's back still lead to All lists).
   d.hidden = true; d.textContent = ""; d.onclick = null;
-  const c = $("corner"); c.hidden = level !== "list"; c.textContent = T.allLists;
-  $("bar").hidden = level !== "catalog";
+  $("corner").hidden = true;                                // v0.31.2: All lists moved to the bottom door
+  $("bar").hidden = level === "study" || (level === "about" && !SYNC_API);
   renderPills();
 }
 function renderPills(){
@@ -1757,6 +1761,7 @@ $("pill").addEventListener("click", () => { if (!activeKey) return; if (level ==
 $("pillStudy").addEventListener("click", onStudy);
 $("corner").addEventListener("click", () => goCatalog());
 $("aboutLink").addEventListener("click", () => openAbout());
+$("listsLink").addEventListener("click", () => goCatalog());
 $("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
 $("syncLine").addEventListener("click", showSyncPanel);
 $("btnHelp").addEventListener("click", e => { e.stopPropagation(); showHelp(); });
