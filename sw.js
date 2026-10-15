@@ -23,7 +23,7 @@
    The result: offline works, and a deploy still reaches everyone the next time
    they open the app with a connection. */
 
-const VERSION    = "wd-2026-10-05";
+const VERSION    = "wd-2026-10-15";
 const SHELL      = "wd-shell-" + VERSION;   // the app + its data
 const IMMUTABLE  = "wd-static-" + VERSION;  // fonts, icons
 
@@ -38,9 +38,9 @@ const PRECACHE = [
   "/manifest.webmanifest",
   "/poppins-400.woff2",
   "/poppins-600.woff2",
-  "/icon-192.png",
-  "/icon-512.png",
-  "/icon-maskable-512.png",
+  "/icon-192-lapis.png",
+  "/icon-512-lapis.png",
+  "/icon-maskable-512-lapis.png",
   "/xlsx.full.min.js",
   "/qrcode.js"
 ];
