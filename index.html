@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192-lapis.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231f3f8f'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.31.8 ───────────────────────────────────────────
+/* ── WordDock — v0.32 ───────────────────────────────────────────
    v0.31.2 (from the beta): one door at the bottom centre, the beta's look (13 px, grey, light grey on hover),
    its middle 42 px above the screen's foot. Table: All lists · All lists: About WordDock · About: the sync
    line (same words, same dialog) · card: none. The card's pill is a very light green, kin to the green ones.
@@ -106,9 +106,12 @@ body.booting .pills{visibility:hidden}
 .bar{position:fixed;left:0;right:0;bottom:0;z-index:40;height:66px;background:var(--bg);padding:0 0 calc(18px + env(safe-area-inset-bottom))}
 .bar[hidden]{display:none}
 .bar-in{height:48px;display:flex;align-items:center;justify-content:center;padding:0 1.25rem}
-.bar .door-b{background:none;border:none;padding:4px 10px;border-radius:6px;color:var(--sec);font-size:13px;line-height:1.4;cursor:pointer;
-  white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;text-decoration:none}
-.bar .door-b:hover{background:var(--card);color:var(--fg);text-decoration:none}
+.bar .door-b{background:none;border:none;padding:4px 10px;border-radius:6px;color:var(--muted);font-size:13px;line-height:1.4;cursor:pointer;
+  white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;text-decoration:none;font-variant-numeric:tabular-nums}
+.bar .door-b:hover{color:var(--green);text-decoration:none}   /* v0.32: lapis on hover, no fill */
+/* v0.32: the sync status is a small line inside About › Devices and sync, not a door. */
+.sync-note{font-size:13px;color:var(--muted);margin:.2rem 0 1rem;cursor:pointer}
+.sync-note:hover{color:var(--green)}
 .bar .door-b[hidden]{display:none}
 
 /* ── list surface ── */
@@ -393,7 +396,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   </div>
 </section>
 
-<nav class="bar" id="bar" hidden><div class="bar-in"><button class="door-b" id="listsLink" data-t="allLists" hidden></button><button class="door-b" id="aboutLink" data-t="aboutLink" hidden></button><button class="door-b sync-line" id="syncLine" hidden></button></div></nav>
+<nav class="bar" id="bar" hidden><div class="bar-in"><button class="door-b" id="listsLink" data-t="dashboard" hidden></button><button class="door-b" id="aboutLink" data-t="aboutLink" hidden></button><button class="door-b" id="deckLink" hidden></button><button class="sync-line" id="syncLine" hidden></button></div></nav>
 <input type="file" id="fileIn" accept=".xlsx,.xlsm,.xls,.csv" hidden>
 
 <div class="dlg-back" id="dlgBack" hidden>
@@ -430,14 +433,14 @@ const T = {
   searchWdAria: "Search the published lists", searchMyAria: "Search the lists on this device",
   prevPage: "Previous page", nextPage: "Next page", study: "Study",
   again: "Again", good: "Good", ok: "OK", cancel: "Cancel", close: "Close", keep: "Keep",
-  wdHeading: "Published WD Lists", myHeading: "My Lists on this device", add: "+ Add a list from an Excel sheet",
+  wdHeading: "Published WD Lists", myHeading: "My Lists on this device", syncNoteAria: "Sync settings", add: "+ Add a list from an Excel sheet",
   // the list surface
   words: n => n + (n === 1 ? " word" : " words"),
   lists: n => n + (n === 1 ? " list" : " lists"),
   levelOne: n => "Level " + n, levelSpan: (lo, hi) => "Level " + lo + "–" + hi,
   onDevice: "on this device", onDeviceSince: d => "on this device since " + d,
   months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], noMatches: "No matches.", loading: "Loading…", nothingYet: "Nothing here yet.",
-  allLists: "All lists", studyN: (n, k) => "Study " + n + " · " + k, showAll: v => "Show all “" + v + "”",
+  allLists: "All lists", dashboard: "Dashboard", studyN: (n, k) => "Study " + n + " · " + k, showAll: v => "Show all “" + v + "”",
   noOtherPairs: "No other pairs.", sample: " · sample data",
   colQ: "Q", colA: "A", colL: "L", colCAT: "CAT", colSUB: "SUB", colTAG: "TAG", colRS: "RS", colID: "ID", colENT: "ENT",
   // LISTS
@@ -922,15 +925,19 @@ const visibleRows = () => { const rows = viewRows(); if (!rows) return []; const
    (a tap: the table of that list). On the table only, the blue [Study 10] at its left, when a tap would
    deal another deck: another list, another view, or the deck is done. Above the pill, one small door:
    table → All lists, All lists → About WordDock, About → All lists; none on the card. ── */
+/* v0.32: the carousel. One door at the bottom of every page, always onward:
+   card → the list (the deck's name · counter) → Dashboard → About WordDock → the card
+   (the deck's name · counter again). The sync status left the bar: it is a line inside About › Devices and sync. */
 function renderBar(){
-  const d = $("door"), s = $("syncLine");
-  s.hidden = level !== "about" || !SYNC_API;               // v0.31.2: the sync line lives on About
+  const d = $("door"), s = $("syncLine"), k = $("deckLink");
+  s.hidden = true;                                           // the sync line is no longer a door
   $("listsLink").hidden = level !== "list"; $("aboutLink").hidden = level !== "catalog";
-  // v0.31.1: no door above the pill. The table's way out is the corner; All lists has its bottom line;
-  // About has none (Esc and the browser's back still lead to All lists).
+  const deckDoor = (level === "study" || level === "about") && !!activeKey && pipe.length > 0;
+  k.hidden = !deckDoor;
+  if (deckDoor) k.textContent = activeKey + T.pillSep + T.pillCount(deckScore, pipe.length, deckDone);
   d.hidden = true; d.textContent = ""; d.onclick = null;
-  $("corner").hidden = true;                                // v0.31.2: All lists moved to the bottom door
-  $("bar").hidden = level === "study" || (level === "about" && !SYNC_API);
+  $("corner").hidden = true;
+  $("bar").hidden = !(level === "list" || level === "catalog" || deckDoor);
   renderPills();
 }
 function renderPills(){
@@ -1138,8 +1145,8 @@ function renderSection(id, lists, unit){
 }
 
 /* ── The counter: in the pill ── */
-function renderPos(){ renderPills(); }
-function paintCounter(){ renderPills(); }   // the counter lives in the pill
+function renderPos(){ renderBar(); }
+function paintCounter(){ renderBar(); }     // the counter lives in the pill and, on the card and About, in the bottom door
 
 /* ── The Study action: studies what the table shows ── */
 const midDeck = () => deckStarted && !deckDone;
@@ -1231,6 +1238,10 @@ function renderAbout(){
   content.innerHTML = "";
   const h = document.createElement("h2"); h.textContent = topic.title; content.appendChild(h);
   for (const html of topic.paras){ const p = document.createElement("p"); p.innerHTML = html; content.appendChild(p); }
+  if (topic.id === "devices" && SYNC_API){                 // v0.32: the sync status, and the way to its dialog
+    const n = document.createElement("p"); n.className = "sync-note"; n.id = "syncNote"; n.setAttribute("role", "button"); n.setAttribute("aria-label", T.syncNoteAria);
+    n.textContent = syncStatusText(); n.addEventListener("click", showSyncPanel); content.appendChild(n);
+  }
 }
 function openAbout(fromPop, pane){
   if (level !== "about"){
@@ -1726,12 +1737,10 @@ function hideSyncPanel(){ $("syncBack").hidden = true; }
 /* The bottom line of LISTS: small, grey, one line of truth; tap opens the dialog.
    No key: "Keep progress safe". A key: "Sync is on", or "Not synced. Will retry"
    after a request that got no answer. */
+function syncStatusText(){ return !getSyncKey() ? T.keepSafe : syncFailed ? T.notSynced : T.syncOn; }
 function renderSyncLine(){
-  const a = $("syncLine"); if (!a) return;
-  if (!SYNC_API){ a.hidden = true; return; }
-  if (!getSyncKey()){ a.textContent = T.keepSafe; a.classList.remove("fail"); return; }
-  a.classList.toggle("fail", syncFailed);
-  a.textContent = syncFailed ? T.notSynced : T.syncOn;
+  const a = $("syncLine"); if (a) a.hidden = true;           // v0.32: no sync door; the status lives in About
+  const n = $("syncNote"); if (n) n.textContent = syncStatusText();
 }
 
 /* ── Dialog: a question with two buttons, or a question with one field ── */
@@ -1764,6 +1773,7 @@ $("pillStudy").addEventListener("click", onStudy);
 $("corner").addEventListener("click", () => goCatalog());
 $("aboutLink").addEventListener("click", () => openAbout());
 $("listsLink").addEventListener("click", () => goCatalog());
+$("deckLink").addEventListener("click", () => { if (!activeKey) return; if (level === "study") goList(activeKey); else enterStudy(); });
 $("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
 $("syncLine").addEventListener("click", showSyncPanel);
 $("btnHelp").addEventListener("click", e => { e.stopPropagation(); showHelp(); });
