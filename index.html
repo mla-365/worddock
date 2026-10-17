@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.32.1 ───────────────────────────────────────────
+/* ── WordDock — v0.32.2 ───────────────────────────────────────────
    v0.31.2 (from the beta): one door at the bottom centre, the beta's look (13 px, grey, light grey on hover),
    its middle 42 px above the screen's foot. Table: All lists · All lists: About WordDock · About: the sync
    line (same words, same dialog) · card: none. The card's pill is a very light green, kin to the green ones.
@@ -687,6 +687,7 @@ async function ensureList(raw){
     l.own = false;
   }
   if (!l.own){ l.rows = rows && rows.length ? rows : null; l.loaded = true; }
+  if (l.rows) { try { localStorage.setItem("wd_rowcount_" + key, String(l.rows.length)); } catch {} }   // v0.32.2: the Dashboard shows the count at once next time
   return l;
 }
 /* Import: a sheet becomes a My list on this device, or replaces one. */
@@ -1107,8 +1108,13 @@ function setQuery(v){
 /* ── LISTS: two sections of at most five rows each, then the door in ── */
 function renderCatalog(){
   const all = listKeys().map(k => getList(k));
-  // WD lists not seen yet: fetch them, so the Words column fills in.
-  for (const l of all) if ((!l.loaded || (isPublished(l.key) && !l.checked)) && !l.fetching){ l.fetching = true; ensureList(l.key).then(() => { if (level === "catalog") renderCatalog(); }); }
+  // WD lists not seen yet: fetch them, so the Words column fills in. v0.32.2: one redraw when all have
+  // landed, not one per list (that was the flicker M saw), and only if a count was still unknown.
+  const pending = all.filter(l => (!l.loaded || (isPublished(l.key) && !l.checked)) && !l.fetching);
+  if (pending.length){
+    pending.forEach(l => { l.fetching = true; });
+    Promise.all(pending.map(l => ensureList(l.key))).then(() => { if (level === "catalog") renderCatalog(); });   // one redraw, for the ↓ buttons and any count still missing
+  }
   renderSection("wd", all.filter(l => !l.own), T.published);
   renderSection("my", all.filter(l => l.own), T.onThisDevice);
   renderSyncLine();
