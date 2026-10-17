@@ -1,0 +1,722 @@
+[
+ {
+  "ID": "0001",
+  "L": "A1.1",
+  "ENT": "Caesar",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "mannelijk",
+  "TAG": "uitspraak",
+  "pairs": [
+   {
+    "q": "Caesar",
+    "a": "keizer, Caesar"
+   },
+   {
+    "q": "Caesar: uitspraak?",
+    "a": "kai-sar"
+   }
+  ]
+ },
+ {
+  "ID": "0002",
+  "L": "A1.1",
+  "ENT": "circus",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "mannelijk",
+  "TAG": "uitspraak",
+  "pairs": [
+   {
+    "q": "circus",
+    "a": "renbaan, circus"
+   },
+   {
+    "q": "circus: uitspraak?",
+    "a": "kir-kus"
+   }
+  ]
+ },
+ {
+  "ID": "0003",
+  "L": "A1.1",
+  "ENT": "aqua",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "vrouwelijk",
+  "TAG": "uitspraak",
+  "pairs": [
+   {
+    "q": "aqua",
+    "a": "water"
+   },
+   {
+    "q": "aqua: uitspraak?",
+    "a": "a-kwa"
+   }
+  ]
+ },
+ {
+  "ID": "0004",
+  "L": "A1.1",
+  "ENT": "vinum",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "onzijdig",
+  "TAG": "uitspraak",
+  "pairs": [
+   {
+    "q": "vinum",
+    "a": "wijn"
+   },
+   {
+    "q": "vinum: uitspraak?",
+    "a": "wie-num"
+   }
+  ]
+ },
+ {
+  "ID": "0005",
+  "L": "A1.1",
+  "ENT": "lingua",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "vrouwelijk",
+  "TAG": "uitspraak",
+  "pairs": [
+   {
+    "q": "lingua",
+    "a": "taal, tong"
+   },
+   {
+    "q": "lingua: uitspraak?",
+    "a": "lin-gwa"
+   }
+  ]
+ },
+ {
+  "ID": "0006",
+  "L": "A1.1",
+  "ENT": "philosophia",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "vrouwelijk",
+  "TAG": "uitspraak",
+  "pairs": [
+   {
+    "q": "philosophia",
+    "a": "filosofie"
+   },
+   {
+    "q": "philosophia: uitspraak?",
+    "a": "fi-lo-so-fi-a"
+   }
+  ]
+ },
+ {
+  "ID": "0007",
+  "L": "A1.1",
+  "ENT": "iam",
+  "CAT": "bijwoord",
+  "SUB": "",
+  "TAG": "uitspraak",
+  "pairs": [
+   {
+    "q": "iam",
+    "a": "al, reeds"
+   },
+   {
+    "q": "iam: uitspraak?",
+    "a": "jam"
+   }
+  ]
+ },
+ {
+  "ID": "0008",
+  "L": "A1.1",
+  "ENT": "schola",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "vrouwelijk",
+  "TAG": "uitspraak",
+  "pairs": [
+   {
+    "q": "schola",
+    "a": "school"
+   },
+   {
+    "q": "schola: uitspraak?",
+    "a": "sko-la"
+   }
+  ]
+ },
+ {
+  "ID": "0009",
+  "L": "A1.1",
+  "ENT": "poena",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "vrouwelijk",
+  "TAG": "uitspraak",
+  "pairs": [
+   {
+    "q": "poena",
+    "a": "straf"
+   },
+   {
+    "q": "poena: uitspraak?",
+    "a": "poi-na"
+   }
+  ]
+ },
+ {
+  "ID": "0010",
+  "L": "A1.1",
+  "ENT": "gaudium",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "onzijdig",
+  "TAG": "uitspraak",
+  "pairs": [
+   {
+    "q": "gaudium",
+    "a": "vreugde"
+   },
+   {
+    "q": "gaudium: uitspraak?",
+    "a": "gau-di-um"
+   }
+  ]
+ },
+ {
+  "ID": "0011",
+  "L": "A1.2",
+  "ENT": "non",
+  "CAT": "bijwoord",
+  "SUB": "",
+  "TAG": "onveranderlijk",
+  "pairs": [
+   {
+    "q": "non",
+    "a": "niet"
+   },
+   {
+    "q": "non amo",
+    "a": "niet (ik bemin niet)"
+   }
+  ]
+ },
+ {
+  "ID": "0012",
+  "L": "A1.2",
+  "ENT": "et",
+  "CAT": "voegwoord",
+  "SUB": "",
+  "TAG": "onveranderlijk",
+  "pairs": [
+   {
+    "q": "et",
+    "a": "en"
+   },
+   {
+    "q": "Caesar et Cicero",
+    "a": "en (Caesar en Cicero)"
+   }
+  ]
+ },
+ {
+  "ID": "0013",
+  "L": "A1.2",
+  "ENT": "quoque",
+  "CAT": "bijwoord",
+  "SUB": "",
+  "TAG": "onveranderlijk",
+  "pairs": [
+   {
+    "q": "quoque",
+    "a": "ook"
+   },
+   {
+    "q": "ego quoque",
+    "a": "ook (ik ook)"
+   }
+  ]
+ },
+ {
+  "ID": "0014",
+  "L": "A1.2",
+  "ENT": "domi",
+  "CAT": "bijwoord",
+  "SUB": "",
+  "TAG": "onveranderlijk",
+  "pairs": [
+   {
+    "q": "domi",
+    "a": "thuis"
+   },
+   {
+    "q": "domi sum",
+    "a": "thuis (ik ben thuis)"
+   }
+  ]
+ },
+ {
+  "ID": "0015",
+  "L": "A1.2",
+  "ENT": "in",
+  "CAT": "voorzetsel",
+  "SUB": "",
+  "TAG": "onveranderlijk",
+  "pairs": [
+   {
+    "q": "in",
+    "a": "in"
+   },
+   {
+    "q": "in schola",
+    "a": "in (in de school)"
+   }
+  ]
+ },
+ {
+  "ID": "0016",
+  "L": "A1.2",
+  "ENT": "semper",
+  "CAT": "bijwoord",
+  "SUB": "",
+  "TAG": "onveranderlijk",
+  "pairs": [
+   {
+    "q": "semper",
+    "a": "altijd"
+   },
+   {
+    "q": "semper domi",
+    "a": "altijd (altijd thuis)"
+   }
+  ]
+ },
+ {
+  "ID": "0017",
+  "L": "A1.2",
+  "ENT": "hic",
+  "CAT": "bijwoord",
+  "SUB": "",
+  "TAG": "onveranderlijk",
+  "pairs": [
+   {
+    "q": "hic",
+    "a": "hier"
+   },
+   {
+    "q": "hic domi",
+    "a": "hier (hier thuis)"
+   }
+  ]
+ },
+ {
+  "ID": "0018",
+  "L": "A1.2",
+  "ENT": "ubi",
+  "CAT": "bijwoord",
+  "SUB": "",
+  "TAG": "onveranderlijk",
+  "pairs": [
+   {
+    "q": "ubi",
+    "a": "waar"
+   },
+   {
+    "q": "ubi est Caesar?",
+    "a": "waar? (waar is Caesar?)"
+   }
+  ]
+ },
+ {
+  "ID": "0019",
+  "L": "A1.2",
+  "ENT": "ita",
+  "CAT": "bijwoord",
+  "SUB": "",
+  "TAG": "onveranderlijk",
+  "pairs": [
+   {
+    "q": "ita",
+    "a": "ja"
+   },
+   {
+    "q": "ita, domi",
+    "a": "ja (ja, thuis)"
+   }
+  ]
+ },
+ {
+  "ID": "0020",
+  "L": "A1.2",
+  "ENT": "minime",
+  "CAT": "bijwoord",
+  "SUB": "",
+  "TAG": "onveranderlijk",
+  "pairs": [
+   {
+    "q": "minime",
+    "a": "nee"
+   },
+   {
+    "q": "minime, non domi",
+    "a": "nee (nee, niet thuis)"
+   }
+  ]
+ },
+ {
+  "ID": "0021",
+  "L": "A1.3",
+  "ENT": "amare",
+  "CAT": "werkwoord",
+  "SUB": "eerste vervoeging",
+  "TAG": "werkwoord",
+  "pairs": [
+   {
+    "q": "amare",
+    "a": "beminnen, houden van"
+   },
+   {
+    "q": "amo",
+    "a": "ik bemin"
+   }
+  ]
+ },
+ {
+  "ID": "0022",
+  "L": "A1.3",
+  "ENT": "laudare",
+  "CAT": "werkwoord",
+  "SUB": "eerste vervoeging",
+  "TAG": "werkwoord",
+  "pairs": [
+   {
+    "q": "laudare",
+    "a": "prijzen"
+   },
+   {
+    "q": "laudo",
+    "a": "ik prijs"
+   }
+  ]
+ },
+ {
+  "ID": "0023",
+  "L": "A1.3",
+  "ENT": "vocare",
+  "CAT": "werkwoord",
+  "SUB": "eerste vervoeging",
+  "TAG": "werkwoord",
+  "pairs": [
+   {
+    "q": "vocare",
+    "a": "roepen"
+   },
+   {
+    "q": "voco",
+    "a": "ik roep"
+   }
+  ]
+ },
+ {
+  "ID": "0024",
+  "L": "A1.3",
+  "ENT": "habitare",
+  "CAT": "werkwoord",
+  "SUB": "eerste vervoeging",
+  "TAG": "werkwoord",
+  "pairs": [
+   {
+    "q": "habitare",
+    "a": "wonen"
+   },
+   {
+    "q": "habito",
+    "a": "ik woon"
+   }
+  ]
+ },
+ {
+  "ID": "0025",
+  "L": "A1.3",
+  "ENT": "ambulare",
+  "CAT": "werkwoord",
+  "SUB": "eerste vervoeging",
+  "TAG": "werkwoord",
+  "pairs": [
+   {
+    "q": "ambulare",
+    "a": "wandelen"
+   },
+   {
+    "q": "ambulo",
+    "a": "ik wandel"
+   }
+  ]
+ },
+ {
+  "ID": "0026",
+  "L": "A1.3",
+  "ENT": "cantare",
+  "CAT": "werkwoord",
+  "SUB": "eerste vervoeging",
+  "TAG": "werkwoord",
+  "pairs": [
+   {
+    "q": "cantare",
+    "a": "zingen"
+   },
+   {
+    "q": "canto",
+    "a": "ik zing"
+   }
+  ]
+ },
+ {
+  "ID": "0027",
+  "L": "A1.3",
+  "ENT": "narrare",
+  "CAT": "werkwoord",
+  "SUB": "eerste vervoeging",
+  "TAG": "werkwoord",
+  "pairs": [
+   {
+    "q": "narrare",
+    "a": "vertellen"
+   },
+   {
+    "q": "narro",
+    "a": "ik vertel"
+   }
+  ]
+ },
+ {
+  "ID": "0028",
+  "L": "A1.3",
+  "ENT": "portare",
+  "CAT": "werkwoord",
+  "SUB": "eerste vervoeging",
+  "TAG": "werkwoord",
+  "pairs": [
+   {
+    "q": "portare",
+    "a": "dragen"
+   },
+   {
+    "q": "porto",
+    "a": "ik draag"
+   }
+  ]
+ },
+ {
+  "ID": "0029",
+  "L": "A1.3",
+  "ENT": "laborare",
+  "CAT": "werkwoord",
+  "SUB": "eerste vervoeging",
+  "TAG": "werkwoord",
+  "pairs": [
+   {
+    "q": "laborare",
+    "a": "werken"
+   },
+   {
+    "q": "laboro",
+    "a": "ik werk"
+   }
+  ]
+ },
+ {
+  "ID": "0030",
+  "L": "A1.3",
+  "ENT": "intrare",
+  "CAT": "werkwoord",
+  "SUB": "eerste vervoeging",
+  "TAG": "werkwoord",
+  "pairs": [
+   {
+    "q": "intrare",
+    "a": "binnengaan"
+   },
+   {
+    "q": "intro",
+    "a": "ik ga binnen"
+   }
+  ]
+ },
+ {
+  "ID": "0031",
+  "L": "A1.4",
+  "ENT": "rosa",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "vrouwelijk",
+  "TAG": "zelfstandig naamwoord",
+  "pairs": [
+   {
+    "q": "rosa",
+    "a": "roos"
+   },
+   {
+    "q": "rosa hic est",
+    "a": "de roos is hier"
+   }
+  ]
+ },
+ {
+  "ID": "0032",
+  "L": "A1.4",
+  "ENT": "puella",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "vrouwelijk",
+  "TAG": "zelfstandig naamwoord",
+  "pairs": [
+   {
+    "q": "puella",
+    "a": "meisje"
+   },
+   {
+    "q": "puella cantat",
+    "a": "het meisje zingt"
+   }
+  ]
+ },
+ {
+  "ID": "0033",
+  "L": "A1.4",
+  "ENT": "villa",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "vrouwelijk",
+  "TAG": "zelfstandig naamwoord",
+  "pairs": [
+   {
+    "q": "villa",
+    "a": "landhuis"
+   },
+   {
+    "q": "in villa",
+    "a": "in het landhuis"
+   }
+  ]
+ },
+ {
+  "ID": "0034",
+  "L": "A1.4",
+  "ENT": "via",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "vrouwelijk",
+  "TAG": "zelfstandig naamwoord",
+  "pairs": [
+   {
+    "q": "via",
+    "a": "weg"
+   },
+   {
+    "q": "in via",
+    "a": "op de weg"
+   }
+  ]
+ },
+ {
+  "ID": "0035",
+  "L": "A1.4",
+  "ENT": "servus",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "mannelijk",
+  "TAG": "zelfstandig naamwoord",
+  "pairs": [
+   {
+    "q": "servus",
+    "a": "slaaf"
+   },
+   {
+    "q": "servus laborat",
+    "a": "de slaaf werkt"
+   }
+  ]
+ },
+ {
+  "ID": "0036",
+  "L": "A1.4",
+  "ENT": "dominus",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "mannelijk",
+  "TAG": "zelfstandig naamwoord",
+  "pairs": [
+   {
+    "q": "dominus",
+    "a": "meester, heer"
+   },
+   {
+    "q": "dominus vocat",
+    "a": "de meester roept"
+   }
+  ]
+ },
+ {
+  "ID": "0037",
+  "L": "A1.4",
+  "ENT": "amicus",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "mannelijk",
+  "TAG": "zelfstandig naamwoord",
+  "pairs": [
+   {
+    "q": "amicus",
+    "a": "vriend"
+   },
+   {
+    "q": "amicus domi est",
+    "a": "de vriend is thuis"
+   }
+  ]
+ },
+ {
+  "ID": "0038",
+  "L": "A1.4",
+  "ENT": "equus",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "mannelijk",
+  "TAG": "zelfstandig naamwoord",
+  "pairs": [
+   {
+    "q": "equus",
+    "a": "paard"
+   },
+   {
+    "q": "equus ambulat",
+    "a": "het paard wandelt"
+   }
+  ]
+ },
+ {
+  "ID": "0039",
+  "L": "A1.4",
+  "ENT": "templum",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "onzijdig",
+  "TAG": "zelfstandig naamwoord",
+  "pairs": [
+   {
+    "q": "templum",
+    "a": "tempel"
+   },
+   {
+    "q": "in templo",
+    "a": "in de tempel"
+   }
+  ]
+ },
+ {
+  "ID": "0040",
+  "L": "A1.4",
+  "ENT": "donum",
+  "CAT": "zelfstandig naamwoord",
+  "SUB": "onzijdig",
+  "TAG": "zelfstandig naamwoord",
+  "pairs": [
+   {
+    "q": "donum",
+    "a": "geschenk"
+   },
+   {
+    "q": "donum hic est",
+    "a": "het geschenk is hier"
+   }
+  ]
+ }
+]
