@@ -35,7 +35,7 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.32.2 ───────────────────────────────────────────
+/* ── WordDock — v0.32.3 ───────────────────────────────────────────
    v0.31.2 (from the beta): one door at the bottom centre, the beta's look (13 px, grey, light grey on hover),
    its middle 42 px above the screen's foot. Table: All lists · All lists: About WordDock · About: the sync
    line (same words, same dialog) · card: none. The card's pill is a very light green, kin to the green ones.
@@ -793,7 +793,7 @@ async function downloadTemplate(){
 function showHelp(){ $("helpBack").hidden = false; }
 function hideHelp(){ $("helpBack").hidden = true; }
 async function exportList(key){
-  const l = getList(key); if (!l.rows) return;
+  let l = getList(key); if (!l.rows) l = await ensureList(key); if (!l.rows) return;
   try { await loadXLSX(); sheetOut(l); } catch (e) { await confirmDlg(T.noWriter, e.message, T.ok, T.close); }
 }
 async function importSheet(file){
@@ -1112,8 +1112,9 @@ function renderCatalog(){
   // landed, not one per list (that was the flicker M saw), and only if a count was still unknown.
   const pending = all.filter(l => (!l.loaded || (isPublished(l.key) && !l.checked)) && !l.fetching);
   if (pending.length){
+    const missing = pending.some(l => knownCount(l.key) === null);
     pending.forEach(l => { l.fetching = true; });
-    Promise.all(pending.map(l => ensureList(l.key))).then(() => { if (level === "catalog") renderCatalog(); });   // one redraw, for the ↓ buttons and any count still missing
+    Promise.all(pending.map(l => ensureList(l.key))).then(() => { if (level === "catalog" && missing) renderCatalog(); });   // a redraw only when a count was still missing (the very first visit)
   }
   renderSection("wd", all.filter(l => !l.own), T.published);
   renderSection("my", all.filter(l => l.own), T.onThisDevice);
@@ -1137,7 +1138,7 @@ function renderSection(id, lists, unit){
     if (l.key === activeKey) tdS.textContent = T.studyingNow;
     else if (l.own){ tdS.textContent = ownSince(l.key); tdS.classList.add("dim"); }
     const tdA = document.createElement("td"); tdA.className = "act";
-    if (l.rows){ const b = document.createElement("button"); b.className = "ib"; b.textContent = "↓"; b.title = T.excelOut(l.key);
+    if (l.rows || isPublished(l.key)){ const b = document.createElement("button"); b.className = "ib"; b.textContent = "↓"; b.title = T.excelOut(l.key);   // v0.32.3: drawn at once, the rows load on tap
       b.addEventListener("click", e => { e.stopPropagation(); exportList(l.key); }); tdA.appendChild(b); }
     if (l.own){ const x = document.createElement("button"); x.className = "ib x"; x.textContent = "×"; x.title = T.removeHere;
       x.addEventListener("click", e => { e.stopPropagation(); removeList(l.key); }); tdA.appendChild(x); }
