@@ -9,19 +9,19 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "icon-192-lapis.png",
+      "src": "icon-192-green.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512-lapis.png",
+      "src": "icon-512-green.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-maskable-512-lapis.png",
+      "src": "icon-maskable-512-green.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

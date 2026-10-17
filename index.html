@@ -32,10 +32,10 @@
 <meta name="theme-color" content="#ffffff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="apple-touch-icon" href="icon-192-lapis.png">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231f3f8f'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icon-192-green.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.32 ───────────────────────────────────────────
+/* ── WordDock — v0.32.1 ───────────────────────────────────────────
    v0.31.2 (from the beta): one door at the bottom centre, the beta's look (13 px, grey, light grey on hover),
    its middle 42 px above the screen's foot. Table: All lists · All lists: About WordDock · About: the sync
    line (same words, same dialog) · card: none. The card's pill is a very light green, kin to the green ones.
@@ -58,13 +58,14 @@
    heading size, one controls row; the pills sit at that row's height on all four pages.
    A link can open a WD list: worddock.app/?list=NL-LA lands on its table (read once at the boot, then wiped).
    Sync and the service worker run on the live site only (LIVE_HOSTS): a copy on another address has neither.
-   v0.31.3: the app's colour is lapis (--green holds #1f3f8f, the Van Eyck blue; the name stays for the code's sake).
-   v0.31.4: no green left. Good, the finished deck, "studying now" and every hover are lapis too; only Again keeps its red.
+   v0.32.1: back to WordDock green (M, 17 Oct: "move" and "grow"; lapis was beautiful but too calm). Green is the
+   only accent: Good, the finished deck, the hovers. Only Again keeps its red. No pill on the card and on About:
+   there the bottom door is the way out, and the counter lives in it.
    Engine from v26.98 except the finish line. Writes RS only at deck completion. */
 :root{
   --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
-  --card:#f6f5ef;--accent:#185fa5;--green:#1f3f8f;--green2:#2a52b3;--q:#6b6a64;
-  --again:#b44a4a;--again-ink:#6e1010;--good:#1f3f8f;--good-ink:#1f3f8f;
+  --card:#f6f5ef;--accent:#185fa5;--green:#006600;--green2:#0a7a0a;--q:#6b6a64;
+  --again:#b44a4a;--again-ink:#6e1010;--good:#006600;--good-ink:#006600;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -90,8 +91,8 @@ button,select,input{font-family:inherit}
   font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;pointer-events:auto;font-variant-numeric:tabular-nums}
 .pill:hover{background:var(--green2);border-color:var(--green2)}
 .pill[hidden]{display:none}
-.pill.pale{background:#eef1f9;border-color:#c9d3ec;color:var(--sec)}   /* a very light lapis, kin to the lapis pills */
-.pill.pale:hover{background:#e3e9f6;border-color:#b3c2e6}
+.pill.pale{background:#eef6ee;border-color:#cfe3cf;color:var(--sec)}   /* kept for safety; v0.32.1 hides the pill on the card */
+.pill.pale:hover{background:#e2efe2;border-color:#b9d8b9}
 .pill.pale .pc{color:var(--fg)}
 .pill.blue{background:var(--accent);border-color:var(--accent)}
 .pill.blue:hover{background:#134f8a;border-color:#134f8a}
@@ -108,7 +109,7 @@ body.booting .pills{visibility:hidden}
 .bar-in{height:48px;display:flex;align-items:center;justify-content:center;padding:0 1.25rem}
 .bar .door-b{background:none;border:none;padding:4px 10px;border-radius:6px;color:var(--muted);font-size:13px;line-height:1.4;cursor:pointer;
   white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;text-decoration:none;font-variant-numeric:tabular-nums}
-.bar .door-b:hover{color:var(--green);text-decoration:none}   /* v0.32: lapis on hover, no fill */
+.bar .door-b:hover{color:var(--green);text-decoration:none}   /* v0.32: green on hover, no fill */
 /* v0.32: the sync status is a small line inside About › Devices and sync, not a door. */
 .sync-note{font-size:13px;color:var(--muted);margin:.2rem 0 1rem;cursor:pointer}
 .sync-note:hover{color:var(--green)}
@@ -273,14 +274,14 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 .card-tag{position:absolute;top:16px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
 .card-text{font-size:28px;text-align:center;white-space:pre-line;word-break:break-word;max-height:100%;overflow-y:auto}
 .card-text.q{color:var(--q)}.card-text.a{color:var(--fg)}
-.card.done{background:#eef1f9;border-color:#c9d3ec}
+.card.done{background:#f1f8f1;border-color:#b9dcbc}
 .card.done .card-text{color:var(--good-ink)}
 .actions{display:flex;gap:10px;margin-top:14px}
 .btn{width:120px;height:42px;border-radius:10px;background:#fff;font-size:15px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .btn:focus{outline:none}
 .btn-again{border:1px solid color-mix(in srgb,var(--again) 55%,#fff);color:var(--again-ink)}
 .btn-good{border:1px solid color-mix(in srgb,var(--good) 55%,#fff);color:var(--good-ink)}
-.btn-again:hover{background:#fbf2f2}.btn-good:hover{background:#eef1f9}
+.btn-again:hover{background:#fbf2f2}.btn-good:hover{background:#f1f8f1}
 
 /* ── dialog ── */
 .dlg-back{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;padding:24px}
@@ -943,7 +944,7 @@ function renderBar(){
 function renderPills(){
   const g = $("pill"), b = $("pillStudy");
   const has = !!activeKey && pipe.length > 0, onCard = level === "study";
-  g.hidden = !has;
+  g.hidden = !has || onCard || level === "about";          // v0.32.1: no pill on the card and on About
   if (has){
     g.innerHTML = "";
     const k = document.createElement("span"); k.className = "pk"; k.textContent = activeKey;
