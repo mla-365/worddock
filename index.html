@@ -35,7 +35,13 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.32.4 ───────────────────────────────────────────
+/* ── WordDock — v0.32.6 ───────────────────────────────────────────
+   v0.32.6: the A1 cell is tappable (M, 18 Oct). A tap writes "=<ENT>" into the search box; a query that
+   starts with "=" matches rows whose ENT is exactly that, nothing else (no substring, no CAT/SUB/TAG),
+   so "=ходить" shows the lemma's own rows and not every row that uses it in a sentence. It replaces the
+   box's text; the level box stays. Only A1: Q1 and the other cells stay inert. Typing "=amare" by hand
+   does the same.
+   v0.32.5: LA-NL-L is the only published list (test phase for L).
    v0.31.2 (from the beta): one door at the bottom centre, the beta's look (13 px, grey, light grey on hover),
    its middle 42 px above the screen's foot. Table: All lists · All lists: About WordDock · About: the sync
    line (same words, same dialog) · card: none. The card's pill is a very light green, kin to the green ones.
@@ -441,7 +447,7 @@ const T = {
   levelOne: n => "Level " + n, levelSpan: (lo, hi) => "Level " + lo + "–" + hi,
   onDevice: "on this device", onDeviceSince: d => "on this device since " + d,
   months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], noMatches: "No matches.", loading: "Loading…", nothingYet: "Nothing here yet.",
-  allLists: "All lists", dashboard: "Dashboard", studyN: (n, k) => "Study " + n + " · " + k, showAll: v => "Show all “" + v + "”",
+  allLists: "All lists", dashboard: "Dashboard", studyN: (n, k) => "Study " + n + " · " + k, showAll: v => "Show all “" + v + "”", showLemma: v => "Show the rows of “" + v + "”",
   noOtherPairs: "No other pairs.", sample: " · sample data",
   colQ: "Q", colA: "A", colL: "L", colCAT: "CAT", colSUB: "SUB", colTAG: "TAG", colRS: "RS", colID: "ID", colENT: "ENT",
   // LISTS
@@ -913,7 +919,10 @@ function matcherFor(rows){
   const range = levelSpan(rows) ? parseLevel(lvlText) : null;   // a list without levels ignores a stale Level field
   const lvlOk = (range && range !== "bad") ? (r => r.Lk != null && r.Lk >= range.lo && r.Lk <= range.hi) : () => true;
   let textOk = () => true;
-  if (query){
+  if (query.startsWith("=")){                       // v0.32.6: "=amare" is the lemma itself, exactly
+    const lemma = query.slice(1).trim();
+    textOk = lemma ? (r => strip(r.ENT) === lemma) : () => true;
+  } else if (query){
     textOk = vocabOf(rows).has(query)
       ? (r => strip(r.CAT) === query || toks(r.SUB).some(t => strip(t) === query) || toks(r.TAG).some(t => strip(t) === query))
       : (r => hayOf(r).includes(query));
@@ -987,7 +996,13 @@ function tapSpan(text, value, cls){
 function fillCell(td, r, k, pool){
   if (k === "LVL"){ td.textContent = r.LVL ?? "·"; return; }
   if (k === "Q1"){ td.textContent = r.pairs[0].q; td.title = r.pairs[0].q; return; }
-  if (k === "A1"){ td.textContent = r.pairs[0].a; td.title = r.pairs[0].a; return; }
+  if (k === "A1"){                                   // v0.32.6: tap = the lemma's own rows ("=ENT")
+    const lemma = (r.ENT || r.pairs[0].a).trim();
+    const s = document.createElement("span"); s.className = "tap lem"; s.textContent = r.pairs[0].a;
+    s.title = T.showLemma(lemma);
+    s.addEventListener("click", e => { e.stopPropagation(); setQuery("=" + lemma); });
+    td.appendChild(s); return;
+  }
   if (k === "RS"){ const v = pool[r.ID]; td.textContent = v === undefined ? "·" : v; return; }
   if (k === "CAT"){ if (!r.CAT){ td.textContent = "·"; return; } td.appendChild(tapSpan(r.CAT, r.CAT, "tag")); td.title = r.CAT; return; }
   const ts = toks(r[k]);
