@@ -35,7 +35,8 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.32.9 ───────────────────────────────────────────
+/* ── WordDock — v0.32.10 ───────────────────────────────────────────
+   v0.32.10: the sum reads "23 RS", right-aligned, the unit after the number (M).
    v0.32.9: Dashboard: a column with the sum of the list's scores ("RS 23"; "·" with no scores yet) and the list
    being studied first in its section (M, 18 Oct).
    v0.32.8: the list-page pill is always "Study N" (N = rows shown); the deck counter stays on the card and the Dashboard.
@@ -227,8 +228,8 @@ body.cataloging .wrap{display:none}
 .sec-h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3}   /* the same size as the table's heading */
 .cat .controls{margin:.9rem 0 .25rem}   /* the same row height as the table's: the green button at the same y */
 .cat tbody tr{cursor:pointer}
-.cat col.c-n{width:11%}.cat col.c-l{width:34px}.cat col.c-r{width:9%}.cat col.c-s{width:22%}.cat col.c-a{width:14%}   /* words · RS label · RS sum · status · ↓ × */
-.cat td.rsl{color:var(--muted);font-size:12px;padding-right:0}.cat td.rs{text-align:right;font-variant-numeric:tabular-nums;color:var(--sec)}   /* v0.32.9 */
+.cat col.c-n{width:11%}.cat col.c-r{width:12%}.cat col.c-s{width:22%}.cat col.c-a{width:14%}   /* words · RS sum · status · ↓ × */
+.cat td.rs{text-align:right;font-variant-numeric:tabular-nums;color:var(--sec);white-space:nowrap}   /* v0.32.10: "23 RS", the number grows to the left */
 .cat td.id .rs-m{display:none;font-size:11px;color:var(--muted);white-space:nowrap}
 td.act{text-align:right;white-space:nowrap}
 .ib{background:none;border:none;color:var(--sec);font-size:16px;line-height:1;cursor:pointer;padding:3px 7px;border-radius:7px}
@@ -330,8 +331,8 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .top-in,.bar-in{padding:0 12px}
   .hide-s{display:none}
   input[type=search]{min-width:0;flex:1 1 150px}
-  .cat col.c-n{width:66px}.cat col.c-l{width:0}.cat col.c-r{width:0}.cat col.c-s{width:100px}.cat col.c-a{width:62px}   /* room for "studying now", the date, and ↓ × */
-  .cat td.rsl,.cat td.rs{font-size:0;padding:0}   /* on a phone the RS sum sits under the word count; a hidden cell would shift the fixed columns */
+  .cat col.c-n{width:66px}.cat col.c-r{width:0}.cat col.c-s{width:100px}.cat col.c-a{width:62px}   /* room for "studying now", the date, and ↓ × */
+  .cat td.rs{font-size:0;padding:0}   /* on a phone the RS sum sits under the word count; a hidden cell would shift the fixed columns */
   .cat td.id .rs-m{display:block}
   .card{height:200px;padding:24px 22px}
   .card-text{font-size:24px}
@@ -375,7 +376,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
       <input type="search" id="wdQ" data-t-ph="search" data-t-aria="searchWdAria" autocomplete="off" spellcheck="false">
       <span class="pager"><button id="wdPrev" data-t-aria="prevPage">&#8249;</button><span class="count" id="wdCount"></span><button id="wdNext" data-t-aria="nextPage">&#8250;</button></span>
     </div>
-    <table><colgroup><col><col class="c-n"><col class="c-l"><col class="c-r"><col class="c-s"><col class="c-a"></colgroup><tbody id="wdBody"></tbody></table>
+    <table><colgroup><col><col class="c-n"><col class="c-r"><col class="c-s"><col class="c-a"></colgroup><tbody id="wdBody"></tbody></table>
     <div class="empty" id="wdEmpty" hidden data-t="noMatches"></div>
   </section>
   <section class="zone-mid" id="secMy">
@@ -385,7 +386,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
       <input type="search" id="myQ" data-t-ph="search" data-t-aria="searchMyAria" autocomplete="off" spellcheck="false">
       <span class="pager"><button id="myPrev" data-t-aria="prevPage">&#8249;</button><span class="count" id="myCount"></span><button id="myNext" data-t-aria="nextPage">&#8250;</button></span>
     </div>
-    <table><colgroup><col><col class="c-n"><col class="c-l"><col class="c-r"><col class="c-s"><col class="c-a"></colgroup><tbody id="myBody"></tbody></table>
+    <table><colgroup><col><col class="c-n"><col class="c-r"><col class="c-s"><col class="c-a"></colgroup><tbody id="myBody"></tbody></table>
     <div class="empty" id="myEmpty" hidden data-t="noMatches"></div>
     <div class="add-row" id="addRow"><button class="add" id="btnAdd" data-t="add"></button><button class="help" id="btnHelp" data-t-aria="excelHelpAria">?</button></div>
   </section>
@@ -1164,9 +1165,8 @@ function renderSection(id, lists, unit){
     const tdN = document.createElement("td"); tdN.className = "b"; tdN.textContent = l.key;
     const rsSum = poolSum(l.key);                                                   // v0.32.9: the list's total RS
     const tdW = document.createElement("td"); tdW.className = "id"; tdW.textContent = n ?? "·";
-    if (rsSum !== null){ const m = document.createElement("span"); m.className = "rs-m"; m.textContent = "RS " + rsSum; tdW.appendChild(m); }   // phones: under the count
-    const tdL = document.createElement("td"); tdL.className = "rsl"; tdL.textContent = rsSum === null ? "" : "RS";
-    const tdR = document.createElement("td"); tdR.className = "rs"; tdR.textContent = rsSum === null ? "·" : String(rsSum); tdR.title = rsSum === null ? "" : T.rsTotal;
+    if (rsSum !== null){ const m = document.createElement("span"); m.className = "rs-m"; m.textContent = rsSum + " RS"; tdW.appendChild(m); }   // phones: under the count
+    const tdR = document.createElement("td"); tdR.className = "rs"; tdR.textContent = rsSum === null ? "·" : rsSum + " RS"; tdR.title = rsSum === null ? "" : T.rsTotal;
     const tdS = document.createElement("td"); tdS.className = "now";
     if (l.key === activeKey) tdS.textContent = T.studyingNow;
     else if (l.own){ tdS.textContent = ownSince(l.key); tdS.classList.add("dim"); }
@@ -1175,7 +1175,7 @@ function renderSection(id, lists, unit){
       b.addEventListener("click", e => { e.stopPropagation(); exportList(l.key); }); tdA.appendChild(b); }
     if (l.own){ const x = document.createElement("button"); x.className = "ib x"; x.textContent = "×"; x.title = T.removeHere;
       x.addEventListener("click", e => { e.stopPropagation(); removeList(l.key); }); tdA.appendChild(x); }
-    tr.append(tdN, tdW, tdL, tdR, tdS, tdA);
+    tr.append(tdN, tdW, tdR, tdS, tdA);
     tr.addEventListener("click", () => goList(l.key)); body.appendChild(tr);
   }
   $(id + "Empty").hidden = !(lists.length && !rows.length);
