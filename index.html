@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.32.6 ───────────────────────────────────────────
+/* ── WordDock — v0.32.7 ───────────────────────────────────────────
+   v0.32.7: one green pill on the list page: the deck in progress, or "Study N" (N = rows shown) when a tap
+   would deal a new deck; the blue pill is gone, the restart question covers the one ambiguous case.
    v0.32.6: the A1 cell is tappable (M, 18 Oct). A tap writes "=<ENT>" into the search box; a query that
    starts with "=" matches rows whose ENT is exactly that, nothing else (no substring, no CAT/SUB/TAG),
    so "=ходить" shows the lemma's own rows and not every row that uses it in a sentence. It replaces the
@@ -100,8 +102,6 @@ button,select,input{font-family:inherit}
 .pill.pale{background:#eef6ee;border-color:#cfe3cf;color:var(--sec)}   /* kept for safety; v0.32.1 hides the pill on the card */
 .pill.pale:hover{background:#e2efe2;border-color:#b9d8b9}
 .pill.pale .pc{color:var(--fg)}
-.pill.blue{background:var(--accent);border-color:var(--accent)}
-.pill.blue:hover{background:#134f8a;border-color:#134f8a}
 body.booting .pills{visibility:hidden}
 /* v0.31.1: the table's way out, "All lists", in the top left corner of the column. */
 .top-in{max-width:920px;margin:0 auto;padding:0 1.25rem;height:52px;display:flex;align-items:center}
@@ -321,7 +321,6 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .door{align-self:flex-end}
   .pill-row{width:100%}
   .pill{flex:1 1 0;min-width:0}
-  .pill.blue{flex:0 0 auto}   /* the blue takes its own width, the green the rest: the counter never gets cut */
   #controls,#wdCtl{margin-top:calc(.9rem + 46px)}
   .top-in,.bar-in{padding:0 12px}
   .hide-s{display:none}
@@ -346,7 +345,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 <header class="top"><div class="top-in"><button class="corner" id="corner" hidden></button></div></header>
 <div class="pills" id="pills"><div class="pills-in">
   <button class="door" id="door" hidden></button>
-  <div class="pill-row" id="pillRow"><button class="pill blue" id="pillStudy" hidden></button><button class="pill" id="pill" hidden></button></div>
+  <div class="pill-row" id="pillRow"><button class="pill" id="pill" hidden></button></div>
 </div></div>
 
 <main class="wrap" id="listSurface">
@@ -951,11 +950,25 @@ function renderBar(){
   $("bar").hidden = !(level === "list" || level === "catalog" || deckDoor);
   renderPills();
 }
+/* v0.32.7: one green pill (M, 18 Oct). On the list page it is either the deck in progress ("LA-NL-L · 3/10",
+   tap resumes) or, when a tap would deal a new deck (no deck, deck finished, or the view changed), "Study N"
+   with N the rows shown, not the deck size; the tap then runs onStudy, which asks "Restart the deck?" only
+   in the one ambiguous case (mid-deck, view changed). The blue pill is gone. */
+let pillDeals = false;
 function renderPills(){
-  const g = $("pill"), b = $("pillStudy");
+  const g = $("pill");
   const has = !!activeKey && pipe.length > 0, onCard = level === "study";
-  g.hidden = !has || onCard || level === "about";          // v0.32.1: no pill on the card and on About
-  if (has){
+  pillDeals = false;
+  if (level === "list"){
+    const vis = visibleRows();
+    pillDeals = vis.length > 0 && (viewKey !== activeKey || sigOf(vis) !== deckSig || deckDone || !has);
+    if (pillDeals){
+      g.textContent = T.studyCount(vis.length);
+      g.classList.remove("pale"); g.setAttribute("aria-label", T.studyCount(vis.length));
+    }
+  }
+  g.hidden = pillDeals ? false : (!has || onCard || level === "about");   // v0.32.1: no pill on the card and on About
+  if (has && !pillDeals){
     g.innerHTML = "";
     const k = document.createElement("span"); k.className = "pk"; k.textContent = activeKey;
     const c = document.createElement("span"); c.className = "pc"; c.textContent = T.pillCount(deckScore, pipe.length, deckDone);
@@ -963,14 +976,6 @@ function renderPills(){
     g.classList.toggle("pale", onCard);
     g.setAttribute("aria-label", onCard ? T.pillToList(activeKey) : T.pillToCard(activeKey));
   }
-  // The blue pill: what Study would deal, only when that is not the deck in progress.
-  let blue = false;
-  if (level === "list"){
-    const vis = visibleRows();
-    blue = vis.length > 0 && (viewKey !== activeKey || sigOf(vis) !== deckSig || deckDone || !has);
-    if (blue) b.textContent = T.studyCount(Math.min(DECK_SIZE, vis.length));
-  }
-  b.hidden = !blue;
   // PC: the controls rows of the table and of All lists leave room at their right end for the pills.
   const w = isSmall() ? 0 : $("pillRow").getBoundingClientRect().width;
   for (const id of ["controls", "wdCtl"]) $(id).style.paddingRight = w ? Math.ceil(w + 12) + "px" : "";
@@ -1791,8 +1796,7 @@ function promptDlg(title, body, value){
 }
 
 /* ── Input ── */
-$("pill").addEventListener("click", () => { if (!activeKey) return; if (level === "study") goList(activeKey); else enterStudy(); });
-$("pillStudy").addEventListener("click", onStudy);
+$("pill").addEventListener("click", () => { if (pillDeals) return onStudy(); if (!activeKey) return; if (level === "study") goList(activeKey); else enterStudy(); });
 $("corner").addEventListener("click", () => goCatalog());
 $("aboutLink").addEventListener("click", () => openAbout());
 $("listsLink").addEventListener("click", () => goCatalog());
