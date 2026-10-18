@@ -35,7 +35,8 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.32.7 ───────────────────────────────────────────
+/* ── WordDock — v0.32.8 ───────────────────────────────────────────
+   v0.32.8: the list-page pill is always "Study N" (N = rows shown); the deck counter stays on the card and the Dashboard.
    v0.32.7: one green pill on the list page: the deck in progress, or "Study N" (N = rows shown) when a tap
    would deal a new deck; the blue pill is gone, the restart question covers the one ambiguous case.
    v0.32.6: the A1 cell is tappable (M, 18 Oct). A tap writes "=<ENT>" into the search box; a query that
@@ -950,10 +951,10 @@ function renderBar(){
   $("bar").hidden = !(level === "list" || level === "catalog" || deckDoor);
   renderPills();
 }
-/* v0.32.7: one green pill (M, 18 Oct). On the list page it is either the deck in progress ("LA-NL-L · 3/10",
-   tap resumes) or, when a tap would deal a new deck (no deck, deck finished, or the view changed), "Study N"
-   with N the rows shown, not the deck size; the tap then runs onStudy, which asks "Restart the deck?" only
-   in the one ambiguous case (mid-deck, view changed). The blue pill is gone. */
+/* v0.32.8: the pill says what the place is about (M, 18 Oct). List page: "Study N", N = the rows shown,
+   always; a tap resumes when the view is the deck's view, otherwise onStudy asks "Restart the deck?".
+   The deck's counter (6/10) belongs to the card and to the Dashboard's way back ("LA-NL-L · 6/10"),
+   not to the list page. v0.32.7 had merged the blue pill into the green one; this drops the counter there. */
 let pillDeals = false;
 function renderPills(){
   const g = $("pill");
@@ -961,14 +962,14 @@ function renderPills(){
   pillDeals = false;
   if (level === "list"){
     const vis = visibleRows();
-    pillDeals = vis.length > 0 && (viewKey !== activeKey || sigOf(vis) !== deckSig || deckDone || !has);
+    pillDeals = vis.length > 0;
     if (pillDeals){
       g.textContent = T.studyCount(vis.length);
       g.classList.remove("pale"); g.setAttribute("aria-label", T.studyCount(vis.length));
     }
   }
-  g.hidden = pillDeals ? false : (!has || onCard || level === "about");   // v0.32.1: no pill on the card and on About
-  if (has && !pillDeals){
+  g.hidden = pillDeals ? false : (!has || onCard || level === "about" || level === "list");
+  if (has && !pillDeals && !g.hidden){
     g.innerHTML = "";
     const k = document.createElement("span"); k.className = "pk"; k.textContent = activeKey;
     const c = document.createElement("span"); c.className = "pc"; c.textContent = T.pillCount(deckScore, pipe.length, deckDone);
