@@ -6,7 +6,7 @@
 <title>WordDock · publish a list</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock · publish a list — v1.7.1 (11 Oct 2026) ─────────────────────────
+/* ── WordDock · publish a list — v1.8 (19 Oct 2026): one name per column, no aliases; unused headers are named. Was v1.7.1 (11 Oct 2026) ─────────────────────────
    The publisher's tool: a curator's sheet → lists/<key>.json.
    · reads headers by name (any order): ENT CAT SUB TAG L Q1 A1 … Q10 A10 (L: A1 … C2, A1.3)
    · required per row: Q1 and A1; the rest optional; ENT empty → A1
@@ -74,8 +74,8 @@ th{font-weight:500;color:var(--sec);font-size:12px;border-bottom:.5px solid var(
 
   <div class="help">
     <p><b>How a sheet is read.</b> The first sheet whose header row has <code>Q1</code> and <code>A1</code>. Columns are found by name, in any order:
-    <code>ENT</code> · <code>CAT</code> · <code>SUB</code> · <code>TAG</code> (or TAGS) · <code>L</code> (or LVL, LEVEL: A1 … C2, A1.3, or a number) · <code>Q1 A1 … Q10 A10</code>.
-    A row is published when it has Q1 and A1; the rest is optional. An empty ENT takes A1.</p>
+    <code>ENT</code> · <code>CAT</code> · <code>SUB</code> · <code>TAG</code> · <code>L</code> (A1 … C2, A1.3, or a number) · <code>Q1 A1 … Q10 A10</code>, and no other names.
+    A row is published when it has Q1 and A1; the rest is optional. An empty ENT takes A1. Any other column is not used, and the report names it.</p>
     <p><b>IDs.</b> Stamped here from the row's place among the published rows: the first is <code>0001</code>. Publish = freeze: when this site already has a <code>lists/&lt;key&gt;.json</code>, it is a WD list, and every row in it must still be at its place with the same word and class. New rows go after the last published one. If something moved, the download stops and says where.</p>
     <p><b>Then.</b> Put the file at <code>lists/&lt;key&gt;.json</code> in the repository and commit. If the list is new, add it to the <code>WD_LISTS</code> line near the top of the script in <code>index.html</code>: its name, as in <code>"NL-LA"</code>.</p>
   </div>
@@ -86,10 +86,10 @@ th{font-weight:500;color:var(--sec);font-size:12px;border-bottom:.5px solid var(
 const $ = id => document.getElementById(id);
 const strip = v => String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 const txt = v => (v === null || v === undefined) ? "" : String(v).trim();
-const ALIAS = { L:"LVL", LVL:"LVL", LEVEL:"LVL", SEG:"LVL", ENT:"ENT", ENTRY:"ENT", CAT:"CAT", CATEGORY:"CAT", SUB:"SUB", TAG:"TAG", TAGS:"TAG" };
+const HEADERS = new Set(["ENT", "CAT", "SUB", "TAG", "L"]);   /* v1.8: one name per column, no aliases */
 function canon(h){
   const u = txt(h).toUpperCase().replace(/\s+/g, "");
-  if (ALIAS[u]) return ALIAS[u];
+  if (HEADERS.has(u)) return u;
   const m = u.match(/^([QA])(10|[1-9])$/); return m ? m[1] + m[2] : null;
 }
 /* L, the level: BAND or BAND.UNIT — the same rule as in the app (index.html, parseL). */
@@ -122,9 +122,9 @@ function readWorkbook(buf){
   for (const name of wb.SheetNames){
     const aoa = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: null, raw: true });
     for (let h = 0; h < Math.min(aoa.length, 10); h++){           /* the header row may not be row 1 */
-      const map = {};
-      (aoa[h] || []).forEach((cell, i) => { const c = canon(cell); if (c && !(c in map)) map[c] = i; });
-      if ("Q1" in map && "A1" in map) return { sheet: name, headerRow: h, map, aoa };
+      const map = {}, unused = [];
+      (aoa[h] || []).forEach((cell, i) => { const c = canon(cell); if (c && !(c in map)) map[c] = i; else if (txt(cell)) unused.push(txt(cell)); });
+      if ("Q1" in map && "A1" in map) return { sheet: name, headerRow: h, map, aoa, unused };
     }
   }
   return null;
@@ -142,7 +142,7 @@ function buildRows(src){
     for (let i = 1; i <= 10; i++){ const q = get(arr, "Q" + i), a = get(arr, "A" + i); if (q && a) pairs.push({ q, a }); }
     if (!get(arr, "Q1") || !get(arr, "A1")){ skipped.push(r + 1); continue; }
     const row = { ID: String(rows.length + 1).padStart(4, "0") };
-    const rawL = ("LVL" in map) ? txt(arr[map.LVL]) : "";
+    const rawL = ("L" in map) ? txt(arr[map.L]) : "";
     const L = parseL(rawL);
     if (L){ row.L = L.text; Lkeys.set(row, L.key); }
     else if (rawL) badL.push(r + 1 + " (" + rawL + ")");
@@ -203,6 +203,7 @@ function render(key, src, res, ledger){
     res.back.length ? "⚠ L steps back at <b>" + res.back.length + "</b> place(s): " + esc(res.back.slice(0, 8).join(", ")) + (res.back.length > 8 ? " …" : "") + " — a sublist in the wrong place?" : "",
     res.skipped.length ? "<b>" + res.skipped.length + "</b> skipped, no Q1 + A1: rows " + res.skipped.slice(0, 15).join(", ") + (res.skipped.length > 15 ? " …" : "") : "nothing skipped",
     res.fallbacks ? res.fallbacks + " ENT taken from A1" : "every ENT typed",
+    src.unused && src.unused.length ? "columns not used: " + esc(src.unused.join(", ")) : "",
     ledger.rows ? "<b>" + esc(key) + "</b> is a WD list: <b>" + ledger.rows.length + "</b> rows already published" + (n > newFrom ? ", <b>" + (n - newFrom) + "</b> new (" + res.rows[newFrom].ID + " – " + res.rows[n - 1].ID + ")" : ", nothing new")
                : "no previous publish on this site" + (ledger.reason ? " — " + esc(ledger.reason) : "") + "; IDs start at 0001"
   ];

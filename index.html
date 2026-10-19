@@ -35,7 +35,11 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.32.10 ───────────────────────────────────────────
+/* ── WordDock — v0.33 ───────────────────────────────────────────
+   v0.33 (19 Oct, the cleanup): one name per column, no aliases: a sheet uses ENT CAT SUB TAG L Q1 A1 … Q10 A10 and
+   nothing else; unknown columns are not used and the import names them ("columns not used: SEG, SRC"). The v26
+   lists (NL-RU, NL-IT, NL-FR, NL-LA, NL-LA-PHOENIX) left the site; they return, if at all, as fresh v27 sheets
+   with new IDs. The published shape is ID · L · ENT · CAT · SUB · TAG · pairs, nothing older is read.
    v0.32.10: the sum reads "23 RS", right-aligned, the unit after the number (M).
    v0.32.9: Dashboard: a column with the sum of the list's scores ("RS 23"; "·" with no scores yet) and the list
    being studied first in its section (M, 18 Oct).
@@ -455,7 +459,7 @@ const T = {
   onDevice: "on this device", onDeviceSince: d => "on this device since " + d,
   months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], noMatches: "No matches.", loading: "Loading…", nothingYet: "Nothing here yet.",
   allLists: "All lists", dashboard: "Dashboard", studyN: (n, k) => "Study " + n + " · " + k, showAll: v => "Show all “" + v + "”", showLemma: v => "Show the rows of “" + v + "”", rsTotal: "The sum of this list's scores",
-  noOtherPairs: "No other pairs.", sample: " · sample data",
+  noOtherPairs: "No other pairs.",
   colQ: "Q", colA: "A", colL: "L", colCAT: "CAT", colSUB: "SUB", colTAG: "TAG", colRS: "RS", colID: "ID", colENT: "ENT",
   // LISTS
   published: "Published", onThisDevice: "On this device", noneYet: "none yet", studyingNow: "studying now",
@@ -479,7 +483,7 @@ const T = {
   nothing: "Nothing to import", nothingBody: "No row has both Q1 and A1.",
   giveName: "Give a NAME for this list", giveNameBody: "Letters, digits and hyphens: NL-LA-L, BIOLOGY.",
   isWd: k => k + " is a WD list and can't be replaced.", nameYours: k => "Name yours " + k + "?",
-  skipped: n => " · " + n + " skipped",
+  skipped: n => " · " + n + " skipped", notUsed: cols => " · columns not used: " + cols.join(", "),
   replaceQ: (k, o, w) => "Replace " + k + " (" + o + ") with this file (" + w + ")?", progressStays: "Your progress stays.",
   otherOrder: "The words in this file are in another order.", replaceFresh: k => "Replace " + k + " and start its progress fresh?",
   replace: "Replace", addQ: k => "Add " + k + " to this device?", addBtn: "Add",
@@ -620,39 +624,15 @@ function parseL(v){
   return { text: band + (unit !== null ? "." + unit : ""), rank, unit, key: rank * 1000 + (unit === null ? 0 : unit + 1) };
 }
 
-/* Sample rows, used only when lists/NL-RU.json can't be fetched (local testing). */
-const SAMPLE = [
-  ["A1.1","0001","в","voorzetsel","","",[["in","в"],["in de klas","в кла́ссе"]]],
-  ["A1.1","0002","и","voegwoord","","",[["en","и"]]],
-  ["A1.1","0003","не","partikel","","",[["niet","не"],["ik weet niet","я не зна́ю"]]],
-  ["A1.1","0004","я","voornaamwoord","pers","",[["ik","я"]]],
-  ["A1.1","0005","ты","voornaamwoord","pers","",[["jij","ты"]]],
-  ["A1.1","0006","дом","zelfst. nw","m","wonen",[["huis","дом"],["thuis","до́ма"],["naar huis","домо́й"]]],
-  ["A1.1","0007","мама","zelfst. nw","v","familie",[["mama","ма́ма"]]],
-  ["A1.1","0008","хлеб","zelfst. nw","m","eten",[["brood","хлеб"]]],
-  ["A1.1","0009","вода","zelfst. nw","v","eten",[["water","вода́"]]],
-  ["A1.1","0010","большой","bijv. nw","","",[["groot","большо́й"],["een groot huis","большо́й дом"]]],
-  ["A1.2","0011","хороший","bijv. nw","","",[["goed","хоро́ший"]]],
-  ["A1.2","0012","ходить","werkwoord","beweging, onregelmatig","",[["gaan (te voet)","ходи́ть"],["vervoeging","хожу́ — хо́дишь — хо́дят"],["ik ga naar school","я хожу́ в шко́лу"]]],
-  ["A1.2","0013","читать","werkwoord","","",[["lezen","чита́ть"],["vervoeging","чита́ю — чита́ешь — чита́ют"]]],
-  ["A1.2","0014","говорить","werkwoord","","",[["spreken","говори́ть"]]],
-  ["A1.2","0015","да","bijwoord","","",[["ja","да"]]],
-  ["A1.2","0016","нет","bijwoord","","",[["nee","нет"]]],
-  ["A2.1","0017","спасибо","tussenw.","","beleefd",[["dank je","спаси́бо"]]],
-  ["A2.1","0018","кто","voornaamwoord","vraag","",[["wie","кто"]]],
-  ["A2.1","0019","что","voornaamwoord","vraag","",[["wat","что"]]],
-  ["A2.1","0020","один","telwoord","","",[["één","оди́н"]]]
-];
-const sampleRows = () => normalizeRows(SAMPLE.map(([SEG,ID,ENT,CAT,SUB,TAG,p]) => ({ SEG, ID, ENT, CAT, SUB, TAG, pairs: p.map(([q,a]) => ({ q, a })) })));
 /* Required: ID and a first pair. Everything else optional; an empty ENT falls back to A1. */
 function normalizeRows(raw){
   return (raw || []).map(r => {
     const pairs = (r.pairs || []).filter(p => p && p.q && p.a).map(p => ({ q: String(p.q), a: String(p.a) }));
     const row = {
-      ID: String(r.ID ?? "").trim(), CAT: r.CAT || "", SUB: r.SUB || "", TAG: r.TAG ?? r.TAGS ?? "",
+      ID: String(r.ID ?? "").trim(), CAT: r.CAT || "", SUB: r.SUB || "", TAG: r.TAG || "",
       LVL: null, Lk: null, pairs
     };
-    const L = parseL(r.L ?? r.LVL ?? r.LEVEL ?? r.Level ?? r.SEG); if (L){ row.LVL = L.text; row.Lk = L.key; }
+    const L = parseL(r.L); if (L){ row.LVL = L.text; row.Lk = L.key; }   // v0.33: the one key is L; no aliases
     row.ENT = r.ENT || (pairs[0] ? pairs[0].a : "");
     if (/^\d{1,3}$/.test(row.ID)) row.ID = row.ID.padStart(4, "0");
     return row;
@@ -663,7 +643,6 @@ const hayOf = r => r._hay || (r._hay = strip([r.ID, r.LVL, r.ENT, r.CAT, r.SUB, 
 /* ── Lists: rows + one pool each. WD lists come from the site;
    My lists live in this browser, on this device, under OWN_KEY as { NAME: { rows, when } }. ── */
 const LISTS = {};
-let usingSample = false;
 const isPublished = key => WD_KEYS.includes(key);
 const getList = raw => { const key = canonKey(raw); return LISTS[key] || (LISTS[key] = { key, ...labelsOf(key), rows: null, loaded: false, own: false }); };
 function readOwn(){ try { return JSON.parse(localStorage.getItem(OWN_KEY)) || {}; } catch { return {}; } }
@@ -687,7 +666,6 @@ async function ensureList(raw){
   let rows = null;
   if (isPublished(key)){
     try { const r = await fetch(LISTS_DIR + key + ".json", { cache: "no-cache" }); if (r.ok) rows = normalizeRows(await r.json()); } catch {}
-    if (!rows && key === "NL-RU" && location.hostname !== "worddock.app"){ rows = sampleRows(); usingSample = true; }
   }
   l.checked = true;
   if (rows && rows.length && l.own){
@@ -737,10 +715,12 @@ function loadXLSX(){
   if (!xlsxReady) xlsxReady = new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "xlsx.full.min.js"; sc.onload = res; sc.onerror = () => { xlsxReady = null; rej(new Error(T.noReader)); }; document.head.appendChild(sc); });
   return xlsxReady;
 }
-const ALIAS = { L:"LVL", LVL:"LVL", LEVEL:"LVL", SEG:"LVL", ENT:"ENT", ENTRY:"ENT", CAT:"CAT", CATEGORY:"CAT", SUB:"SUB", TAG:"TAG", TAGS:"TAG" };
+/* v0.33: one name per column, no aliases (M, 19 Oct). A header is one of ENT CAT SUB TAG L Q1 A1 … Q10 A10,
+   in any case; anything else is not used and is named back to the curator. */
+const HEADERS = new Set(["ENT", "CAT", "SUB", "TAG", "L"]);
 function canonHeader(h){
   const u = String(h ?? "").trim().toUpperCase().replace(/\s+/g, "");
-  if (ALIAS[u]) return ALIAS[u];
+  if (HEADERS.has(u)) return u;
   const m = u.match(/^([QA])(10|[1-9])$/); return m ? m[1] + m[2] : null;
 }
 const cellText = v => (v === null || v === undefined) ? "" : String(v).trim();
@@ -751,7 +731,7 @@ function readSheet(buf){
   for (const sname of wb.SheetNames){
     const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sname], { header: 1, defval: null, raw: true });
     for (let h = 0; h < Math.min(aoa.length, 10); h++){
-      const map = {}; (aoa[h] || []).forEach((c, i) => { const k = canonHeader(c); if (k && !(k in map)) map[k] = i; });
+      const map = {}, unused = []; (aoa[h] || []).forEach((c, i) => { const k = canonHeader(c); if (k && !(k in map)) map[k] = i; else if (cellText(c)) unused.push(cellText(c)); });
       if (!("Q1" in map) || !("A1" in map)) continue;
       const rows = []; let skipped = 0;
       const get = (arr, k) => (k in map) ? cellText(arr[map[k]]) : "";
@@ -760,13 +740,13 @@ function readSheet(buf){
         const pairs = []; for (let i = 1; i <= 10; i++){ const q = get(arr, "Q" + i), a = get(arr, "A" + i); if (q && a) pairs.push({ q, a }); }
         if (!get(arr, "Q1") || !get(arr, "A1")){ skipped++; continue; }
         const row = { ID: String(rows.length + 1).padStart(4, "0"), pairs };
-        const L = ("LVL" in map) ? parseL(arr[map.LVL]) : null; if (L) row.L = L.text;
+        const L = ("L" in map) ? parseL(arr[map.L]) : null; if (L) row.L = L.text;
         row.ENT = get(arr, "ENT") || pairs[0].a;
         const cat = get(arr, "CAT"), sub = get(arr, "SUB"), tag = get(arr, "TAG");
         if (cat) row.CAT = cat; if (sub) row.SUB = sub; if (tag) row.TAG = tag;
         rows.push(row);
       }
-      return { rows, skipped, sheet: sname };
+      return { rows, skipped, unused, sheet: sname };
     }
   }
   return null;
@@ -829,7 +809,7 @@ async function importSheet(file){
     }
     break;
   }
-  const words = nWords(got.rows.length), skip = got.skipped ? T.skipped(got.skipped) : "";
+  const words = nWords(got.rows.length), skip = (got.skipped ? T.skipped(got.skipped) : "") + (got.unused && got.unused.length ? T.notUsed(got.unused) : "");
   const ex = LISTS[key] && LISTS[key].own && LISTS[key].rows ? LISTS[key] : null;
   let keepPool = true;
   if (ex){
@@ -1893,7 +1873,6 @@ setTimeout(bootDone, 5000);                      // a safety net: never stay hid
   if (activeKey !== wanted){ wanted = activeKey; l = getList(wanted); }   // published wins: the copy moved to -OWN
   if (!l.rows && wanted !== WD_KEYS[0]){ wanted = WD_KEYS[0]; l = await ensureList(wanted); }
   if (linked && wanted !== linked) linked = null;                          // the linked list didn't load: a normal open
-  if (usingSample) document.title += T.sample;
   if (!l.rows){ activeKey = null; viewKey = wanted; level = "list"; show(); try { history.replaceState(navState(), ""); } catch {} syncCatchUp(); startSyncPullTimer(); bootDone(); return; }
   activeKey = wanted; viewKey = wanted;
   try { localStorage.setItem(LIST_KEY, activeKey); } catch {}
