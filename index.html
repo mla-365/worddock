@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.35.2 ─────────────────────────────────────────
+/* ── WordDock — v0.35.3 ─────────────────────────────────────────
+   v0.35.3 (24 Oct): the opened row shows every pair in full, Q1 and A1 included; "No other pairs." gone. On a PC it also shows
+   CAT, SUB and TAG in full, tappable. The lemma tap ("=ENT") moves from A1 to Q1: Q1 finds, a tap anywhere else opens the row.
    v0.35.2 (24 Oct): About › More, the last topic: the link to Inside WordDock (moved out of Contact) and the public code.
    v0.35.1 (24 Oct): Template.xlsx, sheets "1" and "Read me", with three Dutch-Latin example rows: the smallest, a full one with SRC, a re-entry row; no macrons.
    v0.35 (24 Oct): All lists orders each section by the last studied list: the current one first, then by the last graded card
@@ -208,7 +210,6 @@ tr.detail td{white-space:normal;padding:2px 10px 14px;border-bottom:.5px solid v
 .det-meta b{color:var(--sec);font-weight:500;margin-right:14px;display:inline-block}
 .det-pairs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:20px;row-gap:3px;font-size:14px}
 .det-pairs .dq{color:var(--q)}.det-pairs .da{font-weight:500}
-.det-none{color:var(--muted);font-size:13px}
 .det-grid{display:grid;grid-template-columns:max-content minmax(0,1fr) minmax(0,1fr) auto auto;column-gap:10px;row-gap:3px;margin:2px 0 10px;align-items:start}
 .dg-h{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.02em}
 .dg-v{display:flex;flex-wrap:wrap;gap:4px;min-width:0;font-size:13px;color:var(--sec)}
@@ -472,7 +473,6 @@ const T = {
   onDevice: "on this device", onDeviceSince: d => "on this device since " + d,
   months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], noMatches: "No matches.", loading: "Loading…", nothingYet: "Nothing here yet.",
   allLists: "All lists", dashboard: "All lists", studyN: (n, k) => "Study " + n + " · " + k, showAll: v => "Show all “" + v + "”", showLemma: v => "Show the rows of “" + v + "”", rsTotal: "The sum of this list's scores",
-  noOtherPairs: "No other pairs.",
   colQ: "Q", colA: "A", colL: "L", colCAT: "CAT", colSUB: "SUB", colTAG: "TAG", colRS: "RS", colID: "ID", colENT: "ENT",
   // LISTS
   published: "Published", onThisDevice: "On this device", noneYet: "none yet", studyingNow: "studying now",
@@ -1005,14 +1005,14 @@ function tapSpan(text, value, cls){
 }
 function fillCell(td, r, k, pool){
   if (k === "LVL"){ td.textContent = r.LVL ?? "·"; return; }
-  if (k === "Q1"){ td.textContent = r.pairs[0].q; td.title = r.pairs[0].q; return; }
-  if (k === "A1"){                                   // v0.32.6: tap = the lemma's own rows ("=ENT")
+  if (k === "Q1"){                                   // v0.35.3: tap = the lemma's own rows ("=ENT"); was A1 (v0.32.6). Q1 finds, the rest of the row opens.
     const lemma = (r.ENT || r.pairs[0].a).trim();
-    const s = document.createElement("span"); s.className = "tap lem"; s.textContent = r.pairs[0].a;
+    const s = document.createElement("span"); s.className = "tap lem"; s.textContent = r.pairs[0].q;
     s.title = T.showLemma(lemma);
     s.addEventListener("click", e => { e.stopPropagation(); setQuery("=" + lemma); });
     td.appendChild(s); return;
   }
+  if (k === "A1"){ td.textContent = r.pairs[0].a; td.title = r.pairs[0].a; return; }
   if (k === "RS"){ const v = pool[r.ID]; td.textContent = v === undefined ? "·" : v; return; }
   if (k === "CAT"){ if (!r.CAT){ td.textContent = "·"; return; } td.appendChild(tapSpan(r.CAT, r.CAT, "tag")); td.title = r.CAT; return; }
   const ts = toks(r[k]);
@@ -1020,7 +1020,7 @@ function fillCell(td, r, k, pool){
   ts.forEach((t, i) => { if (i) td.appendChild(document.createTextNode("\u2009")); td.appendChild(tapSpan(t, t, "tag")); });
   td.title = ts.join(", ");
 }
-/* Row unfold. PC: ID, ENT (the curator's references), then the other pairs.
+/* Row unfold. PC: ID, ENT (the crafter's references), CAT, SUB, TAG in full, then every pair.
    Phone: a small table of what the columns hide — CAT | SUB | TAG | L | RS, heads above
    values, CAT/SUB/TAG tappable as on a PC — then the other pairs. No ID, no ENT. */
 function detailRow(r, pool, span){
@@ -1043,15 +1043,20 @@ function detailRow(r, pool, span){
   } else {
     const meta = document.createElement("div"); meta.className = "det-meta";
     [[T.colID, r.ID], [T.colENT, r.ENT || "·"]].forEach(([k, v]) => { const b = document.createElement("b"); b.textContent = k + " " + v; meta.appendChild(b); });
+    // v0.35.3: CAT, SUB, TAG in full, tappable as in the table (the table cuts long values)
+    [[T.colCAT, r.CAT ? [r.CAT] : []], [T.colSUB, toks(r.SUB)], [T.colTAG, toks(r.TAG)]].forEach(([k, vs]) => {
+      if (!vs.length) return;
+      const b = document.createElement("b"); b.textContent = k + " "; meta.appendChild(b);
+      vs.forEach((v, i) => { if (i) b.appendChild(document.createTextNode("\u2009")); b.appendChild(tapSpan(v, v, "tag")); });
+    });
     td.appendChild(meta);
   }
-  const rest = r.pairs.slice(1);
-  if (rest.length){
-    const g = document.createElement("div"); g.className = "det-pairs";
-    rest.forEach(p => { const q = document.createElement("div"); q.className = "dq"; q.textContent = p.q;
+  // v0.35.3: the opened row shows every pair, the first one included, in full (the table cuts long Q1 and A1)
+  { const g = document.createElement("div"); g.className = "det-pairs";
+    r.pairs.forEach(p => { const q = document.createElement("div"); q.className = "dq"; q.textContent = p.q;
       const a = document.createElement("div"); a.className = "da ru"; a.textContent = p.a; g.append(q, a); });
     td.appendChild(g);
-  } else { const n = document.createElement("div"); n.className = "det-none"; n.textContent = T.noOtherPairs; td.appendChild(n); }
+  }
   tr.appendChild(td);
   return tr;
 }
