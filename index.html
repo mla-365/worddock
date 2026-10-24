@@ -35,7 +35,11 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.33 ───────────────────────────────────────────
+/* ── WordDock — v0.33.1 ───────────────────────────────────────────
+   v0.33.1 (24 Oct): the bottom door of the current list says "All lists" again (the page names, 24 Oct: card, current
+   list, All lists, About, Inside WordDock). "WD list" retired in every text the learner sees: "Published lists", "My lists on this device",
+   "is a published list", About topic "Published lists" (M, naming spar for Inside WordDock). Code comments keep the
+   old shorthand; they are not read by learners.
    v0.33 (19 Oct, the cleanup): one name per column, no aliases: a sheet uses ENT CAT SUB TAG L Q1 A1 … Q10 A10 and
    nothing else; unknown columns are not used and the import names them ("columns not used: SEG, SRC"). The v26
    lists (NL-RU, NL-IT, NL-FR, NL-LA, NL-LA-PHOENIX) left the site; they return, if at all, as fresh v27 sheets
@@ -451,14 +455,14 @@ const T = {
   searchWdAria: "Search the published lists", searchMyAria: "Search the lists on this device",
   prevPage: "Previous page", nextPage: "Next page", study: "Study",
   again: "Again", good: "Good", ok: "OK", cancel: "Cancel", close: "Close", keep: "Keep",
-  wdHeading: "Published WD Lists", myHeading: "My Lists on this device", syncNoteAria: "Sync settings", add: "+ Add a list from an Excel sheet",
+  wdHeading: "Published lists", myHeading: "My lists on this device", syncNoteAria: "Sync settings", add: "+ Add a list from an Excel sheet",
   // the list surface
   words: n => n + (n === 1 ? " word" : " words"),
   lists: n => n + (n === 1 ? " list" : " lists"),
   levelOne: n => "Level " + n, levelSpan: (lo, hi) => "Level " + lo + "–" + hi,
   onDevice: "on this device", onDeviceSince: d => "on this device since " + d,
   months: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], noMatches: "No matches.", loading: "Loading…", nothingYet: "Nothing here yet.",
-  allLists: "All lists", dashboard: "Dashboard", studyN: (n, k) => "Study " + n + " · " + k, showAll: v => "Show all “" + v + "”", showLemma: v => "Show the rows of “" + v + "”", rsTotal: "The sum of this list's scores",
+  allLists: "All lists", dashboard: "All lists", studyN: (n, k) => "Study " + n + " · " + k, showAll: v => "Show all “" + v + "”", showLemma: v => "Show the rows of “" + v + "”", rsTotal: "The sum of this list's scores",
   noOtherPairs: "No other pairs.",
   colQ: "Q", colA: "A", colL: "L", colCAT: "CAT", colSUB: "SUB", colTAG: "TAG", colRS: "RS", colID: "ID", colENT: "ENT",
   // LISTS
@@ -482,7 +486,7 @@ const T = {
   noHeaderBody: "Name the columns in the first row: ENT, CAT, SUB, TAG, L, Q1, A1 …",
   nothing: "Nothing to import", nothingBody: "No row has both Q1 and A1.",
   giveName: "Give a NAME for this list", giveNameBody: "Letters, digits and hyphens: NL-LA-L, BIOLOGY.",
-  isWd: k => k + " is a WD list and can't be replaced.", nameYours: k => "Name yours " + k + "?",
+  isWd: k => k + " is a published list and can't be replaced.", nameYours: k => "Name yours " + k + "?",
   skipped: n => " · " + n + " skipped", notUsed: cols => " · columns not used: " + cols.join(", "),
   replaceQ: (k, o, w) => "Replace " + k + " (" + o + ") with this file (" + w + ")?", progressStays: "Your progress stays.",
   otherOrder: "The words in this file are in another order.", replaceFresh: k => "Replace " + k + " and start its progress fresh?",
@@ -552,7 +556,7 @@ const T = {
       "Your scores live in your browser, on your device. Sync makes a copy in the cloud under a random key - no account, no email, no password. Enter the same key on another device and both show the same progress, possibly with a small delay. Scores travel in both directions: a word you struggled with on your phone stays a word to repeat on your laptop.",
       "Your key is your way back. Lose your phone or wipe your browser? Enter your key on any device and your progress returns. Keep it somewhere outside your devices - written down, or in a message to yourself.",
       "Only scores travel: your My lists stay on the device where you imported them." ] },
-    { id: "wdlists", title: "WD lists", paras: [
+    { id: "wdlists", title: "Published lists", paras: [
       "Lists made and tested by users, then published on WordDock, so every user can study them at once." ] },
     { id: "mylists", title: "My lists", paras: [
       "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>ENT · CAT · SUB · TAG · L · Q1 · A1 … Q10 · A10</code>. Only Q1 and A1 are required in each row." ] },
