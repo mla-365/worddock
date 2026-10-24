@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Inside WordDock: how it works, and why. The format, the protocol, the pipe from a sheet to a deck, the app, the lists, the decisions and the licence.">
+<link rel="icon" href="icon-192-green.png">
+<link rel="canonical" href="https://worddock.app/inside.html">
+<title>Inside WordDock</title>
+<style>html{font-size:14px}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<style>
+:root{
+  --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
+  --card:#f6f5ef;--accent:#185fa5;--green:#006600;--on-green:#fff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161614;--fg:#ecebe4;--muted:#8a8980;--sec:#b4b3aa;--line:#2b2b27;--line2:#45453f;
+    --card:#22221f;--accent:#7fb3ea;--green:#3f9a4f;--on-green:#fff;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161614;--fg:#ecebe4;--muted:#8a8980;--sec:#b4b3aa;--line:#2b2b27;--line2:#45453f;
+  --card:#22221f;--accent:#7fb3ea;--green:#3f9a4f;--on-green:#fff;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding-inline:20px;padding-block:1.1rem 4rem}
+.h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3;text-wrap:balance}
+.sub{color:var(--sec);font-size:13px;margin:2px 0 0}
+.lede{color:var(--sec);font-size:15px;line-height:1.65;margin:1rem 0 0;max-width:640px}
+.lede em{color:var(--fg)}
+.keep{background:var(--card);border:.5px solid var(--line);border-radius:10px;padding:12px 14px;margin:1.1rem 0 0;font-size:14px;color:var(--sec);line-height:1.6;max-width:640px}
+.keep b{color:var(--fg);font-weight:600}
+.panes{display:grid;grid-template-columns:220px minmax(0,1fr);column-gap:32px;margin-top:1.4rem}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;border-right:.5px solid var(--line2);padding:.25rem 14px .25rem 0}
+.rail-h{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px 12px}
+.topic{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;background:none;border:none;padding:8px 12px;margin:0 0 3px;border-radius:8px;
+  color:var(--sec);font-size:14px;line-height:1.35;text-decoration:none;cursor:pointer}
+.topic:hover{background:var(--card);color:var(--fg)}
+.topic.active{background:var(--green);color:var(--on-green)}
+.topic .n{font-family:var(--mono);font-size:11.5px;color:var(--muted);flex:none;width:1.1em}
+.topic.active .n{color:var(--on-green);opacity:.8}
+.t-short{display:none}
+.content{max-width:640px;min-width:0}
+.sec{padding:1.5rem 0 1rem;border-top:.5px solid var(--line);scroll-margin-top:12px}
+.sec:first-child{border-top:none;padding-top:.6rem}
+.sec-top{display:flex;align-items:center;gap:10px;margin:0 0 .35rem}
+.num{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.chip{font-size:11.5px;line-height:1.4;padding:1px 8px;border-radius:999px;border:.5px solid var(--line2);color:var(--sec);white-space:nowrap}
+.chip.todo{border-style:dashed;color:var(--muted)}
+.refs{margin:0 0 .85rem;padding-left:1.1rem}
+.refs li{font-size:14px;line-height:1.55;margin:0 0 .4rem;color:var(--sec)}
+.refs li::marker{color:var(--muted)}
+.toc{margin:.2rem 0 1rem;padding-left:1.4rem}
+.toc li{margin:0 0 .5rem}
+.toc li::marker{color:var(--muted);font-family:var(--mono);font-size:12.5px}
+.sub-h{margin:1.3rem 0 .4rem}
+.ref-group{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:1rem 0 .4rem}
+h2{font-size:20px;font-weight:600;margin:0 0 .7rem;line-height:1.3;text-wrap:balance}
+h3{font-size:15px;font-weight:600;margin:1.1rem 0 .4rem;line-height:1.35}
+p,li{color:var(--sec);font-size:15px;line-height:1.65}
+p{margin:0 0 .85rem}
+strong,b{color:var(--fg);font-weight:600}
+em{color:var(--fg);font-style:italic}
+code{font-family:var(--mono);font-size:12.5px;background:var(--card);border:.5px solid var(--line);padding:1px 5px;border-radius:4px;color:var(--fg);white-space:nowrap;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+ul.plain{margin:0 0 .85rem;padding-left:1.1rem}
+ul.plain li{margin:0 0 .45rem}
+ul.plain li::marker{color:var(--muted)}
+ol.plain{margin:0 0 .85rem;padding-left:1.3rem}
+ol.plain li{margin:0 0 .45rem}
+.note{font-size:14px;color:var(--muted);font-style:italic;margin:0 0 .85rem}
+.note b{color:var(--sec);font-style:normal}
+.addr{font-family:var(--mono);font-size:13px;color:var(--fg);user-select:all}
+.rules{list-style:none;margin:.4rem 0 .9rem;padding:0;display:grid;gap:15px}
+.rules li{display:grid;grid-template-columns:2.8rem minmax(0,1fr);column-gap:8px;scroll-margin-top:12px}
+.pn{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--green);padding-top:3px}
+.rule{margin:0 0 .25rem}
+.why{margin:0;font-size:14px;line-height:1.55;color:var(--muted);font-style:italic}
+.why b{font-style:normal;font-weight:600;color:var(--sec);margin-right:4px}
+.why em{color:var(--sec)}
+.tbl{overflow-x:auto;margin:0 0 .85rem}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:.5px solid var(--line);vertical-align:top;color:var(--sec)}
+th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+td:first-child{white-space:nowrap;color:var(--fg)}
+.set{display:flex;flex-wrap:wrap;gap:5px}
+.set code{font-size:12.5px}
+dl.terms{margin:0 0 .85rem}
+dl.terms dt{color:var(--fg);font-weight:600;font-size:15px;margin:.6rem 0 .1rem}
+dl.terms dd{margin:0;color:var(--sec);font-size:15px;line-height:1.6}
+a{color:var(--accent)}
+.back{display:inline-block;margin-top:2.5rem;font-size:13px;color:var(--muted);text-decoration:none}
+.back:hover{color:var(--green)}
+@media (max-width:700px){
+  .wrap{padding-inline:16px}
+  .h{font-size:20px}
+  .panes{grid-template-columns:1fr;margin-top:1rem}
+  .rail{position:static;border-right:0;padding:0 0 10px;border-bottom:.5px solid var(--line2);display:flex;flex-wrap:wrap;gap:6px}
+  .rail-h{display:none}
+  .topic{width:auto;padding:5px 10px;margin:0;font-size:13px;gap:6px}
+  .t-long{display:none}
+  .t-short{display:inline}
+  .rules li{grid-template-columns:2.4rem minmax(0,1fr)}
+}
+</style>
+
+<div class="wrap">
+  <h1 class="h">Inside WordDock</h1>
+  <p class="sub">How it works, and why · version 1 · 24 October 2026</p>
+
+  <p class="lede">WordDock is a web-based tool for learning words: you study published lists or build your own, in decks of ten, and your progress is remembered.</p>
+  <p class="lede">This page is about the format a list is written in, the rules for writing a good one, the way a sheet becomes a deck, the app's own logic and the licence. It is written so that someone with this page and the public code could build WordDock again from nothing.</p>
+
+  <div class="keep"><b>How to read this page.</b> Every term is defined once, in bold where it first appears, and used with that one meaning everywhere else. The code is public (<a href="https://github.com/mla-365/worddock">github.com/mla-365/worddock</a>); where this page describes a mechanism, the file that does it is named. People who contribute appear by initial only. Example rows are in Dutch, Latin and Russian; the explanations are English. A branch marked <span class="chip todo">to write</span> exists as a plan, not yet as text.</div>
+
+  <div class="panes">
+    <nav class="rail" aria-label="Contents">
+      <p class="rail-h">Contents</p>
+      <a class="topic" href="#s1"><span class="n">1</span><span class="t-long">What WordDock is</span><span class="t-short">What</span></a>
+      <a class="topic" href="#s2"><span class="n">2</span><span class="t-long">The format</span><span class="t-short">Format</span></a>
+      <a class="topic" href="#s3"><span class="n">3</span><span class="t-long">The protocol</span><span class="t-short">Protocol</span></a>
+      <a class="topic" href="#s4"><span class="n">4</span><span class="t-long">The pipe: sheet, converter, deck</span><span class="t-short">Pipe</span></a>
+      <a class="topic" href="#s5"><span class="n">5</span><span class="t-long">The app</span><span class="t-short">App</span></a>
+      <a class="topic" href="#s6"><span class="n">6</span><span class="t-long">Crafting notes</span><span class="t-short">Crafting</span></a>
+      <a class="topic" href="#s7"><span class="n">7</span><span class="t-long">Licence, and running your own copy</span><span class="t-short">Licence</span></a>
+      <a class="topic" href="#s8"><span class="n">8</span><span class="t-long">A paper, one day</span><span class="t-short">Paper</span></a>
+    </nav>
+
+    <div class="content">
+
+      <section class="sec" id="s1">
+        <div class="sec-top"><span class="num">Branch 1</span></div>
+        <h2>What WordDock is</h2>
+        <p>A <b>learner</b> opens a list and studies it in decks of ten. A <b>crafter</b> writes a list, in a spreadsheet, following a few rules, and either keeps it on her own device or publishes it for everyone. WordDock is the small piece in between: it reads the sheet, deals the decks, remembers how each word went, and brings the weakest words back first. No account, no email, no password.</p>
+        <p>Technically it is two things, and this page is about both:</p>
+        <ul class="plain">
+          <li><b>a format</b>: a plain table with a fixed set of columns that any teacher can fill in Excel, and that the app can deal cards from;</li>
+          <li><b>a protocol</b>: the rules for filling that table so the list teaches well, can travel across languages, and can be checked by someone else.</li>
+        </ul>
+        <h3>Three words</h3>
+        <dl class="terms">
+          <dt>list</dt><dd>One space: its rows, their IDs, and its pool of scores. Nothing is shared across lists. A list has one name and lives either on worddock.app (a <b>published list</b>) or on one device (a <b>My list</b>, added from an Excel sheet).</dd>
+          <dt>view</dt><dd>What the current list shows after a search, a tap on a class, or a level: all of the list, or a part of it. Remembered per list.</dd>
+          <dt>deck</dt><dd>The ten lowest-scoring rows of the view, dealt as cards. The deck is <b>done</b> when all ten cards are <b>clean</b>: passed without Again.</dd>
+        </dl>
+        <h3>Row and card</h3>
+        <p>A <b>row</b> is the unit of the data: one line of the list, one word with its class, its level and its question-and-answer pairs. A <b>card</b> is the surface on which a row is shown while studying, by rules: which columns appear where, the class line above the question, the edge that shows there is more. A deck is ten rows dealt; what the learner handles are their cards. The app counts in <b>words</b> ("40 words", "Study 40") because a learner counts words; in every rule the unit is the row.</p>
+        <h3>The double helix</h3>
+        <p>Two orders run through every list. The crafter's order is the <b>ID</b>: the place of a row in the list, fixed when the list is published, so that the sequence a crafter chose is the sequence a learner meets. The learner's order is the <b>running score</b>, <b>RS</b>: one number per row, per learner, raised when a card comes through a deck clean and lowered when it slips. A fresh list plays in the crafter's order; after that the ten lowest RS come first, whatever their place. The two never fight: a <b>pool</b>, all RS of one list on one device (and on every device that shares a sync key), belongs to the list and not to a view, so studying a filtered part of a list writes into the same pool as the whole. A filter is a way of studying a list, never a second list.</p>
+        <h3>Show first, explain later</h3>
+        <p>A card shows the question, the learner answers out loud or on paper, then reveals. Nothing on the card may give the answer away before the reveal, and nothing explains before the learner has tried. The class line says what kind of word it is; it never says which word. Explanations that a learner must be able to produce go into the pairs themselves, where they are retrieved, not read.</p>
+        <h3>Where the novelty is, and where it is not</h3>
+        <p>The descriptive standards exist and WordDock borrows them: Universal Dependencies for word class, the CEFR for levels, Tatoeba for sentence pairs, Wiktionary for lemma, gender and inflection, the SuperMemo family for repetition. What nobody had standardised is the pedagogical row: cue, answer, class, level, order, and the way a word comes back deeper. WordDock standardises nothing about language and one thing about teaching, the row as a lesson, and the rest it takes from people who did it well. A WordDock file is a readable table first and an app input second: a learner can open it, a teacher can print it, without the app.</p>
+      </section>
+
+      <section class="sec" id="s2">
+        <div class="sec-top"><span class="num">Branch 2</span></div>
+        <h2>The format</h2>
+        <p>One table, three places: the crafter's sheet, the published JSON, the learner's screen. The canonical definition is <code>v27/columns.md</code> in the project; this branch is that page, said once more.</p>
+        <h3>The columns</h3>
+        <div class="tbl"><table>
+          <tr><th>column</th><th>meaning</th><th>on the card</th></tr>
+          <tr><td><code>ENT</code></td><td>the entry word, the lemma, as the crafter names it: the naked dictionary form, no stress marks, no macrons, no principal parts</td><td>not shown; the search key, the tap on the list page</td></tr>
+          <tr><td><code>CAT</code></td><td>the word class, one value from the reader's language (<code>zelfstandig naamwoord</code>, <code>werkwoord</code>, or the English set in the hub)</td><td>the class line above the question</td></tr>
+          <tr><td><code>SUB</code></td><td>the class that predicts the word's behaviour: genus, declension or conjugation, aspect, a measure word, a noun class, <code>onregelmatig</code>; never the answer</td><td>the class line</td></tr>
+          <tr><td><code>TAG</code></td><td>where the word belongs: a theme, a text, an author, the name of a unit; lowercase plain words a learner can tap</td><td>the opened row</td></tr>
+          <tr><td><code>L</code></td><td>the level: a band and a unit, <code>A1.3</code></td><td>the opened row; the Level box</td></tr>
+          <tr><td><code>SRC</code></td><td>where the row comes from: a book, a site, a course; empty means the crafter's own</td><td>kept in the file, shown nowhere yet</td></tr>
+          <tr><td><code>Q1 A1 … Q10 A10</code></td><td>the pairs: the question and the answer, up to ten per row</td><td>the card</td></tr>
+          <tr><td><code>ID</code></td><td>four characters, zero-padded; never in the sheet, stamped at publishing from the row's place</td><td>the opened row, on a PC</td></tr>
+          <tr><td><code>RS</code></td><td>the running score; never in a file, lives in the pool</td><td>the list page</td></tr>
+        </table></div>
+        <p>The sheet has 26 columns: <code>ENT CAT SUB TAG L SRC Q1 A1 … Q10 A10</code>, in any order, since headers are read by name, in any case. <b>No other names are read.</b> Required: <code>Q1</code> and <code>A1</code>; an empty <code>ENT</code> takes <code>A1</code>. Any other column (a note, a comment) is not used, may stay in the sheet, and the import names it: "columns not used: NOTE". The template with these headers and two example rows is behind the <code>?</code> next to the Excel door on All lists.</p>
+        <h3>Q and A</h3>
+        <p>The <b>question</b> is what the card shows; the <b>answer</b> is what the learner gives and then reveals. <code>Q1 A1</code> is the word itself. The pairs after the first are the <b>same word, deeper</b>: a form, an example, a sentence that puts the word in another position. A card with more than one pair shows an edge above itself from the second question on. What a crafter puts into Q and into A is her choice, and that choice is part of the list's identity: a Dutch learner of Latin may be asked the Latin (recognition) or the Dutch (production), and those are two lists with two pools.</p>
+        <h3>L, the level</h3>
+        <ul class="plain">
+          <li><b>Band</b>: <code>A1 A2 B1 B2 C1 C2</code> (the CEFR; also for Latin), or a plain number for lists that are not languages.</li>
+          <li><b>Unit</b>: 1 to 99 after a point, the crafter's working block of roughly 20 to 100 rows: a lesson, a theme, a grammar notion. <code>A1.01</code> reads as <code>A1.1</code>; a plain <code>A1</code> sorts at the start of A1.</li>
+          <li>Order: bands in CEFR order, units as numbers (<code>A1.2</code> before <code>A1.10</code> before <code>A2</code>).</li>
+          <li>Filter in the app: <code>A1</code> is the whole band, <code>A1.3</code> one unit, <code>A1-A2</code>, <code>A1.2-A1.5</code>, <code>-B1</code>, <code>B1-</code> ranges.</li>
+          <li>One scheme per list. In Excel, number bands with units need text cells (Excel turns <code>1.10</code> into <code>1.1</code>); CEFR bands are safe.</li>
+          <li>L is a label on a row, not a driver of order. The order of the rows is the crafter's order in the sheet; the converter only warns when L steps back along the rows.</li>
+        </ul>
+        <h3>Identity of a row</h3>
+        <p>The app knows a row by its ID. The crafter's handle is <code>ENT · CAT · SUB</code>: two entries that look alike are two rows when their class differs (Russian <em>нет</em> the particle and <em>нет</em> the predicative; <em>что</em> the conjunction and <em>что</em> the question word), and gender splits a word only where the language has two words. In a list where a word comes back at a higher level (a <b>re-entry row</b>: <em>amare</em> with its lemma at A1.3, again with its persons at A2.1), the level is part of the handle, <code>ENT · CAT · SUB · L</code>, and L is required.</p>
+        <h3>The published list</h3>
+        <p>One JSON file, <code>lists/&lt;NAME&gt;.json</code>, one object per row: <code>ID, L, ENT, CAT, SUB, TAG, SRC, pairs</code>, where <code>pairs</code> is a list of <code>{q, a}</code>. Nothing else. The app reads no older shape.</p>
+        <h3>Names</h3>
+        <p>A list has one <b>name</b>, shown everywhere as it is: capitals, letters, digits and hyphens, no spaces, no accents. The name is the file name (<code>NL-RU-HA-2027.xlsx</code>, <code>lists/NL-RU-HA-2027.json</code>) and the key the pool is stored under. Capitals because <code>nl-ru</code> and <code>NL-RU</code> are one file on Windows and Mac but two addresses on the web. Two language codes at the start label the two columns on the list page: the first code labels the question column, the second the answer column; any other name shows <code>Q | A</code>. The two codes also tell two lists apart: lists with the codes swapped are two lists with two pools.</p>
+        <p>For a published list, advice rather than law: let the third segment say where the list comes from, a city, a school, a course (<code>NL-IT-BOLOGNA</code>, <code>LA-NL-HASSELT</code>), add a year or a number when one origin has several lists (<code>NL-RU-HA-2027</code>, <code>NL-RU-HA-2027-1</code>), keep it short enough for a phone (about twelve characters), and keep a person's full name out of it. A My list may have any name its file system accepts. Two-code names without a third segment (<code>NL-TR</code>) are kept for the hub (branch 6).</p>
+        <p>Several lists per language pair are welcome and expected, each from somewhere else; a learner picks the one her teacher or friends named. Scores never travel from one list to another: a word met in two lists is learned twice, and that is not a contradiction.</p>
+        <h3>Conventions that live in the rows</h3>
+        <ul class="plain">
+          <li><b>Sound pair.</b> A pair whose question ends in <code>uitspraak?</code> (later <code>pinyin?</code>, <code>klemtoon?</code>) asks for the word's sound or reading; its answer is always the sound. Every language has a sound to learn somewhere; this is where it lives, not in a column.</li>
+          <li><b>Marks.</b> Per list. The Latin lists carry no macrons (not used in Flemish schools today). Russian keeps its stress marks in the pairs, never in <code>ENT</code>.</li>
+          <li><b>The dash.</b> No long dash in a sentence of WordDock material; a spaced short dash, " - ", in Dutch and Russian, a comma or a colon in English. The Russian dash between subject and predicate is grammar and stays, written as " - ". The dash between the forms of a conjugation (<em>хожу́ — хо́дишь — хо́дят</em>) is notation, not a sentence; it stays.</li>
+        </ul>
+      </section>
+
+      <section class="sec" id="s3">
+        <div class="sec-top"><span class="num">Branch 3</span></div>
+        <h2>The protocol: how a list is made</h2>
+        <p>The rules, each with its reason; a rule without a reason is a habit. Most are directions rather than laws: a crafter who knows why may bend one. The two that the software enforces are marked.</p>
+        <ul class="rules">
+          <li id="p1"><span class="pn">P1</span><div><p class="rule"><b>One row, one word, one place.</b> A word that comes back later in the curriculum is a new row, a re-entry row.</p><p class="why"><b>Why</b> Scores hang on rows; a word met twice is learned twice, in two contexts.</p></div></li>
+          <li id="p2"><span class="pn">P2</span><div><p class="rule"><b>Q1 and A1 are the word; the pairs after the first are the same word, deeper.</b> A form, a sentence, a pattern.</p><p class="why"><b>Why</b> The card shows an edge from the second question on: "same word, deeper", never a new word in disguise.</p></div></li>
+          <li id="p3"><span class="pn">P3</span><div><p class="rule"><b>CAT, SUB and TAG are in the reader's language</b>, the language of the question. School lists write them out in full (<code>zelfstandig naamwoord</code>, <code>vrouwelijk</code>, <code>eerste vervoeging</code>); the hub's English master uses the English set (branch 6).</p><p class="why"><b>Why</b> A class label the learner cannot read is noise on the card; a label in the target language gives away or confuses.</p></div></li>
+          <li id="p4"><span class="pn">P4</span><div><p class="rule"><b>A class line names a class, never a rule, and never the answer.</b> <code>vrouwelijk</code>, <code>-la / -le</code>, <code>vraag, richting</code> are fine; "o = he / she / it" is not, and neither is a sentence. SUB is the class that predicts the word's behaviour, not a category for sorting.</p><p class="why"><b>Why</b> Show first, explain later; the card must not leak; and a column defined by behaviour survives every language.</p></div></li>
+          <li id="p5"><span class="pn">P5</span><div><p class="rule"><b>The entry is naked; the first answer may carry more.</b> <code>ENT</code> is the dictionary form without marks. The first answer adds what has to be learned with the word: stress marks, an aspect partner (<em>мыть - помы́ть</em>), principal parts where a list uses them.</p><p class="why"><b>Why</b> The entry is the handle and the search key; the answer is what has to be learned.</p></div></li>
+          <li id="p6"><span class="pn">P6</span><div><p class="rule"><b>Replace the long dash, never delete it.</b> See the conventions in branch 2.</p><p class="why"><b>Why</b> House style; and in Russian the dash carries meaning.</p></div></li>
+          <li id="p7"><span class="pn">P7</span><div><p class="rule"><b>Known words first.</b> A sentence in a row prefers words the list has already taught at that level or below. A word that is not there yet is not forbidden; it is named, and the crafter decides.</p><p class="why"><b>Why</b> A sentence the learner cannot yet read teaches nothing; the first deck plays in order.</p></div></li>
+          <li id="p8"><span class="pn">P8</span><div><p class="rule"><b>Short, concrete, one idea.</b> A sentence is 2 to 6 words, says one thing, and the next sentence puts the word in another position. Short words first; long words and exceptions in later units.</p><p class="why"><b>Why</b> The mechanics of memory.</p></div></li>
+          <li id="p9"><span class="pn">P9</span><div><p class="rule"><b>Easy to translate.</b> In a master that every language translates, beginner rows stay close to concepts every language has a word for: <em>tea, house, friend, good</em>. A place name is fine.</p><p class="why"><b>Why</b> Every language has to say the same line; a beginner line should cost the translator no explaining.</p></div></li>
+          <li id="p10"><span class="pn">P10</span><div><p class="rule"><b>Provenance is transparent.</b> Every published list says who made it and from what. A row made from someone else's material carries its source in <code>SRC</code>; an empty <code>SRC</code> is the crafter's own and public domain (branch 7). A list made from a book needs the rights settled before it is published.</p><p class="why"><b>Why</b> The shelf is public; a learner picks a list by trusting its origin.</p></div></li>
+          <li id="p11"><span class="pn">P11</span><div><p class="rule"><b>Publish = freeze, and a list grows at the end.</b> <em>Enforced by the converter.</em> After the first publish a row keeps its ID, its place and its meaning; its text may be corrected; a change of meaning is a new row at the end; new rows go after the last published one; a row is never removed or moved, and the converter stops the publish when one is. A list is never renumbered: another order is another list, with another name. Before the first publish, anything may move.</p><p class="why"><b>Why</b> The learner's scores hang on the ID.</p></div></li>
+          <li id="p12"><span class="pn">P12</span><div><p class="rule"><b>A reviewer, not a rule, promotes a list.</b> Machine-made material is beta until one person who knows the language has read it.</p><p class="why"><b>Why</b> The bottleneck is people, and that is the right bottleneck.</p></div></li>
+          <li id="p13"><span class="pn">P13</span><div><p class="rule"><b>One layer at a time.</b> First the masculine singular, later the plural, never mixed with gender in one cue. A form that is its own dictionary word is its own row (<em>vriend</em> and <em>vriendin</em>). Fixed phrases are their own row.</p><p class="why"><b>Why</b> A learner who meets two layers at once learns neither; and "two words that look alike" is itself a lesson.</p></div></li>
+          <li id="p14"><span class="pn">P14</span><div><p class="rule"><b>A row's identity is ENT · CAT · SUB</b>, and in a list with re-entry rows <code>ENT · CAT · SUB · L</code>. See branch 2.</p><p class="why"><b>Why</b> One row per real word per place, no more and no fewer.</p></div></li>
+          <li id="p15"><span class="pn">P15</span><div><p class="rule"><b>One list, one way of asking.</b> <em>Enforced by the app.</em> Within a list the question column always holds the same language. Recognising a word and producing it are two skills with two scores, so a list that asks the other way round is another list, with its own pool.</p><p class="why"><b>Why</b> A learner at 8 on recognition and 2 on production is a true picture; one pool for both would average a truth away.</p></div></li>
+        </ul>
+        <h3>The staircase</h3>
+        <p>The direction that the rules above serve: from easy and introduced to complex and layered, gradually. A word enters with little (its lemma and one context), other words follow, and the word comes back as a re-entry row with more: its forms, then sentences. How much a row carries and how fast the list climbs is the crafter's throttle, chosen for the level: at A1 one layer per row, at C2 a rare word may come with everything it has at once, because its paradigm is not the lesson. The deck of ten is the measure of load: ten rows is enough to have to work and few enough to finish, and finishing is what motivates.</p>
+        <h3>What the app does for the crafter</h3>
+        <p>The repetition is not in the list; it is in the app. After every done deck each row gains a point if it was never missed, loses one if it was missed once, two if more often; the next deck takes the ten lowest. What a learner missed comes back, not a hundred times in a row but mixed with rows she has not seen yet. Mastery builds, and there is always something new. The crafter does nothing for this but choose and order the rows.</p>
+        <h3>The row-smith</h3>
+        <p>For crafters who work with an assistant, the project holds a checklist, <code>v27/worddock-rows.md</code>: from a sketch (an entry, a level, a few hints) to finished rows that follow this protocol, with the checks in order: headers, naked entry, marks in the pairs, complete sentences, length, the class line, known words first, one layer, the dash, identity. Its one rule for the assistant: name what is doubtful, don't decide it.</p>
+      </section>
+
+      <section class="sec" id="s4">
+        <div class="sec-top"><span class="num">Branch 4</span></div>
+        <h2>The pipe: sheet, converter, deck</h2>
+        <h3>From a sheet to a My list</h3>
+        <p>On All lists, the Excel door ("Add a list from an Excel sheet") reads an <code>.xlsx</code> in the browser: the first sheet whose header row has <code>Q1</code> and <code>A1</code>; columns by name; a row needs <code>Q1</code> and <code>A1</code>; the ID is the row's place. The file name becomes the list name, in capitals. A name a published list already has cannot be taken; the app proposes <code>NAME-01</code>. Adding a sheet under a name that exists on the device asks: rows in the same order, "Replace? Your progress stays"; rows in another order, "The words in this file are in another order. Replace and start its progress fresh?" In a My list, <b>order = place = ID</b>: keep the order and your RS is intact; change it and the IDs would point at other words, so the app starts the pool fresh rather than let it be wrong. Nothing of a My list leaves the device; only scores can sync.</p>
+        <h3>From a sheet to a published list: the converter</h3>
+        <p><code>convert.html</code>, on the site, is the <b>converter</b>: it turns a sheet into the published JSON and enforces the freeze. It reads the sheet as the app does, stamps IDs from the rows' places (<code>0001</code> for the first), and, if a list of that name is already published, fetches it and compares: every published row must still be at its place with the same entry and class; new rows may only follow the last published one; if a published row moved, the download stops and says where. It warns, without stopping, on a level it cannot read and on a level that steps back along the rows (a block pasted in the wrong place?), and it names columns it did not use. The result goes into the repository as <code>lists/&lt;NAME&gt;.json</code>, and the name onto the one line in <code>index.html</code> that lists the published lists (<code>WD_LISTS</code>). Publishing is a commit. A published list that a device also holds as a My list of the same name: the published one wins, the device's copy steps aside as <code>NAME-OWN</code> with its progress.</p>
+        <h3>The export</h3>
+        <p>The <code>↓</code> on All lists writes any list back to a sheet in the crafter's layout, every cell as text, all 26 columns including <code>SRC</code>, so a learner can take a published list, make it her own, change it, and add it back as a My list. The file name is the list name.</p>
+        <h3>The view</h3>
+        <p>The current list shows the rows that pass two filters: the Level box (<code>A1</code>, <code>A1.3</code>, <code>A1-A2</code>; a list without levels ignores it) and the search box. A search that is exactly a CAT, SUB or TAG value keeps the rows with that value; a search that starts with <code>=</code> keeps the rows whose entry is exactly that (<code>=amare</code>: the lemma's own rows, not the rows that use it in a sentence; tapping the answer cell writes it); any other text searches the whole row, case and accents folded. Rows per page: as many as fit the screen.</p>
+        <h3>The deck</h3>
+        <p>Study takes the visible rows, sorts them by RS (lowest first) and then by ID, and takes the first ten. A fresh list therefore plays in the crafter's order; later the weakest come first. Each card in the deck remembers its row, a finger on the current pair, whether this pass is dirty, whether it owes a redemption pass, how many times it was dirty, and whether it is clean.</p>
+        <p>The deck is a queue; the card at the front is the one shown. A tap or Enter reveals the answer; a tap on the revealed card peeks back at the question. Then Again or Good.</p>
+        <ul class="plain">
+          <li><b>Again</b>: the card stays at the front and asks once more; the pass is now dirty (counted once per pass); the card is not clean.</li>
+          <li><b>Good</b>: on to the next pair of the same card. After the last pair: if the pass was dirty, the card owes a redemption pass and plays again from its first pair; if that was the redemption pass, the card goes to position three, still not counted; otherwise the card is clean, goes to the back, and is counted.</li>
+          <li>The counter at the top is "clean cards / cards in the deck". The deck is done when every card is clean; the done card appears; a tap deals the next deck.</li>
+        </ul>
+        <h3>The score</h3>
+        <p>Only when a deck is done does a score change: +1 for a card that was never dirty, −1 for a card dirty once, −2 for a card dirty more than once. Nothing is written during a deck. RS has no clock: it says how often a word came back clean, not when it is due. A word counts as mastered at 10. The sum of a list's RS is shown on All lists ("23 RS"); it can be negative early on, which is honest.</p>
+        <h3>Resume</h3>
+        <p>The deck in progress is saved after every grade. On reopening, the same deck comes back if it is the same list and the same view (the signature is the IDs of the visible rows); otherwise a new deck is dealt. On the list page, one green pill says "Study N", N the rows the view shows; mid-deck with a changed view, a tap asks "Restart the deck?" and Keep deck resumes.</p>
+        <h3>Sync</h3>
+        <p>Scores live in the browser. Sync is optional: the learner makes a <b>sync key</b>, eight random characters, in About under Devices and sync, and enters the same key on another device. From then on, at the end of every deck, the app pulls the cloud copy, merges, and pushes: the payload is every pool on the device; the merge is per list and per ID, and the higher RS wins; a row present on one side only is taken. The app also pushes when the page is hidden and pulls when it returns to the foreground and once an hour, with a short cooldown between calls. The server side (<code>worker.js</code> in the repository) is deliberately stupid: it stores a blob under a key and gives it back, never merges, never reads a score, knows nothing about a person. Losing a phone is losing nothing: the key brings the pools back. Only scores travel; My lists stay where they were imported.</p>
+        <h3>What the device stores</h3>
+        <ul class="plain">
+          <li><code>wd_rs_&lt;NAME&gt;</code>: the pool of one list, ID to RS.</li>
+          <li><code>wd_list</code>: the list being studied; <code>wd_deck</code>: the deck in progress; <code>wd_view_&lt;NAME&gt;</code>: the view per list; <code>wd_mylists</code>: the My lists, rows and import date; <code>wd_rowcount_&lt;NAME&gt;</code>: a published list's row count, so All lists draws at once.</li>
+          <li><code>wd_sync_key</code> and a few <code>wd_sync_*</code> stamps for the sync's bookkeeping.</li>
+        </ul>
+        <p>A rebuilt app must read these names, or every learner starts from zero.</p>
+      </section>
+
+      <section class="sec" id="s5">
+        <div class="sec-top"><span class="num">Branch 5</span></div>
+        <h2>The app</h2>
+        <p>One HTML file, <code>index.html</code>, no framework, no build step. Four pages in a ring, each with one small door at the bottom; a fifth page, this one, outside the ring.</p>
+        <dl class="terms">
+          <dt>the card</dt><dd>The question, the class line above it, the edge when there is more, Again and Good, the counter. The door at the bottom is the list's name, with the counter: it opens the current list.</dd>
+          <dt>the current list</dt><dd>The table: the two language columns, class, sub, tags, level, RS; the search box and the Level box; the pill "Study N"; a tapped row opens its other pairs. The door at the bottom: All lists.</dd>
+          <dt>All lists</dt><dd>Two sections, Published lists and My lists on this device, each with its word count and RS sum, the list being studied first; <code>↓</code> exports any list, <code>×</code> removes a My list; the Excel door with its <code>?</code> and the template. The door at the bottom: About WordDock.</dd>
+          <dt>About</dt><dd>A few lines on the idea, studying, progress, devices and sync (with the sync note and its dialog), published lists, My lists, contact; and the link to this page. The door at the bottom: back to the card.</dd>
+        </dl>
+        <p>The interface is English only and stays so: some forty strings that would otherwise have to be kept in every language forever. Content is the crafter's and may be in any language. Again and Good keep their words; colour alone is not enough.</p>
+        <h3>First open, links, offline</h3>
+        <p>A device that has never had a list lands in the WORDDOCK list, ten cards that explain the app by being studied, if that list is published; otherwise in the first published list. Every later open returns to the last list. <code>worddock.app/?list=NAME</code> opens a published list's table directly, once, and is then wiped from the address bar. On the live site a service worker keeps a copy of the app and of the lists already opened, so a reload works without network; the app can be installed from the browser's menu and then runs in its own window. A copy of the app on any other address runs without sync and without the service worker, which is how the beta (branch 6) and local tests work.</p>
+        <h3>The frozen page</h3>
+        <p><code>index_v26.html</code> in the repository is the app as it was before October 2026, kept as a roll-back copy. It is not linked, not maintained, and not described here.</p>
+      </section>
+
+      <section class="sec" id="s6">
+        <div class="sec-top"><span class="num">Branch 6</span></div>
+        <h2>Crafting notes</h2>
+        <h3>Three layers of a good list</h3>
+        <p>From the note a Latin teacher received with her first forty rows: a list has three layers, and a good list respects all three. <b>Structure</b>: the 26 columns, never touched, the shape of the brick. <b>Pattern</b>: how a row is filled, the entry naked, the class line that never gives the answer away, one layer at a time, the studs on the brick. <b>Content</b>: which rows, in which order, which are exemplary; the teacher's work. Two images go with it. Learning is weaving: knot after knot, in order, ten at a time, never the whole carpet at once. Making lists is building a car: parts made apart, in whatever order, that click together at the end on one condition, that each followed the pattern. A list of ten rows made in five minutes is such a part; small, and it already fits a whole of a thousand.</p>
+        <h3>The exemplary row</h3>
+        <p>A well-chosen row teaches more than itself. Whoever knows <em>amare</em> knows the forms of <em>laudare</em>, <em>vocare</em> and a hundred other verbs; whoever knows <em>servus</em> knows <em>dominus</em>. Ten rows of a good list already show the structure of the language, not its content but its pattern. Which rows get that role is a teacher's decision, and the part of a list no rule can make.</p>
+        <h3>LA-NL: Latin for Dutch-speaking pupils</h3>
+        <p>Started with a Latin teacher, L, in October 2026. Her decisions shaped the format more than any other list. Flemish Latin teaching today asks for recognition, not production, so the Latin is the question and the Dutch the answer. The class line is written out in full (<code>zelfstandig naamwoord</code>, <code>vrouwelijk</code>, <code>eerste vervoeging</code>), because pupils read it. No macrons: not used in schools now. The first forty rows came in four blocks of ten: ten words chosen to show the sounds (<em>Caesar</em>, <em>circus</em>, <em>aqua</em>, <em>quoque</em>), each with a sound pair; ten unchanging words (<em>non, et, quoque, domi, in</em>); ten verbs of the first conjugation, lemma and first person; ten nouns of the first and second declension with a three-word sentence from words already in the list. The fifth block, the link between verb and noun, the cases, waits for her reading. What she asked for next: explanations. The rule we took: what a pupil must be able to produce goes into a pair, where it is retrieved; a note that helps to understand is a later matter, once the lists show which notes recur.</p>
+        <h3>NL-RU: Russian for Dutch speakers <span class="chip todo">to write</span></h3>
+        <p>Production: the Dutch is the question, the Russian the answer. The verb convention: the entry is the imperfective infinitive, naked; the first answer gives both infinitives (<em>мыть - помы́ть</em>); then the conjugation of the imperfective, then of the perfective, then sentences. Stress marks on every word of more than one syllable in the pairs, never in the entry. The list is being normalised from an older working file and re-levelled from A1.1 upwards; this note grows with it.</p>
+        <h3>The hub: one file per language</h3>
+        <p>A different kind of list, parked for now. One master of fifty rows in English, a short story about a spy, Mister X, translated into seven languages by the same rules (the English set for CAT; SUB a class only; the entry naked, the pairs marked). The files, one per language, are joined in the browser into a language pair: any two of them give a list, <code>NL-TR</code>, <code>RU-LA</code>, forty-two pairs from eight files. It lives on a beta copy of the app at another address, without sync. Its charter and notes are in the project (<code>v27/hub.md</code>, <code>v27/hub-notes.md</code>). Lessons it taught: a language without a word leaves the entry empty and the pair is skipped for it; names are localised; a master line may not be a question that forces a new word in some language; and the English master must be easy to translate (P9).</p>
+      </section>
+
+      <section class="sec" id="s7">
+        <div class="sec-top"><span class="num">Branch 7</span></div>
+        <h2>Licence, and running your own copy</h2>
+        <h3>Three layers, three rules</h3>
+        <ul class="plain">
+          <li><b>The code</b> (<code>index.html</code>, <code>convert.html</code>, <code>worker.js</code>, <code>sw.js</code>): GNU Affero General Public License v3.0. Anyone may use and change it; changes must stay open, also when someone runs a changed copy as a website for others.</li>
+          <li><b>The lists published in the repository</b>: dedicated to the public domain under CC0 1.0, unless a row states a source in <code>SRC</code>; then that source's terms apply to that row.</li>
+          <li><b>The format and the protocol</b> (this page, <code>columns.md</code>): CC0 1.0. Ideas, methods and data formats cannot be owned in any case; what protects them from being fenced off is open, dated publication, not a licence. The guard against someone else's claim is that this page exists and is dated.</li>
+        </ul>
+        <p>Bundled libraries: SheetJS Community Edition (Apache 2.0) reads and writes the sheets; a small QR code generator (MIT); the Poppins font (Open Font License) is used only by the frozen page. The name WordDock was checked against the European and other trademark registers in October 2026: no live registration.</p>
+        <h3>Running your own copy</h3>
+        <p>What a copy needs, without the values that belong to this one:</p>
+        <ol class="plain">
+          <li><b>The repository</b>, as it is: the app, the converter, the lists, the icons, the manifest, the service worker.</li>
+          <li><b>A static host</b> for the files, any one that serves a folder over HTTPS. This site builds from the main branch on every commit; nothing is compiled.</li>
+          <li><b>Your own list line</b>: put your lists in <code>lists/</code> and their names on the <code>WD_LISTS</code> line near the top of the script in <code>index.html</code>.</li>
+          <li><b>Sync, only if you want it</b>: <code>worker.js</code> is a small serverless function with one table that maps a key to a blob and a timestamp; deploy it on your own account, give it its own address, and set that address in <code>index.html</code> where the live hostnames are listed (<code>LIVE_HOSTS</code>, <code>SYNC_API</code>). Without it the app works fully; scores simply stay on each device.</li>
+          <li><b>The service worker's cache name</b> in <code>sw.js</code>: change it on every deploy, or returning devices keep the earlier page.</li>
+          <li><b>A beta</b>, if you want one: a second copy at another address runs without sync and without the service worker, by design.</li>
+        </ol>
+        <p>Contact: <span class="addr">info@worddock.app</span>.</p>
+      </section>
+
+      <section class="sec" id="s8">
+        <div class="sec-top"><span class="num">Branch 8</span><span class="chip todo">proposal</span></div>
+        <h2>A paper, one day</h2>
+        <p>A table of contents for an academic paper on the principles, and a first reference list. Working title: <em>Show first, explain later: a format and a protocol for shareable word lists</em>.</p>
+        <h3 class="sub-h">Table of contents</h3>
+        <ol class="toc">
+          <li>Introduction: the bottleneck is the material, not the schedule. Most tools optimise when a card returns; few say what a card may contain. Can a plain table, with rules, be the unit of exchange between teachers?</li>
+          <li>The format: a list as a minimal data structure. Rows, pairs, levels, IDs; one space per list; comparison with flashcard formats.</li>
+          <li>The protocol: the fifteen rules and their grounding (branch 3).</li>
+          <li>The engine: a deck of ten, dirty passes, redemption, the score at completion (branch 4). What it deliberately does not do: no timing model, no due dates.</li>
+          <li>Didactic principles: show first, explain later; the staircase (the zone of proximal development, the spiral curriculum); known words first; recognition and production as two lists (the generation effect, desirable difficulty).</li>
+          <li>Lexicon: lemma and form; "same word, deeper"; fixed expressions as rows; frequency and coverage.</li>
+          <li>Grammar inside a word list: a class label, not a rule; focus on form without explanation; the Russian dash as grammar.</li>
+          <li>Linguistic diversity: the hub, one file per language; masters that are easy to translate; the sound pair (sound, reading, tone); what one story in eight languages reveals.</li>
+          <li>Learning psychology: retrieval practice, spacing, desirable difficulties, cognitive load; the counter as feedback; why the score is slow.</li>
+          <li>Social design: cathedral and bazaar; tiers; provenance and licences; the reviewer as the right bottleneck; the missing join between descriptive standards and the pedagogical row.</li>
+          <li>Evaluation: what to measure (the pool over time, re-entry rows, a reviewer's corrections); a first study design with the Latin list.</li>
+          <li>Limitations and future work.</li>
+        </ol>
+        <h3 class="sub-h">References, a first list</h3>
+        <p class="note">To verify and extend before writing; grouped by theme.</p>
+        <p class="ref-group">Memory and practice</p>
+        <ul class="refs">
+          <li>Ebbinghaus, H. (1885). <em>Über das Gedächtnis.</em> Leipzig: Duncker &amp; Humblot.</li>
+          <li>Leitner, S. (1972). <em>So lernt man lernen.</em> Freiburg: Herder.</li>
+          <li>Pimsleur, P. (1967). A memory schedule. <em>Modern Language Journal</em>, 51(2), 73–75.</li>
+          <li>Bjork, R. A. (1994). Memory and metamemory considerations in the training of human beings. In J. Metcalfe &amp; A. Shimamura (Eds.), <em>Metacognition</em> (pp. 185–205). MIT Press.</li>
+          <li>Roediger, H. L., &amp; Karpicke, J. D. (2006). Test-enhanced learning. <em>Psychological Science</em>, 17(3), 249–255.</li>
+          <li>Cepeda, N. J., Pashler, H., Vul, E., Wixted, J. T., &amp; Rohrer, D. (2006). Distributed practice in verbal recall tasks. <em>Psychological Bulletin</em>, 132(3), 354–380.</li>
+          <li>Karpicke, J. D., &amp; Roediger, H. L. (2008). The critical importance of retrieval for learning. <em>Science</em>, 319(5865), 966–968.</li>
+          <li>Dunlosky, J., Rawson, K. A., Marsh, E. J., Nathan, M. J., &amp; Willingham, D. T. (2013). Improving students' learning with effective learning techniques. <em>Psychological Science in the Public Interest</em>, 14(1), 4–58.</li>
+          <li>Bahrick, H. P. (1984). Semantic memory content in permastore. <em>Journal of Experimental Psychology: General</em>, 113(1), 1–29.</li>
+          <li>Wozniak, P. A., &amp; Gorzelanczyk, E. J. (1994). Optimization of repetition spacing in the practice of learning. <em>Acta Neurobiologiae Experimentalis</em>, 54, 59–62.</li>
+          <li>Settles, B., &amp; Meeder, B. (2016). A trainable spaced repetition model for language learning. <em>Proceedings of ACL 2016</em>, 1848–1858.</li>
+          <li>Sweller, J. (1988). Cognitive load during problem solving. <em>Cognitive Science</em>, 12(2), 257–285.</li>
+          <li>Slamecka, N. J., &amp; Graf, P. (1978). The generation effect. <em>Journal of Experimental Psychology: Human Learning and Memory</em>, 4(6), 592–604.</li>
+          <li>Schneider, V. I., Healy, A. F., &amp; Bourne, L. E. (2002). What is learned under difficult conditions is hard to forget. <em>Journal of Memory and Language</em>, 46(2), 419–440.</li>
+        </ul>
+        <p class="ref-group">Vocabulary</p>
+        <ul class="refs">
+          <li>Nation, I. S. P. (2013). <em>Learning vocabulary in another language</em> (2nd ed.). Cambridge University Press.</li>
+          <li>Nation, I. S. P. (2006). How large a vocabulary is needed for reading and listening? <em>Canadian Modern Language Review</em>, 63(1), 59–82.</li>
+          <li>Schmitt, N. (2010). <em>Researching vocabulary.</em> Palgrave Macmillan.</li>
+          <li>Laufer, B., &amp; Hulstijn, J. (2001). Incidental vocabulary acquisition in a second language. <em>Applied Linguistics</em>, 22(1), 1–26.</li>
+          <li>Webb, S., &amp; Nation, P. (2017). <em>How vocabulary is learned.</em> Oxford University Press.</li>
+          <li>Nakata, T. (2011). Computer-assisted second language vocabulary learning in a paired-associate paradigm. <em>Computer Assisted Language Learning</em>, 24(1), 17–38.</li>
+          <li>Nakata, T. (2015). Effects of expanding and equal spacing on second language vocabulary learning. <em>Studies in Second Language Acquisition</em>, 37(4), 677–711.</li>
+        </ul>
+        <p class="ref-group">Grammar, usage, lexicon and syntax</p>
+        <ul class="refs">
+          <li>Krashen, S. D. (1985). <em>The input hypothesis.</em> Longman.</li>
+          <li>Schmidt, R. (1990). The role of consciousness in second language learning. <em>Applied Linguistics</em>, 11(2), 129–158.</li>
+          <li>Long, M. H. (1991). Focus on form. In K. de Bot, R. Ginsberg &amp; C. Kramsch (Eds.), <em>Foreign language research in cross-cultural perspective</em> (pp. 39–52). John Benjamins.</li>
+          <li>Ellis, N. C. (2002). Frequency effects in language processing. <em>Studies in Second Language Acquisition</em>, 24(2), 143–188.</li>
+          <li>Ellis, R. (2006). Current issues in the teaching of grammar. <em>TESOL Quarterly</em>, 40(1), 83–107.</li>
+          <li>Tomasello, M. (2003). <em>Constructing a language.</em> Harvard University Press.</li>
+          <li>Lewis, M. (1993). <em>The lexical approach.</em> Language Teaching Publications.</li>
+          <li>Sinclair, J. (1991). <em>Corpus, concordance, collocation.</em> Oxford University Press.</li>
+          <li>Wray, A. (2002). <em>Formulaic language and the lexicon.</em> Cambridge University Press.</li>
+          <li>DeKeyser, R. (Ed.) (2007). <em>Practice in a second language.</em> Cambridge University Press.</li>
+          <li>Ørberg, H. H. (1991). <em>Lingua Latina per se illustrata. Pars I: Familia Romana.</em> Domus Latina.</li>
+        </ul>
+        <p class="ref-group">Pedagogy and curriculum</p>
+        <ul class="refs">
+          <li>Bruner, J. S. (1960). <em>The process of education.</em> Harvard University Press.</li>
+          <li>Vygotsky, L. S. (1978). <em>Mind in society.</em> Harvard University Press.</li>
+          <li>Council of Europe (2001). <em>Common European Framework of Reference for Languages.</em> Cambridge University Press; and (2020) <em>Companion volume.</em></li>
+          <li>Kwakernaak, E. (2009). <em>Didactiek van het vreemdetalenonderwijs.</em> Coutinho.</li>
+        </ul>
+        <p class="ref-group">Standards and open data</p>
+        <ul class="refs">
+          <li>Nivre, J., et al. (2020). Universal Dependencies v2. <em>Proceedings of LREC 2020</em>, 4034–4043.</li>
+          <li>Kilgarriff, A., et al. (2014). Corpus-based vocabulary lists for language learners for nine languages. <em>Language Resources and Evaluation</em>, 48, 121–163.</li>
+          <li>Tatoeba: a collection of sentences and translations. tatoeba.org</li>
+          <li>Ylonen, T. (2022). Wiktextract: Wiktionary as machine-readable structured data. <em>Proceedings of LREC 2022</em>.</li>
+        </ul>
+        <p class="ref-group">Commons and collaboration</p>
+        <ul class="refs">
+          <li>Raymond, E. S. (1999). <em>The cathedral and the bazaar.</em> O'Reilly.</li>
+          <li>Creative Commons. <em>CC0 1.0 Universal.</em> creativecommons.org/publicdomain/zero/1.0</li>
+          <li>Otlet, P. (1934). <em>Traité de documentation.</em> Brussels: Mundaneum.</li>
+        </ul>
+      </section>
+
+      <a class="back" href="./">← WordDock</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var topics = Array.prototype.slice.call(document.querySelectorAll('.topic'));
+  var secs = Array.prototype.slice.call(document.querySelectorAll('.sec'));
+  function setActive(id){
+    topics.forEach(function(t){ t.classList.toggle('active', t.getAttribute('href') === '#' + id); });
+  }
+  topics.forEach(function(t){
+    t.addEventListener('click', function(){ setActive(t.getAttribute('href').slice(1)); });
+  });
+  var start = (location.hash || '').replace('#','');
+  if (start && document.getElementById(start)) {
+    var el = document.getElementById(start);
+    var sec = el.closest ? el.closest('.sec') : null;
+    setActive(sec ? sec.id : start);
+  } else setActive('s1');
+  if ('IntersectionObserver' in window) {
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ visible[e.target.id] = e.isIntersecting ? e.intersectionRatio : 0; });
+      var best = null, bestV = 0;
+      secs.forEach(function(s){ if ((visible[s.id] || 0) > bestV) { bestV = visible[s.id]; best = s.id; } });
+      if (best) setActive(best);
+    }, { rootMargin: '-10% 0px -55% 0px', threshold: [0, .1, .25, .5, .75, 1] });
+    secs.forEach(function(s){ io.observe(s); });
+  }
+})();
+</script>
+
+</body>
+</html>

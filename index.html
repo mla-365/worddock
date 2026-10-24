@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.34 ───────────────────────────────────────────
+/* ── WordDock — v0.34.1 ─────────────────────────────────────────
+   v0.34.1 (24 Oct): About › Contact links to inside.html, "Inside WordDock: how it works, and why" (the public page;
+   insiders.html stays as an unlinked working copy).
    v0.34 (24 Oct): SRC is a column of the format (optional): read, kept in the JSON, exported, in the template and
    its notes. The device keys are wd_list, wd_mylists, wd_view_<NAME>, wd_deck; the earlier keys are removed
    at boot (M: erase, no migration).
@@ -271,7 +273,6 @@ body.abouting .wrap,body.abouting .cat{display:none}
 .about-content em{color:var(--fg);font-style:italic}
 .about-content code{font-family:var(--mono);font-size:12.5px;background:var(--card);border:.5px solid var(--line);padding:1px 5px;border-radius:4px;color:var(--fg);-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .about-content a{color:var(--accent);text-underline-offset:2px}
-.about-content .soon{color:var(--muted);text-decoration:underline dotted;text-underline-offset:3px;cursor:default}
 
 /* ── study: the list is gone; card + Again / Good ── */
 .study{position:fixed;inset:0;z-index:20;background:var(--bg);display:none;flex-direction:column;
@@ -565,7 +566,7 @@ const T = {
       "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>ENT · CAT · SUB · TAG · L · SRC · Q1 · A1 … Q10 · A10</code>. Only Q1 and A1 are required in each row." ] },
     { id: "contact", title: "Contact", paras: [
       "Working together through exchange is one of the main purposes of WordDock. If you'd like to take part, write to info@worddock.app.",
-      "More on the specifics: <a class=\"soon\" aria-disabled=\"true\" title=\"Page to come\">WordDock for Insiders</a> (page to come)." ] }
+      "More on the specifics: <a href=\"inside.html\">Inside WordDock</a>, how it works, and why." ] }
   ]
 };
 /* ── WD lists, published on this site: one line. A new WD list = one JSON file (lists/<NAME>.json)

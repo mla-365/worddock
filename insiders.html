@@ -117,7 +117,7 @@ td:first-child{white-space:nowrap;color:var(--fg)}
 
 <div class="wrap">
   <h1 class="h">WordDock for Insiders</h1>
-  <p class="sub">The schema and the protocol · draft for review · 11 October 2026</p>
+  <p class="sub">Working copy, 11 October 2026, with later notes · the public page is <a href="inside.html">Inside WordDock</a></p>
 
   <p class="lede">For people who make lists, not only study them: teachers, curators, reviewers, and anyone who wants to try this for a language of their own. Started 11 October 2026 by M and C; a living page. The learner's side is in the app itself: the <em>WORDDOCK</em> list and <em>About</em>.</p>
 
@@ -136,6 +136,7 @@ td:first-child{white-space:nowrap;color:var(--fg)}
       <a class="topic" href="#s7"><span class="n">7</span><span class="t-long">Reference: columns, CAT sets, L scheme</span><span class="t-short">Reference</span></a>
       <a class="topic" href="#s8"><span class="n">8</span><span class="t-long">Code logic: the engine</span><span class="t-short">Engine</span></a>
       <a class="topic" href="#s9"><span class="n">9</span><span class="t-long">A paper, one day</span><span class="t-short">Paper</span></a>
+      <a class="topic" href="#s10"><span class="n">10</span><span class="t-long">Decisions, and why</span><span class="t-short">Decisions</span></a>
     </nav>
 
     <div class="content">
@@ -402,6 +403,31 @@ td:first-child{white-space:nowrap;color:var(--fg)}
           <li>Raymond, E. S. (1999). <em>The cathedral and the bazaar.</em> O'Reilly.</li>
           <li>Creative Commons. <em>CC0 1.0 Universal.</em> <span class="addr">creativecommons.org/publicdomain/zero/1.0</span></li>
         </ul>
+      </section>
+
+      <section class="sec" id="s10">
+        <div class="sec-top"><span class="num">Section 10</span><span class="chip">24 Oct</span></div>
+        <h2>Decisions, and why</h2>
+        <p>The why behind the current state, only what still holds. The full record, with what each decision replaced, is in the project (<code>v27/decisions.md</code> for October 1 to 5, <code>v27/build.md</code> after that).</p>
+        <ul class="plain">
+          <li><b>The list is the space.</b> Its rows, its IDs, its pool. An earlier design had a container above the list that shared one pool among several files; it dissolved once a part of a list became a view instead of a file, because a view never asks "same scores or new ones?".</li>
+          <li><b>One name, no titles.</b> The name is the file name, the pool key, the heading, the pill. Titles were built once and withdrawn: two things to keep in step for no gain.</li>
+          <li><b>The level column is L, band and unit.</b> It replaced an integer scheme in hundreds and, before that, a letter-and-digit segment code; CEFR bands are what teachers already speak.</li>
+          <li><b>IDs are stamped at publishing, never typed.</b> The crafter's handle is the entry, the class and the level; the number is the machine's.</li>
+          <li><b>Publish = freeze, and grow at the end.</b> Scores hang on IDs; a moved row would move a learner's score to another word.</li>
+          <li><b>Headers by name, one name per column, no aliases.</b> Names from earlier trials were accepted silently for a while and misled a reader; now an unknown header is named back to the crafter and nothing older is read.</li>
+          <li><b>Required: Q1 and A1; everything else optional.</b> The smallest list is two words.</li>
+          <li><b>Study deals from the view.</b> Filter first, then Study: the ten weakest of what you see, into the list's one pool.</li>
+          <li><b>Four pages in a ring, one door each, one green accent.</b> Five arrangements of the doors were tried in two days in October; what survived is the one where every page has exactly one way out, at the bottom, and the way into studying is the one green pill. Orange and a Van Eyck blue were tried live and dropped: green reads as movement and growth.</li>
+          <li><b>The list-page pill says "Study N".</b> N is the size of the selection; the deck's counter belongs to the card, not to the list page.</li>
+          <li><b>All lists shows the RS sum, not a percentage.</b> The plain sum is honest and needs no explanation; the list being studied comes first.</li>
+          <li><b>English interface only.</b> Forty strings, forever, in every language, for no learner's benefit; content can be in any language.</li>
+          <li><b>SRC is a column of the format, optional.</b> Provenance per row survives sorting, filtering and merging; an empty SRC is the crafter's own.</li>
+          <li><b>Two lists for two ways of asking.</b> Recognition and production are two skills; they get two pools.</li>
+          <li><b>Names: hard where the software needs it, advice where it doesn't.</b></li>
+          <li><b>Nobody's full name in anything published.</b> Initials.</li>
+        </ul>
+        <p class="note">Still to add: the dated decisions of October 6 to 24, from the build page, with the reason of each in one line.</p>
       </section>
 
     </div>
