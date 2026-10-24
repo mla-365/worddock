@@ -35,7 +35,8 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.35 ─────────────────────────────────────────
+/* ── WordDock — v0.35.1 ─────────────────────────────────────────
+   v0.35.1 (24 Oct): Template.xlsx, sheets "1" and "Read me", with three Dutch-Latin example rows: the smallest, a full one with SRC, a re-entry row; no macrons.
    v0.35 (24 Oct): All lists orders each section by the last studied list: the current one first, then by the last graded card
    (wd_studied, device only), then the never-studied in their fixed order.
    v0.34.2 (24 Oct): WORDDOCK back on the shelf, last of three (M); a fresh device lands in it (FIRST_OPEN).
@@ -503,15 +504,15 @@ const T = {
   // the Excel door: the ? beside the line
   excelHelpAria: "How to make a sheet", excelHelpTitle: "A list from an Excel sheet",
   excelHelp1: "Download the template, fill it in, and save it under the name you want for the list: NL-LA-Test.xlsx → NL-LA-TEST. Only Q1 and A1 are required in a row.",
-  excelHelp2: "Try it first as it is: it becomes a two-word list you can study, and remove again with ×.",
+  excelHelp2: "Try it first as it is: it becomes a small list you can study, and remove again with ×.",
   // the template: a note on each header cell, and the same lines on a second sheet "Read me"
   tplNotes: { ENT: "the word itself (empty: A1 is taken)", CAT: "word class", SUB: "what the word is: m, f, irregular …", TAG: "where it belongs: a theme, a text …",
     L: "level: A1 … C2, or A1.3 for a unit", SRC: "where the row comes from (a book, a site); empty = your own", Q1: "the question", A1: "the answer", Q2: "the same word, deeper: a prompt (gen., mv. …)", A2: "… and its answer, up to Q10 · A10" },
   tplReadme: ["WordDock: a list from an Excel sheet", "", "Name the columns in the first row: ENT · CAT · SUB · TAG · L · SRC · Q1 · A1 … Q10 · A10.",
     "Only Q1 and A1 are required in a row; the rest may stay empty.", "", "@notes", "",
     "The file name becomes the list name, in capitals: NL-LA-Test.xlsx → NL-LA-TEST.",
-    "Two example rows: the shortest possible (water · aqua), and a full one (rosa, with its ten pairs).",
-    "Try it as it is: it becomes a two-word list you can study, and remove again."],
+    "Three example rows: the shortest possible (water · aqua), a full one (amare, with a source in SRC), and a re-entry row (amare again at A2.1, with its persons).",
+    "Try it as it is: it becomes a small list you can study, and remove again."],
   excelTemplate: "Download Template.xlsx",
   // sync: the bottom line of LISTS. "Sync is on" claims only what the page knows; a time
   // ("synced just now") would claim that this device is current, which it can't know.
@@ -781,16 +782,16 @@ function sheetOut(l){
 /* The template: the header row, the shortest legitimate row (Q1 + A1 only), and a full one. */
 function templateOut(){
   const H = ["ENT", "CAT", "SUB", "TAG", "L", "SRC"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
-  const r1 = [null, null, null, null, null, null, "water", "aqua"];
-  const r2 = ["rosa", "zelfstandig naamwoord", "vrouwelijk", "tuin, natuur", "A1.1", null, "roos", "rosa", "gen.", "rosae", "dat.", "rosae", "acc.", "rosam", "abl.", "rosā",
-    "nom. mv.", "rosae", "gen. mv.", "rosārum", "dat. mv.", "rosīs", "acc. mv.", "rosās", "abl. mv.", "rosīs"];
-  const ws = XLSX.utils.aoa_to_sheet([H, r1, r2]);
+  const r1 = [null, null, null, null, null, null, "water", "aqua"];   // v0.35.1: the smallest valid row, a full row, a re-entry row
+  const r2 = ["amare", "werkwoord", "eerste vervoeging", "basis", "A1.3", "a textbook, lesson 3", "beminnen", "amare", "amare: vervoeging?", "eerste", "ik bemin", "amo"];
+  const r3 = ["amare", "werkwoord", "eerste vervoeging", "basis", "A2.1", null, "jij bemint", "amas", "hij bemint", "amat", "wij beminnen", "amamus"];
+  const ws = XLSX.utils.aoa_to_sheet([H, r1, r2, r3]);
   for (const addr of Object.keys(ws)) if (addr[0] !== "!"){ ws[addr].t = "s"; ws[addr].v = String(ws[addr].v); ws[addr].z = "@"; }
   ws["!cols"] = H.map((h, i) => ({ wch: i < 6 ? 12 : 14 }));
   H.forEach((h, i) => { const note = T.tplNotes[h]; if (!note) return; const cell = ws[XLSX.utils.encode_cell({ r: 0, c: i })]; cell.c = [{ a: "WordDock", t: note }]; cell.c.hidden = true; });
   const readme = []; for (const line of T.tplReadme){ if (line === "@notes") for (const [k, v] of Object.entries(T.tplNotes)) readme.push([k, v]); else readme.push([line]); }
   const rs = XLSX.utils.aoa_to_sheet(readme); rs["!cols"] = [{ wch: 10 }, { wch: 60 }];
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template"); XLSX.utils.book_append_sheet(wb, rs, "Read me");
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "1"); XLSX.utils.book_append_sheet(wb, rs, "Read me");
   XLSX.writeFile(wb, "Template.xlsx");
 }
 async function downloadTemplate(){
