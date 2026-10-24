@@ -35,7 +35,10 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.33.1 ───────────────────────────────────────────
+/* ── WordDock — v0.34 ───────────────────────────────────────────
+   v0.34 (24 Oct): SRC is a column of the format (optional): read, kept in the JSON, exported, in the template and
+   its notes. The device keys are wd_list, wd_mylists, wd_view_<NAME>, wd_deck; the earlier keys are removed
+   at boot (M: erase, no migration).
    v0.33.1 (24 Oct): the bottom door of the current list says "All lists" again (the page names, 24 Oct: card, current
    list, All lists, About, Inside WordDock). "WD list" retired in every text the learner sees: "Published lists", "My lists on this device",
    "is a published list", About topic "Published lists" (M, naming spar for Inside WordDock). Code comments keep the
@@ -499,8 +502,8 @@ const T = {
   excelHelp2: "Try it first as it is: it becomes a two-word list you can study, and remove again with ×.",
   // the template: a note on each header cell, and the same lines on a second sheet "Read me"
   tplNotes: { ENT: "the word itself (empty: A1 is taken)", CAT: "word class", SUB: "what the word is: m, f, irregular …", TAG: "where it belongs: a theme, a text …",
-    L: "level: A1 … C2, or A1.3 for a unit", Q1: "the question", A1: "the answer", Q2: "more sides of the same word: a prompt (gen., mv. …)", A2: "… and its answer, up to Q10 · A10" },
-  tplReadme: ["WordDock: a list from an Excel sheet", "", "Name the columns in the first row: ENT · CAT · SUB · TAG · L · Q1 · A1 … Q10 · A10.",
+    L: "level: A1 … C2, or A1.3 for a unit", SRC: "where the row comes from (a book, a site); empty = your own", Q1: "the question", A1: "the answer", Q2: "the same word, deeper: a prompt (gen., mv. …)", A2: "… and its answer, up to Q10 · A10" },
+  tplReadme: ["WordDock: a list from an Excel sheet", "", "Name the columns in the first row: ENT · CAT · SUB · TAG · L · SRC · Q1 · A1 … Q10 · A10.",
     "Only Q1 and A1 are required in a row; the rest may stay empty.", "", "@notes", "",
     "The file name becomes the list name, in capitals: NL-LA-Test.xlsx → NL-LA-TEST.",
     "Two example rows: the shortest possible (water · aqua), and a full one (rosa, with its ten pairs).",
@@ -559,7 +562,7 @@ const T = {
     { id: "wdlists", title: "Published lists", paras: [
       "Lists made and tested by users, then published on WordDock, so every user can study them at once." ] },
     { id: "mylists", title: "My lists", paras: [
-      "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>ENT · CAT · SUB · TAG · L · Q1 · A1 … Q10 · A10</code>. Only Q1 and A1 are required in each row." ] },
+      "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>ENT · CAT · SUB · TAG · L · SRC · Q1 · A1 … Q10 · A10</code>. Only Q1 and A1 are required in each row." ] },
     { id: "contact", title: "Contact", paras: [
       "Working together through exchange is one of the main purposes of WordDock. If you'd like to take part, write to info@worddock.app.",
       "More on the specifics: <a class=\"soon\" aria-disabled=\"true\" title=\"Page to come\">WordDock for Insiders</a> (page to come)." ] }
@@ -585,7 +588,8 @@ function labelsOf(key){
   return m ? { q: m[1].toUpperCase(), a: m[2].toUpperCase() } : { q: T.colQ, a: T.colA };
 }
 const LISTS_DIR = "lists/", ROW_H = 38, DECK_SIZE = 10, CAT_PAGE = 5;
-const DECK_KEY = "wd_lens_deck", LIST_KEY = "wd_lens_list", OWN_KEY = "wd_lens_lists", VIEW_KEY = k => "wd_lens_view_" + k;   /* the lens's own keys */
+const DECK_KEY = "wd_deck", LIST_KEY = "wd_list", OWN_KEY = "wd_mylists", VIEW_KEY = k => "wd_view_" + k;   /* the app's own keys (v0.34: renamed; the earlier keys are removed at boot, nothing is copied: M, 24 Oct) */
+try { for (const k of Object.keys(localStorage)) if (k.startsWith("wd_lens_")) localStorage.removeItem(k); } catch {}
 const OWN_SUFFIX = "-OWN";
 let PAGE = 10;
 /* Rows per page follow the screen height: as many as fit, never a scrollbar. */
@@ -633,7 +637,7 @@ function normalizeRows(raw){
   return (raw || []).map(r => {
     const pairs = (r.pairs || []).filter(p => p && p.q && p.a).map(p => ({ q: String(p.q), a: String(p.a) }));
     const row = {
-      ID: String(r.ID ?? "").trim(), CAT: r.CAT || "", SUB: r.SUB || "", TAG: r.TAG || "",
+      ID: String(r.ID ?? "").trim(), CAT: r.CAT || "", SUB: r.SUB || "", TAG: r.TAG || "", SRC: r.SRC || "",
       LVL: null, Lk: null, pairs
     };
     const L = parseL(r.L); if (L){ row.LVL = L.text; row.Lk = L.key; }   // v0.33: the one key is L; no aliases
@@ -721,7 +725,7 @@ function loadXLSX(){
 }
 /* v0.33: one name per column, no aliases (M, 19 Oct). A header is one of ENT CAT SUB TAG L Q1 A1 … Q10 A10,
    in any case; anything else is not used and is named back to the curator. */
-const HEADERS = new Set(["ENT", "CAT", "SUB", "TAG", "L"]);
+const HEADERS = new Set(["ENT", "CAT", "SUB", "TAG", "L", "SRC"]);   /* v0.34: SRC, the source of a row, optional */
 function canonHeader(h){
   const u = String(h ?? "").trim().toUpperCase().replace(/\s+/g, "");
   if (HEADERS.has(u)) return u;
@@ -746,8 +750,8 @@ function readSheet(buf){
         const row = { ID: String(rows.length + 1).padStart(4, "0"), pairs };
         const L = ("L" in map) ? parseL(arr[map.L]) : null; if (L) row.L = L.text;
         row.ENT = get(arr, "ENT") || pairs[0].a;
-        const cat = get(arr, "CAT"), sub = get(arr, "SUB"), tag = get(arr, "TAG");
-        if (cat) row.CAT = cat; if (sub) row.SUB = sub; if (tag) row.TAG = tag;
+        const cat = get(arr, "CAT"), sub = get(arr, "SUB"), tag = get(arr, "TAG"), src = get(arr, "SRC");
+        if (cat) row.CAT = cat; if (sub) row.SUB = sub; if (tag) row.TAG = tag; if (src) row.SRC = src;
         rows.push(row);
       }
       return { rows, skipped, unused, sheet: sname };
@@ -757,28 +761,28 @@ function readSheet(buf){
 }
 /* The sheet out: the curator's layout, every cell as Text, so it comes back in unchanged. File name = the key. */
 function sheetOut(l){
-  const H = ["ENT", "CAT", "SUB", "TAG", "L"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
+  const H = ["ENT", "CAT", "SUB", "TAG", "L", "SRC"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
   const aoa = [H];
   for (const r of l.rows){
-    const arr = [r.ENT || null, r.CAT || null, r.SUB || null, r.TAG || null, r.LVL ?? null];
+    const arr = [r.ENT || null, r.CAT || null, r.SUB || null, r.TAG || null, r.LVL ?? null, r.SRC || null];
     for (let i = 0; i < 10; i++){ const p = r.pairs[i]; arr.push(p ? p.q : null, p ? p.a : null); }
     aoa.push(arr);
   }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   for (const addr of Object.keys(ws)) if (addr[0] !== "!"){ ws[addr].t = "s"; ws[addr].v = String(ws[addr].v); ws[addr].z = "@"; }
-  ws["!cols"] = H.map((h, i) => ({ wch: i < 5 ? 12 : 22 }));
+  ws["!cols"] = H.map((h, i) => ({ wch: i < 6 ? 12 : 22 }));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, l.key.slice(0, 31));
   XLSX.writeFile(wb, l.key + ".xlsx");
 }
 /* The template: the header row, the shortest legitimate row (Q1 + A1 only), and a full one. */
 function templateOut(){
-  const H = ["ENT", "CAT", "SUB", "TAG", "L"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
-  const r1 = [null, null, null, null, null, "water", "aqua"];
-  const r2 = ["rosa", "subst", "f", "tuin, natuur", "A1.1", "roos", "rosa", "gen.", "rosae", "dat.", "rosae", "acc.", "rosam", "abl.", "rosā",
+  const H = ["ENT", "CAT", "SUB", "TAG", "L", "SRC"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
+  const r1 = [null, null, null, null, null, null, "water", "aqua"];
+  const r2 = ["rosa", "zelfstandig naamwoord", "vrouwelijk", "tuin, natuur", "A1.1", null, "roos", "rosa", "gen.", "rosae", "dat.", "rosae", "acc.", "rosam", "abl.", "rosā",
     "nom. mv.", "rosae", "gen. mv.", "rosārum", "dat. mv.", "rosīs", "acc. mv.", "rosās", "abl. mv.", "rosīs"];
   const ws = XLSX.utils.aoa_to_sheet([H, r1, r2]);
   for (const addr of Object.keys(ws)) if (addr[0] !== "!"){ ws[addr].t = "s"; ws[addr].v = String(ws[addr].v); ws[addr].z = "@"; }
-  ws["!cols"] = H.map((h, i) => ({ wch: i < 5 ? 12 : 14 }));
+  ws["!cols"] = H.map((h, i) => ({ wch: i < 6 ? 12 : 14 }));
   H.forEach((h, i) => { const note = T.tplNotes[h]; if (!note) return; const cell = ws[XLSX.utils.encode_cell({ r: 0, c: i })]; cell.c = [{ a: "WordDock", t: note }]; cell.c.hidden = true; });
   const readme = []; for (const line of T.tplReadme){ if (line === "@notes") for (const [k, v] of Object.entries(T.tplNotes)) readme.push([k, v]); else readme.push([line]); }
   const rs = XLSX.utils.aoa_to_sheet(readme); rs["!cols"] = [{ wch: 10 }, { wch: 60 }];
@@ -1404,7 +1408,7 @@ function renderCard(){
    device (My lists' pools ride along like any other). The wd_sync_* keys are written
    exactly as index.html writes them, so a key claimed on the dark page works here
    and back. The comments of index.html hold the reasoning; the functions below are
-   copies, changed only where the lens differs (no loadRS, no initDeck(), its own
+   copies, changed only where this page differs (no loadRS, no initDeck(), its own
    bottom line on LISTS, no QR, no consent cascade). ── */
 const SYNC_KEY_STORE = "wd_sync_key";
 const KEY_ALPHABET   = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
@@ -1441,7 +1445,7 @@ const SYNC_SOLO_PULLS_KEY= "wd_sync_solopulls"; // consecutive pulls where stamp
 const SYNC_SOLO_RESET    = 10;                  // revert to backup after this many solo pulls
 const SYNC_COOLDOWN_SYNC = 15 * 60 * 1000;     // 15 min — another device may be waiting
 const SYNC_COOLDOWN_BKUP = 3 * 60 * 60 * 1000; // 3 h  — cloud is just a safety copy
-const SYNC_BOOT_WAIT     = 3000;               // lens: the first deck waits for a pull at most this long
+const SYNC_BOOT_WAIT     = 3000;               // the first deck waits for a pull at most this long
 let syncBusy = false;
 let syncPullTimer = null;
 
