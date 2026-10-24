@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.34.2 ─────────────────────────────────────────
+/* ── WordDock — v0.35 ─────────────────────────────────────────
+   v0.35 (24 Oct): All lists orders each section by the last studied list: the current one first, then by the last graded card
+   (wd_studied, device only), then the never-studied in their fixed order.
    v0.34.2 (24 Oct): WORDDOCK back on the shelf, last of three (M); a fresh device lands in it (FIRST_OPEN).
    v0.34.1 (24 Oct): About › Contact links to inside.html, "Inside WordDock: how it works, and why" (the public page;
    insiders.html stays as an unlinked working copy).
@@ -1144,7 +1146,10 @@ function renderSection(id, lists, unit){
   const S = CAT[id], qq = strip(S.q), body = $(id + "Body");
   body.innerHTML = "";
   let rows = qq ? lists.filter(l => strip(l.key).includes(qq)) : lists;
-  if (activeKey) rows = [...rows.filter(l => l.key === activeKey), ...rows.filter(l => l.key !== activeKey)];   // v0.32.9: the list being studied first in its section
+  {  // v0.35: the list being studied first, then the others by last graded card, then the never-studied in their fixed order
+    const m = loadStudied(), at = l => (l.key === activeKey ? Infinity : (m[l.key] || 0));
+    rows = rows.map((l, i) => [l, i]).sort((a, b) => (at(b[0]) - at(a[0])) || (a[1] - b[1])).map(x => x[0]);
+  }
   $(id + "Sub").textContent = unit + " · " + (lists.length ? nLists(lists.length) : T.noneYet);
   $(id + "Ctl").hidden = !lists.length;
   $(id + "Q").value = S.q; $(id + "Q").classList.toggle("on", !!qq);
@@ -1343,8 +1348,16 @@ const cur = () => pipe[0];
 const countClean = () => pipe.filter(x => x.clean).length;
 function moveTo(i){ const s = pipe.shift(); pipe.splice(Math.min(i, pipe.length), 0, s); }
 function reveal(){ if (deckDone || showingA) return; showingA = true; renderCard(); }
+/* v0.35: the last studied list. A graded card stamps its list (device only, never synced); All lists orders by it. */
+const STUDIED_KEY = "wd_studied";
+function loadStudied(){ try { return JSON.parse(localStorage.getItem(STUDIED_KEY)) || {}; } catch { return {}; } }
+function stampStudied(){
+  if (!activeKey) return;
+  try { const m = loadStudied(); m[activeKey] = Date.now(); localStorage.setItem(STUDIED_KEY, JSON.stringify(m)); } catch {}
+}
 function gradeAgain(){
   if (!showingA || deckDone) return;
+  stampStudied();
   showingA = false; peeking = false; deckStarted = true;
   const s = cur(); if (!s.passDirty){ s.passDirty = true; s.timesDirty++; }
   s.clean = false; deckScore = countClean();
@@ -1352,6 +1365,7 @@ function gradeAgain(){
 }
 function gradeGood(){
   if (!showingA || deckDone) return;
+  stampStudied();
   showingA = false; peeking = false; deckStarted = true;
   const s = cur(); s.fi++;
   if (s.fi >= s.row.pairs.length){
