@@ -35,7 +35,8 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.35.1 ─────────────────────────────────────────
+/* ── WordDock — v0.35.2 ─────────────────────────────────────────
+   v0.35.2 (24 Oct): About › More, the last topic: the link to Inside WordDock (moved out of Contact) and the public code.
    v0.35.1 (24 Oct): Template.xlsx, sheets "1" and "Read me", with three Dutch-Latin example rows: the smallest, a full one with SRC, a re-entry row; no macrons.
    v0.35 (24 Oct): All lists orders each section by the last studied list: the current one first, then by the last graded card
    (wd_studied, device only), then the never-studied in their fixed order.
@@ -569,8 +570,10 @@ const T = {
     { id: "mylists", title: "My lists", paras: [
       "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>ENT · CAT · SUB · TAG · L · SRC · Q1 · A1 … Q10 · A10</code>. Only Q1 and A1 are required in each row." ] },
     { id: "contact", title: "Contact", paras: [
-      "Working together through exchange is one of the main purposes of WordDock. If you'd like to take part, write to info@worddock.app.",
-      "More on the specifics: <a href=\"inside.html\">Inside WordDock</a>, how it works, and why." ] }
+      "Working together through exchange is one of the main purposes of WordDock. If you'd like to take part, write to info@worddock.app." ] },
+    { id: "more", title: "More", paras: [
+      "<a href=\"inside.html\">Inside WordDock</a>: how it works, and why. The format a list is written in, the rules for a good list, the app's own logic, and the licence.",
+      "The code is public: <a href=\"https://github.com/mla-365/worddock\">github.com/mla-365/worddock</a>." ] }
   ]
 };
 /* ── WD lists, published on this site: one line. A new WD list = one JSON file (lists/<NAME>.json)
