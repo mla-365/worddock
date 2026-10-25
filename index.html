@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.36.3 ─────────────────────────────────────────
+/* ── WordDock — v0.36.4 ─────────────────────────────────────────
+   v0.36.4 (25 Oct): the source moves into the line under the heading, at its end, on a PC only (it slid under the green
+   button on a phone); dialog buttons grow with their text, so a long list name wraps inside its button.
    v0.36.3 (25 Oct): a link over 4,000 characters (WhatsApp's cut, M's test: 40 rows passed, 70 broke) says so in pairs:
    "This link is long: N pairs. Mail usually works; WhatsApp cuts links above about 160 pairs ..." (about 25 characters a pair).
    v0.36.2 (25 Oct): links in letters and digits only (base62): WhatsApp read _..._ in a base64url link as italics and
@@ -269,10 +271,9 @@ td.act{text-align:right;white-space:nowrap}
 .ib.x{font-size:15px;color:var(--muted)}
 .ib.ln{font-size:13px;filter:grayscale(1);opacity:.75}   /* v0.36: share a My list as a link */
 .ib.ln:hover{opacity:1}
-/* v0.36: the source line */
+/* v0.36.4: the source, on a PC only, at the end of the line under the heading */
 #dlgBack{z-index:70}   /* above the make dialog */
-.src-line{color:var(--muted);font-size:12.5px;margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.src-line a{color:var(--sec)}
+.sub .src a{color:inherit}
 .add{background:none;border:none;padding:0;color:var(--green2);font-weight:600;font-size:22px;line-height:1.3;cursor:pointer;text-align:left}   /* a heading, like the two above it */
 .add:hover{text-decoration:underline;text-underline-offset:3px}
 .dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px}
@@ -338,8 +339,8 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 .dlg{background:#fff;border:1px solid var(--line);border-radius:14px;max-width:400px;width:100%;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.16)}
 .dlg h3{margin:0 0 8px;font-size:16px}
 .dlg p{margin:0 0 18px;color:var(--sec);font-size:14px}
-.dlg-actions{display:flex;justify-content:flex-end;gap:8px}
-.dlg-actions button{height:36px;padding:0 14px;border-radius:8px;font-size:14px;cursor:pointer}
+.dlg-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.dlg-actions button{min-height:36px;height:auto;padding:7px 14px;border-radius:8px;font-size:14px;line-height:1.3;cursor:pointer;max-width:100%;overflow-wrap:anywhere;text-align:center}   /* v0.36.4: a long list name wraps inside its button */
 .dlg-cancel{background:#fff;border:.5px solid var(--line2);color:var(--sec)}
 .dlg-ok{background:var(--green);border:none;color:#fff;font-weight:500}
 
@@ -396,7 +397,6 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 <main class="wrap" id="listSurface">
   <h1 class="h" id="h"></h1>
   <p class="sub" id="sub"></p>
-  <p class="src-line" id="srcLine" hidden></p>
   <div class="controls" id="controls">
     <input type="search" id="q" data-t-ph="search" data-t-aria="search" autocomplete="off" spellcheck="false">
     <label class="lvl-f" id="lvlBox"><span data-t="level"></span><input type="search" id="lvl" data-t-aria="levelAria" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
@@ -1023,15 +1023,6 @@ const listKeys = () => [...new Set([...WD_KEYS, ...Object.keys(LISTS).filter(k =
 function renderHeading(){
   const h = $("h"); h.innerHTML = "";
   h.textContent = viewKey;          // just the name
-  // v0.36: one source for the whole list (every row the same SRC) shows once under the heading
-  const l = LISTS[viewKey], rs = l && l.rows, p = $("srcLine"); p.innerHTML = "";
-  const src = rs && rs.length && rs[0].SRC && rs.every(r => r.SRC === rs[0].SRC) ? rs[0].SRC : "";
-  p.hidden = !src; if (!src) return;
-  p.append(T.srcLabel);
-  if (/^https?:\/\/\S+$/i.test(src)){
-    const a = document.createElement("a"); a.href = src; a.target = "_blank"; a.rel = "noopener noreferrer";
-    a.textContent = src.replace(/^https?:\/\/(www\.)?/i, ""); p.appendChild(a);
-  } else p.append(src);
 }
 function paged(rows){
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
@@ -1142,6 +1133,14 @@ function renderList(){
     }
     const since = l.own ? ownSince(viewKey) : "";
     $("sub").textContent = [lv, nWords(rows.length), l.own ? (since ? T.onDeviceSince(since) : T.onDevice) : ""].filter(Boolean).join(" · ");
+    // v0.36.4: one source for the whole list (every row the same SRC) ends the line, on a PC only (phones: no room)
+    const all = l.rows || [], src = all.length && all[0].SRC && all.every(r => r.SRC === all[0].SRC) ? all[0].SRC : "";
+    if (src){
+      const sp = document.createElement("span"); sp.className = "src hide-s"; sp.append(" · " + T.srcLabel);
+      if (/^https?:\/\/\S+$/i.test(src)){ const a = document.createElement("a"); a.href = src; a.target = "_blank"; a.rel = "noopener noreferrer";
+        a.textContent = src.replace(/^https?:\/\/(www\.)?/i, ""); sp.appendChild(a); } else sp.append(src);
+      $("sub").appendChild(sp);
+    }
     if (sortKey) rows = [...rows].sort((x, y) => {
       const a = sortVal(x, sortKey, pool), b = sortVal(y, sortKey, pool);
       const c = (typeof a === "number" && typeof b === "number") ? a - b : String(a).localeCompare(String(b));
