@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.36.1 ─────────────────────────────────────────
+/* ── WordDock — v0.36.2 ─────────────────────────────────────────
+   v0.36.2 (25 Oct): links in letters and digits only (base62): WhatsApp read _..._ in a base64url link as italics and
+   broke it. Older links are not read (M: dead wood).
    v0.36.1 (25 Oct): "Make a list by pasting" removed (M: a sheet is needed anyway, the Excel door reads it by name; the
    paste box guessed columns and scrambled full rows). The link sign on My lists stays, with everything else of v0.36.
    v0.36 (25 Oct): the link is the list. "+ Make a list by pasting" (a dialog at the end of My lists) and a link sign on every
@@ -1476,13 +1478,23 @@ function renderCard(){
    copies, changed only where this page differs (no loadRS, no initDeck(), its own
    bottom line on LISTS, no QR, no consent cascade). ── */
 /* ── v0.36: the link is the list. A list travels in the fragment (#l=...), which the browser never sends
-   to a server: rows packed as arrays, deflated, base64url. Opening it makes a My list on the device. ── */
+   to a server: rows packed as arrays, deflated, written in letters and digits (base62). Opening it makes a My list on the device. ── */
 const LINK_TAG = "l=";
 const canLink = () => typeof CompressionStream === "function" && typeof DecompressionStream === "function";
-function b64uEnc(u8){ let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000));
-  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
-function b64uDec(t){ const s = atob(t.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((t.length + 3) % 4));
-  const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+/* v0.36.2: letters and digits only (base62), so no app reads part of a link as formatting
+   (WhatsApp turns _text_ into italics and drops the underscores) or as punctuation. */
+const B62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+function b62Enc(u8){
+  let n = BigInt("0x01" + Array.from(u8, b => b.toString(16).padStart(2, "0")).join("")), out = "";
+  while (n > 0n){ out = B62[Number(n % 62n)] + out; n /= 62n; }
+  return out;
+}
+function b62Dec(t){
+  let n = 0n;
+  for (const ch of t){ const v = B62.indexOf(ch); if (v < 0) throw new Error("bad link"); n = n * 62n + BigInt(v); }
+  const h = n.toString(16); if (h[0] !== "1" || h.length % 2 !== 1) throw new Error("bad link");
+  const u = new Uint8Array((h.length - 1) / 2); for (let i = 0; i < u.length; i++) u[i] = parseInt(h.substr(1 + i * 2, 2), 16); return u;
+}
 async function deflate(u8, back){
   const cs = back ? new DecompressionStream("deflate-raw") : new CompressionStream("deflate-raw");
   return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(cs)).arrayBuffer());
@@ -1515,10 +1527,10 @@ const rowsSig = rows => JSON.stringify(packRows(normalizeRows(rows)));
 function fingerprint(str){ let h = 0x811c9dc5; for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).toUpperCase().padStart(8, "0").slice(0, 4); }
 async function linkFor(name, rows){
   const json = JSON.stringify({ v: 1, n: name, r: packRows(rows) });
-  return location.origin + location.pathname + "#" + LINK_TAG + b64uEnc(await deflate(new TextEncoder().encode(json)));
+  return location.origin + location.pathname + "#" + LINK_TAG + b62Enc(await deflate(new TextEncoder().encode(json)));
 }
 async function readLink(data){
-  const o = JSON.parse(new TextDecoder().decode(await deflate(b64uDec(data), true)));
+  const o = JSON.parse(new TextDecoder().decode(await deflate(b62Dec(data), true)));
   return { name: keyFrom(o && o.n), rows: unpackRows(o && o.r) };
 }
 /* Opening a link: the list lands on this device. Returns its name, or null. */
