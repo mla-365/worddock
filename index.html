@@ -35,7 +35,10 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.36.4 ─────────────────────────────────────────
+/* ── WordDock — v0.37 ─────────────────────────────────────────
+   v0.37 (25 Oct): on a PC the door moves to the top-left of every page (M: on a PC we are wired to look for navigation at
+   the top; on a phone the thumb reaches the bottom). Card: the list's name top-left, the counter alone at the bottom (text, not
+   a door); list: All lists; All lists: About WordDock; About: the deck (name · counter). Phones unchanged.
    v0.36.4 (25 Oct): the source moves into the line under the heading, at its end, on a PC only (it slid under the green
    button on a phone); dialog buttons grow with their text, so a long list name wraps inside its button.
    v0.36.3 (25 Oct): a link over 4,000 characters (WhatsApp's cut, M's test: 40 rows passed, 70 broke) says so in pairs:
@@ -144,8 +147,8 @@ button,select,input{font-family:inherit}
 body.booting .pills{visibility:hidden}
 /* v0.31.1: the table's way out, "All lists", in the top left corner of the column. */
 .top-in{max-width:920px;margin:0 auto;padding:0 1.25rem;height:52px;display:flex;align-items:center}
-.corner{background:none;border:none;padding:0 2px;color:var(--muted);font-size:12px;cursor:pointer;white-space:nowrap}
-.corner:hover{color:var(--fg);text-decoration:underline;text-underline-offset:3px}
+.corner{background:none;border:none;padding:4px 0;color:var(--muted);font-size:13px;cursor:pointer;white-space:nowrap}
+.corner:hover{color:var(--green)}   /* v0.37: like the bottom doors: green on hover */
 .corner[hidden]{display:none}
 /* All lists only: the sync line bottom left, About WordDock bottom right, both on the column's edges,
    a little above the bottom of the screen. */
@@ -159,6 +162,7 @@ body.booting .pills{visibility:hidden}
 .sync-note{font-size:13px;color:var(--muted);margin:.2rem 0 1rem;cursor:pointer}
 .sync-note:hover{color:var(--green)}
 .bar .door-b[hidden]{display:none}
+.bar .door-b.count-only{cursor:default}.bar .door-b.count-only:hover{color:var(--muted)}   /* v0.37 PC card: the counter, not a door */
 
 /* ── list surface ── */
 .wrap{max-width:920px;margin:0 auto;padding:.25rem 1.25rem 4rem}
@@ -983,8 +987,20 @@ function renderBar(){
   k.hidden = !deckDoor;
   if (deckDoor) k.textContent = activeKey + T.pillSep + T.pillCount(deckScore, pipe.length, deckDone);
   d.hidden = true; d.textContent = ""; d.onclick = null;
-  $("corner").hidden = true;
-  $("bar").hidden = !(level === "list" || level === "catalog" || deckDoor);
+  const c = $("corner");
+  if (isSmall()){                                            // phone: the doors at the bottom, under the thumb
+    c.hidden = true; k.classList.remove("count-only");
+    $("bar").hidden = !(level === "list" || level === "catalog" || deckDoor);
+  } else {                                                   // v0.37 PC: the door top-left; on the card only the counter stays at the bottom
+    const label = level === "list" ? T.dashboard : level === "catalog" ? T.aboutLink
+      : level === "study" && activeKey ? activeKey : level === "about" && deckDoor ? k.textContent : "";
+    c.textContent = label; c.hidden = !label;
+    $("listsLink").hidden = $("aboutLink").hidden = true;
+    const onCard = level === "study" && deckDoor;
+    k.hidden = !onCard; k.classList.toggle("count-only", onCard);
+    if (onCard) k.textContent = T.pillCount(deckScore, pipe.length, deckDone);
+    $("bar").hidden = !onCard;
+  }
   renderPills();
 }
 /* v0.32.8: the pill says what the place is about (M, 18 Oct). List page: "Study N", N = the rows shown,
@@ -1982,10 +1998,13 @@ function promptDlg(title, body, value){
 
 /* ── Input ── */
 $("pill").addEventListener("click", () => { if (pillDeals) return onStudy(); if (!activeKey) return; if (level === "study") goList(activeKey); else enterStudy(); });
-$("corner").addEventListener("click", () => goCatalog());
+$("corner").addEventListener("click", () => {   // v0.37: the PC's one door, top-left; the same ring as the phone's bottom doors
+  if (level === "list") goCatalog(); else if (level === "catalog") openAbout();
+  else if (activeKey){ if (level === "study") goList(activeKey); else enterStudy(); }
+});
 $("aboutLink").addEventListener("click", () => openAbout());
 $("listsLink").addEventListener("click", () => goCatalog());
-$("deckLink").addEventListener("click", () => { if (!activeKey) return; if (level === "study") goList(activeKey); else enterStudy(); });
+$("deckLink").addEventListener("click", () => { if (!activeKey || $("deckLink").classList.contains("count-only")) return; if (level === "study") goList(activeKey); else enterStudy(); });
 $("btnAdd").addEventListener("click", () => { $("fileIn").value = ""; $("fileIn").click(); });
 $("syncLine").addEventListener("click", showSyncPanel);
 $("btnHelp").addEventListener("click", e => { e.stopPropagation(); showHelp(); });
@@ -2005,7 +2024,7 @@ for (const id of ["wd", "my"]){
   $(id + "Next").addEventListener("click", () => { CAT[id].page++; renderCatalog(); });
 }
 let rsz = null;
-window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if (level !== "study") render(); }, 120); });
+window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if (level !== "study") render(); else renderBar(); }, 120); });   // v0.37: the door follows the width
 $("q").addEventListener("input", e => {
   qText = e.target.value; query = strip(qText); page = 0; openId = null; saveView(); renderList();
 });
