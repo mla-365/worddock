@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.36.2 ─────────────────────────────────────────
+/* ── WordDock — v0.36.3 ─────────────────────────────────────────
+   v0.36.3 (25 Oct): a link over 4,000 characters (WhatsApp's cut, M's test: 40 rows passed, 70 broke) says so in pairs:
+   "This link is long: N pairs. Mail usually works; WhatsApp cuts links above about 160 pairs ..." (about 25 characters a pair).
    v0.36.2 (25 Oct): links in letters and digits only (base62): WhatsApp read _..._ in a base64url link as italics and
    broke it. Older links are not read (M: dead wood).
    v0.36.1 (25 Oct): "Make a list by pasting" removed (M: a sheet is needed anyway, the Excel door reads it by name; the
@@ -486,7 +488,7 @@ const T = {
   shareLink: "Share as a link", shareTitle: k => "WordDock: " + k,
   linkCopied: k => "The link to " + k + " is copied",
   linkCopiedBody: "Paste it in a mail, a chat or a video description. Whoever opens it gets this list on their device, with their own progress.",
-  linkLong: n => "It is long (" + n + " characters): some apps cut links like this.",
+  linkLong: n => "This link is long: " + n + " pairs. Mail usually works; WhatsApp cuts links above about 160 pairs, so send the Excel file (↓) there instead, or split the list.",
   copyThis: "Copy this link",
   linkReplaceQ: k => "You have " + k + ". Replace it with this version?", progressFresh: "Its progress starts fresh.", keepBoth: "Keep both",
   linkBroken: "This link can't be read", linkBrokenBody: "It may have been cut off when it was shared. Ask for the link again.",
@@ -1561,13 +1563,14 @@ async function takeLink(){
 async function shareLink(key){
   const l = LISTS[key]; if (!l || !l.rows) return;
   if (!canLink()){ await confirmDlg(T.shareLink, T.noLinks, T.ok, null); return; }
-  const url = await linkFor(key, l.rows), long = url.length > 4000;
+  const url = await linkFor(key, l.rows), long = url.length > 4000;   // WhatsApp passes about 4,000 characters on a tap (M's test, 25 Oct)
+  const pairs = l.rows.reduce((n, r) => n + r.pairs.length, 0);
   if (navigator.share && window.matchMedia("(pointer:coarse)").matches){
     try { await navigator.share({ title: T.shareTitle(key), url }); return; } catch (e){ if (e && e.name === "AbortError") return; }
   }
   let copied = false; try { await navigator.clipboard.writeText(url); copied = true; } catch {}
-  if (copied) await confirmDlg(T.linkCopied(key), T.linkCopiedBody + (long ? " " + T.linkLong(url.length) : ""), T.ok, null);
-  else await promptDlg(T.copyThis, long ? T.linkLong(url.length) : "", url);
+  if (copied) await confirmDlg(T.linkCopied(key), T.linkCopiedBody + (long ? " " + T.linkLong(pairs) : ""), T.ok, null);
+  else await promptDlg(T.copyThis, long ? T.linkLong(pairs) : "", url);
 }
 /* v0.36: once per device, after the first done deck of a real list, when nothing keeps a copy. */
 const SAFE_KEY = "wd_safe_asked";
