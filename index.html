@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.36 ─────────────────────────────────────────
+/* ── WordDock — v0.36.1 ─────────────────────────────────────────
+   v0.36.1 (25 Oct): "Make a list by pasting" removed (M: a sheet is needed anyway, the Excel door reads it by name; the
+   paste box guessed columns and scrambled full rows). The link sign on My lists stays, with everything else of v0.36.
    v0.36 (25 Oct): the link is the list. "+ Make a list by pasting" (a dialog at the end of My lists) and a link sign on every
    My list turn rows into a link, worddock.app/#l=..., the list deflated and base64url-encoded in the fragment (never sent to
    a server). Opening such a link adds the list to the device as a My list: a new name is added; the same name with the same
@@ -263,16 +265,8 @@ td.act{text-align:right;white-space:nowrap}
 .ib.x{font-size:15px;color:var(--muted)}
 .ib.ln{font-size:13px;filter:grayscale(1);opacity:.75}   /* v0.36: share a My list as a link */
 .ib.ln:hover{opacity:1}
-/* v0.36: the paste door under the Excel door, the make dialog, the source line */
-.add-row + .add-row{margin-top:.6rem}
+/* v0.36: the source line */
 #dlgBack{z-index:70}   /* above the make dialog */
-.make-dlg{max-width:560px}
-.dlg .mk-l{display:block;font-size:13px;color:var(--sec);margin:0 0 4px}
-.dlg .mk-l input{margin:4px 0 0}
-.dlg .mk-hint{font-size:12.5px;color:var(--muted);margin:4px 0 12px;min-height:1.2em}
-.dlg .mk-hint.warn{color:#b45309}
-.dlg textarea{width:100%;height:170px;padding:8px 10px;border:.5px solid var(--line2);border-radius:8px;font:13px/1.45 var(--mono);resize:vertical;white-space:pre;overflow:auto;margin:6px 0 0}
-.dlg textarea:focus{outline:none;border-color:var(--accent)}
 .src-line{color:var(--muted);font-size:12.5px;margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .src-line a{color:var(--sec)}
 .add{background:none;border:none;padding:0;color:var(--green2);font-weight:600;font-size:22px;line-height:1.3;cursor:pointer;text-align:left}   /* a heading, like the two above it */
@@ -429,7 +423,6 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
     <table><colgroup><col><col class="c-n"><col class="c-r"><col class="c-s"><col class="c-a"></colgroup><tbody id="myBody"></tbody></table>
     <div class="empty" id="myEmpty" hidden data-t="noMatches"></div>
     <div class="add-row" id="addRow"><button class="add" id="btnAdd" data-t="add"></button><button class="help" id="btnHelp" data-t-aria="excelHelpAria">?</button></div>
-    <div class="add-row" id="pasteRow"><button class="add" id="btnPaste" data-t="paste"></button></div>
   </section>
 </main>
 
@@ -471,20 +464,6 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   </div>
 </div>
 
-<div class="dlg-back" id="makeBack" hidden>
-  <div class="dlg sync-dlg make-dlg" role="dialog" aria-modal="true">
-    <button class="sync-x" id="makeX" data-t-aria="close">&times;</button>
-    <h3 data-t="makeTitle"></h3>
-    <p class="sync-desc" data-t="makeHow"></p>
-    <label class="mk-l"><span data-t="makeName"></span><input id="mkName" autocomplete="off" spellcheck="false"></label>
-    <p class="mk-hint" id="mkNameHint"></p>
-    <label class="mk-l"><span data-t="makeSrc"></span><input id="mkSrc" data-t-ph="makeSrcPh" autocomplete="off" spellcheck="false"></label>
-    <textarea id="mkRows" data-t-ph="makeRowsPh" spellcheck="false"></textarea>
-    <p class="mk-hint" id="mkInfo"></p>
-    <div class="dlg-actions sync-actions"><button class="dlg-cancel" id="mkCancel" data-t="cancel"></button><button class="dlg-ok" id="mkGo" data-t="makeGo"></button></div>
-  </div>
-</div>
-
 <div class="dlg-back" id="syncBack" hidden>
   <div class="dlg sync-dlg" role="dialog" aria-modal="true">
     <button class="sync-x" id="syncX" data-t-aria="close">&times;</button>
@@ -502,14 +481,6 @@ const T = {
   searchWdAria: "Search the published lists", searchMyAria: "Search the lists on this device",
   prevPage: "Previous page", nextPage: "Next page", study: "Study",
   again: "Again", good: "Good", ok: "OK", cancel: "Cancel", close: "Close", keep: "Keep",
-  paste: "+ Make a list by pasting",
-  makeTitle: "Make a list by pasting",
-  makeHow: "Paste the rows from Excel or Sheets. Column one is the question the card shows; column two is the answer the learner gives. Name your list as short as you can. If it starts with two language codes (EN-RU-…), the columns are labelled with them.",
-  makeName: "Name", makeSrc: "Source", makeSrcPh: "where the rows come from (optional)", makeRowsPh: "Paste the rows here",
-  makeGo: "Make the link", makeNoName: "Give the list a name.", makeNone: "Paste at least one row with a question and an answer.",
-  nameHint: (k, n) => (k ? k + " · " : "") + n + " / 12" + (n > 12 ? " · long for a phone: as short as possible" : " · as short as possible"),
-  mkInfo: (n, c) => n + (n === 1 ? " row" : " rows") + " · a link of " + c + " characters",
-  mkLong: " · long: some apps cut links this long",
   shareLink: "Share as a link", shareTitle: k => "WordDock: " + k,
   linkCopied: k => "The link to " + k + " is copied",
   linkCopiedBody: "Paste it in a mail, a chat or a video description. Whoever opens it gets this list on their device, with their own progress.",
@@ -1586,67 +1557,6 @@ async function shareLink(key){
   if (copied) await confirmDlg(T.linkCopied(key), T.linkCopiedBody + (long ? " " + T.linkLong(url.length) : ""), T.ok, null);
   else await promptDlg(T.copyThis, long ? T.linkLong(url.length) : "", url);
 }
-/* Paste from Excel or Sheets: tab-separated. A header row with Q1 and A1 is read by name; without one,
-   two columns are Q1 · A1, three are ENT · Q1 · A1, more go on in pairs. IDs from the row's place. */
-function parsePaste(text){
-  const lines = String(text || "").replace(/\r\n?/g, "\n").split("\n").filter(l => l.trim());
-  const cells = lines.map(l => l.split("\t").map(c => c.trim()));
-  if (!cells.length) return [];
-  const map = {}; cells[0].forEach((c, i) => { const k = canonHeader(c); if (k && !(k in map)) map[k] = i; });
-  let body = cells, col;
-  if ("Q1" in map && "A1" in map){ body = cells.slice(1); col = k => (k in map) ? map[k] : -1; }
-  else {
-    const w = Math.max(...cells.map(c => c.length)), off = w >= 3 && w % 2 === 1 ? 1 : 0;
-    col = k => { if (k === "ENT") return off ? 0 : -1; const m = k.match(/^([QA])(\d+)$/); return m ? off + (+m[2] - 1) * 2 + (m[1] === "A" ? 1 : 0) : -1; };
-  }
-  const get = (arr, k) => { const i = col(k); return i >= 0 ? (arr[i] || "") : ""; };
-  const rows = [];
-  for (const arr of body){
-    const pairs = []; for (let i = 1; i <= 10; i++){ const q = get(arr, "Q" + i), a = get(arr, "A" + i); if (q && a) pairs.push({ q, a }); }
-    if (!get(arr, "Q1") || !get(arr, "A1")) continue;
-    const row = { ID: String(rows.length + 1).padStart(4, "0"), pairs, ENT: get(arr, "ENT") || pairs[0].a };
-    const L = parseL(get(arr, "L")); if (L) row.L = L.text;
-    for (const k of ["CAT", "SUB", "TAG", "SRC"]){ const v = get(arr, k); if (v) row[k] = v; }
-    rows.push(row);
-  }
-  return rows;
-}
-function showMake(){ $("mkName").value = ""; $("mkSrc").value = ""; $("mkRows").value = ""; makeInfo(); $("makeBack").hidden = false; $("mkName").focus(); }
-function hideMake(){ $("makeBack").hidden = true; }
-let _mkTimer = null;
-function makeInfo(){
-  const k = keyFrom($("mkName").value), nh = $("mkNameHint");
-  nh.textContent = T.nameHint(k, k.length); nh.classList.toggle("warn", k.length > 12);
-  clearTimeout(_mkTimer);
-  _mkTimer = setTimeout(async () => {
-    const info = $("mkInfo"), rows = parsePaste($("mkRows").value);
-    if (!rows.length || !canLink()){ info.textContent = ""; info.classList.remove("warn"); return; }
-    const src = $("mkSrc").value.trim(); if (src) rows.forEach(r => { if (!r.SRC) r.SRC = src; });
-    const n = (await linkFor(k || "LIST", rows)).length;
-    info.textContent = T.mkInfo(rows.length, n) + (n > 4000 ? T.mkLong : ""); info.classList.toggle("warn", n > 4000);
-  }, 200);
-}
-async function makeFromPaste(){
-  const info = $("mkInfo"), rows = parsePaste($("mkRows").value), src = $("mkSrc").value.trim();
-  let key = keyFrom($("mkName").value);
-  if (!key){ info.textContent = T.makeNoName; info.classList.add("warn"); $("mkName").focus(); return; }
-  if (!rows.length){ info.textContent = T.makeNone; info.classList.add("warn"); $("mkRows").focus(); return; }
-  if (src) rows.forEach(r => { if (!r.SRC) r.SRC = src; });
-  while (isPublished(key)){
-    const v = await promptDlg(T.isWd(key), T.nameYours(key + "-01"), key + "-01");
-    if (v === null) return; key = keyFrom(v); if (!key) return;
-  }
-  const ex = LISTS[key] && LISTS[key].own && LISTS[key].rows ? LISTS[key] : null;
-  let keepPool = false;
-  if (ex && JSON.stringify(packRows(ex.rows)) !== rowsSig(rows)){
-    keepPool = sameOrder(ex.rows, normalizeRows(rows));
-    if (!(await confirmDlg(T.linkReplaceQ(key), keepPool ? T.progressStays : T.progressFresh, T.replace, T.keep))) return;
-  } else if (ex) keepPool = true;
-  if (!putOwn(key, rows, keepPool)){ await confirmDlg(T.cantKeep, T.noRoom, T.ok, null); return; }
-  if (activeKey === key) initDeck(LISTS[key].rows);
-  hideMake(); render();
-  await shareLink(key);
-}
 /* v0.36: once per device, after the first done deck of a real list, when nothing keeps a copy. */
 const SAFE_KEY = "wd_safe_asked";
 function maybeAskSafe(){
@@ -2069,11 +1979,6 @@ $("addRow").addEventListener("click", e => { if (!e.target.closest("#btnAdd")) $
 $("helpX").addEventListener("click", hideHelp); $("helpClose").addEventListener("click", hideHelp);
 $("helpBack").addEventListener("click", e => { if (e.target === $("helpBack")) hideHelp(); });
 $("helpTpl").addEventListener("click", downloadTemplate);
-$("pasteRow").addEventListener("click", showMake);
-$("makeX").addEventListener("click", hideMake); $("mkCancel").addEventListener("click", hideMake);
-$("makeBack").addEventListener("click", e => { if (e.target === $("makeBack")) hideMake(); });
-$("mkGo").addEventListener("click", makeFromPaste);
-for (const id of ["mkName", "mkSrc", "mkRows"]) $(id).addEventListener("input", makeInfo);
 window.addEventListener("hashchange", async () => { const k = await takeLink(); if (k) goList(k); });
 $("syncX").addEventListener("click", hideSyncPanel);
 $("syncBack").addEventListener("click", e => { if (e.target === $("syncBack")) hideSyncPanel(); });
@@ -2103,7 +2008,6 @@ document.addEventListener("keydown", e => {
   if (!$("dlgBack").hidden) return;
   if (!$("syncBack").hidden){ if (e.key === "Escape") hideSyncPanel(); return; }
   if (!$("helpBack").hidden){ if (e.key === "Escape") hideHelp(); return; }
-  if (!$("makeBack").hidden){ if (e.key === "Escape") hideMake(); return; }
   if (level === "about"){ if (e.key === "Escape"){ e.preventDefault(); closeAbout(); } return; }
   if (level !== "study"){
     if (document.activeElement && ["INPUT","SELECT"].includes(document.activeElement.tagName)) return;
