@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.37 ─────────────────────────────────────────
+/* ── WordDock — v0.37.1 ─────────────────────────────────────────
+   v0.37.1 (25 Oct): the tab names where you are: "LA-NL-L · WordDock", "All lists · WordDock", "About · WordDock"; the
+   page's own title (search engines, link previews) stays "WordDock · Learn".
    v0.37 (25 Oct): on a PC the door moves to the top-left of every page (M: on a PC we are wired to look for navigation at
    the top; on a phone the thumb reaches the bottom). Card: the list's name top-left, the counter alone at the bottom (text, not
    a door); list: All lists; All lists: About WordDock; About: the deck (name · counter). Phones unchanged.
@@ -980,6 +982,9 @@ const visibleRows = () => { const rows = viewRows(); if (!rows) return []; const
    card → the list (the deck's name · counter) → Dashboard → About WordDock → the card
    (the deck's name · counter again). The sync status left the bar: it is a line inside About › Devices and sync. */
 function renderBar(){
+  // v0.37.1: the tab names where you are: the list on the card and its table, else the page
+  const where = level === "catalog" ? T.dashboard : level === "about" ? T.aboutHeading : level === "study" ? activeKey : viewKey;
+  document.title = where ? where + " · WordDock" : "WordDock · Learn";
   const d = $("door"), s = $("syncLine"), k = $("deckLink");
   s.hidden = true;                                           // the sync line is no longer a door
   $("listsLink").hidden = level !== "list"; $("aboutLink").hidden = level !== "catalog";
