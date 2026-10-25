@@ -35,7 +35,14 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.35.3 ─────────────────────────────────────────
+/* ── WordDock — v0.36 ─────────────────────────────────────────
+   v0.36 (25 Oct): the link is the list. "+ Make a list by pasting" (a dialog at the end of My lists) and a link sign on every
+   My list turn rows into a link, worddock.app/#l=..., the list deflated and base64url-encoded in the fragment (never sent to
+   a server). Opening such a link adds the list to the device as a My list: a new name is added; the same name with the same
+   rows just opens; the same name with other rows asks Replace / Keep both (NAME-<4 hex of the content>) / Cancel, with the
+   Excel door's rule for progress (same order stays, other order starts fresh). A Source field fills SRC on every row; the
+   list page shows "Source: ..." under the heading when every row shares one SRC. "Keep your progress safe?" once per device
+   after the first done deck of any list but WORDDOCK, live site only, when there is no sync key (wd_safe_asked).
    v0.35.3 (24 Oct): the opened row shows every pair in full, Q1 and A1 included; "No other pairs." gone. On a PC it also shows
    CAT, SUB and TAG in full, tappable. The lemma tap ("=ENT") moves from A1 to Q1: Q1 finds, a tap anywhere else opens the row.
    v0.35.2 (24 Oct): About › More, the last topic: the link to Inside WordDock (moved out of Contact) and the public code.
@@ -247,13 +254,27 @@ body.cataloging .wrap{display:none}
 .sec-h{font-size:22px;font-weight:600;margin:.5rem 0 0;line-height:1.3}   /* the same size as the table's heading */
 .cat .controls{margin:.9rem 0 .25rem}   /* the same row height as the table's: the green button at the same y */
 .cat tbody tr{cursor:pointer}
-.cat col.c-n{width:11%}.cat col.c-r{width:12%}.cat col.c-s{width:22%}.cat col.c-a{width:14%}   /* words · RS sum · status · ↓ × */
+.cat col.c-n{width:11%}.cat col.c-r{width:12%}.cat col.c-s{width:20%}.cat col.c-a{width:17%}   /* words · RS sum · status · ↓ × */
 .cat td.rs{text-align:right;font-variant-numeric:tabular-nums;color:var(--sec);white-space:nowrap}   /* v0.32.10: "23 RS", the number grows to the left */
 .cat td.id .rs-m{display:none;font-size:11px;color:var(--muted);white-space:nowrap}
 td.act{text-align:right;white-space:nowrap}
 .ib{background:none;border:none;color:var(--sec);font-size:16px;line-height:1;cursor:pointer;padding:3px 7px;border-radius:7px}
 .ib:hover{background:var(--line);color:var(--fg)}
 .ib.x{font-size:15px;color:var(--muted)}
+.ib.ln{font-size:13px;filter:grayscale(1);opacity:.75}   /* v0.36: share a My list as a link */
+.ib.ln:hover{opacity:1}
+/* v0.36: the paste door under the Excel door, the make dialog, the source line */
+.add-row + .add-row{margin-top:.6rem}
+#dlgBack{z-index:70}   /* above the make dialog */
+.make-dlg{max-width:560px}
+.dlg .mk-l{display:block;font-size:13px;color:var(--sec);margin:0 0 4px}
+.dlg .mk-l input{margin:4px 0 0}
+.dlg .mk-hint{font-size:12.5px;color:var(--muted);margin:4px 0 12px;min-height:1.2em}
+.dlg .mk-hint.warn{color:#b45309}
+.dlg textarea{width:100%;height:170px;padding:8px 10px;border:.5px solid var(--line2);border-radius:8px;font:13px/1.45 var(--mono);resize:vertical;white-space:pre;overflow:auto;margin:6px 0 0}
+.dlg textarea:focus{outline:none;border-color:var(--accent)}
+.src-line{color:var(--muted);font-size:12.5px;margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src-line a{color:var(--sec)}
 .add{background:none;border:none;padding:0;color:var(--green2);font-weight:600;font-size:22px;line-height:1.3;cursor:pointer;text-align:left}   /* a heading, like the two above it */
 .add:hover{text-decoration:underline;text-underline-offset:3px}
 .dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px}
@@ -349,7 +370,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .top-in,.bar-in{padding:0 12px}
   .hide-s{display:none}
   input[type=search]{min-width:0;flex:1 1 150px}
-  .cat col.c-n{width:66px}.cat col.c-r{width:0}.cat col.c-s{width:100px}.cat col.c-a{width:62px}   /* room for "studying now", the date, and ↓ × */
+  .cat col.c-n{width:44px}.cat col.c-r{width:0}.cat col.c-s{width:78px}.cat col.c-a{width:108px}   /* room for "studying now", the date, and ↓ × */
   .cat td.rs{font-size:0;padding:0}   /* on a phone the RS sum sits under the word count; a hidden cell would shift the fixed columns */
   .cat td.id .rs-m{display:block}
   .card{height:200px;padding:24px 22px}
@@ -377,6 +398,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 <main class="wrap" id="listSurface">
   <h1 class="h" id="h"></h1>
   <p class="sub" id="sub"></p>
+  <p class="src-line" id="srcLine" hidden></p>
   <div class="controls" id="controls">
     <input type="search" id="q" data-t-ph="search" data-t-aria="search" autocomplete="off" spellcheck="false">
     <label class="lvl-f" id="lvlBox"><span data-t="level"></span><input type="search" id="lvl" data-t-aria="levelAria" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
@@ -407,6 +429,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
     <table><colgroup><col><col class="c-n"><col class="c-r"><col class="c-s"><col class="c-a"></colgroup><tbody id="myBody"></tbody></table>
     <div class="empty" id="myEmpty" hidden data-t="noMatches"></div>
     <div class="add-row" id="addRow"><button class="add" id="btnAdd" data-t="add"></button><button class="help" id="btnHelp" data-t-aria="excelHelpAria">?</button></div>
+    <div class="add-row" id="pasteRow"><button class="add" id="btnPaste" data-t="paste"></button></div>
   </section>
 </main>
 
@@ -434,7 +457,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 <div class="dlg-back" id="dlgBack" hidden>
   <div class="dlg" role="dialog" aria-modal="true">
     <h3 id="dlgTitle"></h3><p id="dlgBody"></p><input id="dlgInput" hidden autocomplete="off" spellcheck="false">
-    <div class="dlg-actions"><button class="dlg-cancel" id="dlgCancel" data-t="cancel"></button><button class="dlg-ok" id="dlgOk" data-t="ok"></button></div>
+    <div class="dlg-actions"><button class="dlg-cancel" id="dlgCancel" data-t="cancel"></button><button class="dlg-cancel" id="dlgAlt" hidden></button><button class="dlg-ok" id="dlgOk" data-t="ok"></button></div>
   </div>
 </div>
 
@@ -445,6 +468,20 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
     <p class="sync-desc" data-t="excelHelp1"></p>
     <p class="sync-desc" data-t="excelHelp2"></p>
     <div class="dlg-actions sync-actions"><button class="dlg-cancel" id="helpClose" data-t="close"></button><button class="dlg-ok" id="helpTpl" data-t="excelTemplate"></button></div>
+  </div>
+</div>
+
+<div class="dlg-back" id="makeBack" hidden>
+  <div class="dlg sync-dlg make-dlg" role="dialog" aria-modal="true">
+    <button class="sync-x" id="makeX" data-t-aria="close">&times;</button>
+    <h3 data-t="makeTitle"></h3>
+    <p class="sync-desc" data-t="makeHow"></p>
+    <label class="mk-l"><span data-t="makeName"></span><input id="mkName" autocomplete="off" spellcheck="false"></label>
+    <p class="mk-hint" id="mkNameHint"></p>
+    <label class="mk-l"><span data-t="makeSrc"></span><input id="mkSrc" data-t-ph="makeSrcPh" autocomplete="off" spellcheck="false"></label>
+    <textarea id="mkRows" data-t-ph="makeRowsPh" spellcheck="false"></textarea>
+    <p class="mk-hint" id="mkInfo"></p>
+    <div class="dlg-actions sync-actions"><button class="dlg-cancel" id="mkCancel" data-t="cancel"></button><button class="dlg-ok" id="mkGo" data-t="makeGo"></button></div>
   </div>
 </div>
 
@@ -465,6 +502,26 @@ const T = {
   searchWdAria: "Search the published lists", searchMyAria: "Search the lists on this device",
   prevPage: "Previous page", nextPage: "Next page", study: "Study",
   again: "Again", good: "Good", ok: "OK", cancel: "Cancel", close: "Close", keep: "Keep",
+  paste: "+ Make a list by pasting",
+  makeTitle: "Make a list by pasting",
+  makeHow: "Paste the rows from Excel or Sheets. Column one is the question the card shows; column two is the answer the learner gives. Name your list as short as you can. If it starts with two language codes (EN-RU-…), the columns are labelled with them.",
+  makeName: "Name", makeSrc: "Source", makeSrcPh: "where the rows come from (optional)", makeRowsPh: "Paste the rows here",
+  makeGo: "Make the link", makeNoName: "Give the list a name.", makeNone: "Paste at least one row with a question and an answer.",
+  nameHint: (k, n) => (k ? k + " · " : "") + n + " / 12" + (n > 12 ? " · long for a phone: as short as possible" : " · as short as possible"),
+  mkInfo: (n, c) => n + (n === 1 ? " row" : " rows") + " · a link of " + c + " characters",
+  mkLong: " · long: some apps cut links this long",
+  shareLink: "Share as a link", shareTitle: k => "WordDock: " + k,
+  linkCopied: k => "The link to " + k + " is copied",
+  linkCopiedBody: "Paste it in a mail, a chat or a video description. Whoever opens it gets this list on their device, with their own progress.",
+  linkLong: n => "It is long (" + n + " characters): some apps cut links like this.",
+  copyThis: "Copy this link",
+  linkReplaceQ: k => "You have " + k + ". Replace it with this version?", progressFresh: "Its progress starts fresh.", keepBoth: "Keep both",
+  linkBroken: "This link can't be read", linkBrokenBody: "It may have been cut off when it was shared. Ask for the link again.",
+  noLinks: "This browser can't make or open WordDock links. Try a recent Chrome, Edge, Safari or Firefox.",
+  srcLabel: "Source: ",
+  safeTitle: "Keep your progress safe?",
+  safeBody: "Your scores live only in this browser and can be lost. A sync key keeps a copy, and brings them back on any device. You can also do this later: About WordDock › Devices and sync.",
+  safeMake: "Make a key", safeLater: "Not now",
   wdHeading: "Published lists", myHeading: "My lists on this device", syncNoteAria: "Sync settings", add: "+ Add a list from an Excel sheet",
   // the list surface
   words: n => n + (n === 1 ? " word" : " words"),
@@ -991,6 +1048,15 @@ const listKeys = () => [...new Set([...WD_KEYS, ...Object.keys(LISTS).filter(k =
 function renderHeading(){
   const h = $("h"); h.innerHTML = "";
   h.textContent = viewKey;          // just the name
+  // v0.36: one source for the whole list (every row the same SRC) shows once under the heading
+  const l = LISTS[viewKey], rs = l && l.rows, p = $("srcLine"); p.innerHTML = "";
+  const src = rs && rs.length && rs[0].SRC && rs.every(r => r.SRC === rs[0].SRC) ? rs[0].SRC : "";
+  p.hidden = !src; if (!src) return;
+  p.append(T.srcLabel);
+  if (/^https?:\/\/\S+$/i.test(src)){
+    const a = document.createElement("a"); a.href = src; a.target = "_blank"; a.rel = "noopener noreferrer";
+    a.textContent = src.replace(/^https?:\/\/(www\.)?/i, ""); p.appendChild(a);
+  } else p.append(src);
 }
 function paged(rows){
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
@@ -1177,6 +1243,8 @@ function renderSection(id, lists, unit){
     const tdA = document.createElement("td"); tdA.className = "act";
     if (l.rows || isPublished(l.key)){ const b = document.createElement("button"); b.className = "ib"; b.textContent = "↓"; b.title = T.excelOut(l.key);   // v0.32.3: drawn at once, the rows load on tap
       b.addEventListener("click", e => { e.stopPropagation(); exportList(l.key); }); tdA.appendChild(b); }
+    if (l.own){ const k = document.createElement("button"); k.className = "ib ln"; k.textContent = "🔗"; k.title = T.shareLink;   // v0.36
+      k.addEventListener("click", e => { e.stopPropagation(); shareLink(l.key); }); tdA.appendChild(k); }
     if (l.own){ const x = document.createElement("button"); x.className = "ib x"; x.textContent = "×"; x.title = T.removeHere;
       x.addEventListener("click", e => { e.stopPropagation(); removeList(l.key); }); tdA.appendChild(x); }
     tr.append(tdN, tdW, tdR, tdS, tdA);
@@ -1391,6 +1459,7 @@ function gradeGood(){
         pool[id] = x.timesDirty === 0 ? base + 1 : x.timesDirty === 1 ? base - 1 : base - 2; });
       try { localStorage.setItem(key, JSON.stringify(pool)); } catch {}
       markSyncDirty(); syncCatchUp();            // the one moment a score can change: pull, merge, push
+      maybeAskSafe();
     }
   }
   saveDeck(); renderCard();
@@ -1435,6 +1504,159 @@ function renderCard(){
    and back. The comments of index.html hold the reasoning; the functions below are
    copies, changed only where this page differs (no loadRS, no initDeck(), its own
    bottom line on LISTS, no QR, no consent cascade). ── */
+/* ── v0.36: the link is the list. A list travels in the fragment (#l=...), which the browser never sends
+   to a server: rows packed as arrays, deflated, base64url. Opening it makes a My list on the device. ── */
+const LINK_TAG = "l=";
+const canLink = () => typeof CompressionStream === "function" && typeof DecompressionStream === "function";
+function b64uEnc(u8){ let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000));
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function b64uDec(t){ const s = atob(t.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((t.length + 3) % 4));
+  const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+async function deflate(u8, back){
+  const cs = back ? new DecompressionStream("deflate-raw") : new CompressionStream("deflate-raw");
+  return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(cs)).arrayBuffer());
+}
+/* A row as an array: ENT (empty when it is A1), CAT, SUB, TAG, L, SRC, then Q1 A1 … ; trailing blanks cut. */
+function packRows(rows){
+  return rows.map(r => {
+    const a1 = r.pairs[0] ? r.pairs[0].a : "";
+    const arr = [r.ENT && r.ENT !== a1 ? r.ENT : "", r.CAT || "", r.SUB || "", r.TAG || "", r.LVL || r.L || "", r.SRC || ""];
+    r.pairs.forEach(p => arr.push(p.q, p.a));
+    while (arr.length && arr[arr.length - 1] === "") arr.pop();
+    return arr;
+  });
+}
+function unpackRows(arrs){
+  const rows = [];
+  for (const a of arrs || []){
+    if (!Array.isArray(a)) continue;
+    const pairs = []; for (let i = 6; i + 1 < a.length; i += 2){ const q = cellText(a[i]), an = cellText(a[i + 1]); if (q && an) pairs.push({ q, a: an }); }
+    if (!pairs.length) continue;
+    const row = { ID: String(rows.length + 1).padStart(4, "0"), pairs, ENT: cellText(a[0]) || pairs[0].a };
+    const L = parseL(a[4]); if (L) row.L = L.text;
+    [["CAT", 1], ["SUB", 2], ["TAG", 3], ["SRC", 5]].forEach(([k, i]) => { const v = cellText(a[i]); if (v) row[k] = v; });
+    rows.push(row);
+  }
+  return rows;
+}
+const rowsSig = rows => JSON.stringify(packRows(normalizeRows(rows)));
+/* Four hex characters from the content: the same rows give the same four, whoever made them. */
+function fingerprint(str){ let h = 0x811c9dc5; for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).toUpperCase().padStart(8, "0").slice(0, 4); }
+async function linkFor(name, rows){
+  const json = JSON.stringify({ v: 1, n: name, r: packRows(rows) });
+  return location.origin + location.pathname + "#" + LINK_TAG + b64uEnc(await deflate(new TextEncoder().encode(json)));
+}
+async function readLink(data){
+  const o = JSON.parse(new TextDecoder().decode(await deflate(b64uDec(data), true)));
+  return { name: keyFrom(o && o.n), rows: unpackRows(o && o.r) };
+}
+/* Opening a link: the list lands on this device. Returns its name, or null. */
+async function takeLink(){
+  const h = location.hash || ""; if (!h.startsWith("#" + LINK_TAG)) return null;
+  const data = h.slice(1 + LINK_TAG.length);
+  try { history.replaceState(history.state, "", location.pathname + location.search); } catch {}
+  if (!canLink()){ await confirmDlg(T.linkBroken, T.noLinks, T.ok, null); return null; }
+  let got = null; try { got = await readLink(data); } catch {}
+  if (!got || !got.rows.length){ await confirmDlg(T.linkBroken, T.linkBrokenBody, T.ok, null); return null; }
+  const sig = rowsSig(got.rows), base = got.name || "LIST", alt = base + "-" + fingerprint(sig);
+  const sameAs = k => { const l = LISTS[k]; return !!(l && l.own && l.rows && JSON.stringify(packRows(l.rows)) === sig); };
+  let key = isPublished(base) ? alt : base;
+  if (sameAs(key)) return key;                       // the same link again: open it, scores intact
+  if (sameAs(alt)) return alt;
+  const ex = LISTS[key] && LISTS[key].own && LISTS[key].rows ? LISTS[key] : null;
+  let keepPool = false;
+  if (ex){
+    const order = sameOrder(ex.rows, normalizeRows(got.rows));
+    const c = await choiceDlg(T.linkReplaceQ(key), order ? T.progressStays : T.progressFresh, [T.replace, T.keepBoth, T.cancel]);
+    if (c === 2) return null;
+    if (c === 1) key = alt; else keepPool = order;
+  }
+  if (!putOwn(key, got.rows, keepPool)){ await confirmDlg(T.cantKeep, T.noRoom, T.ok, null); return null; }
+  return key;
+}
+/* Sharing a My list: the phone's share sheet, else the clipboard, else the link to copy by hand. */
+async function shareLink(key){
+  const l = LISTS[key]; if (!l || !l.rows) return;
+  if (!canLink()){ await confirmDlg(T.shareLink, T.noLinks, T.ok, null); return; }
+  const url = await linkFor(key, l.rows), long = url.length > 4000;
+  if (navigator.share && window.matchMedia("(pointer:coarse)").matches){
+    try { await navigator.share({ title: T.shareTitle(key), url }); return; } catch (e){ if (e && e.name === "AbortError") return; }
+  }
+  let copied = false; try { await navigator.clipboard.writeText(url); copied = true; } catch {}
+  if (copied) await confirmDlg(T.linkCopied(key), T.linkCopiedBody + (long ? " " + T.linkLong(url.length) : ""), T.ok, null);
+  else await promptDlg(T.copyThis, long ? T.linkLong(url.length) : "", url);
+}
+/* Paste from Excel or Sheets: tab-separated. A header row with Q1 and A1 is read by name; without one,
+   two columns are Q1 · A1, three are ENT · Q1 · A1, more go on in pairs. IDs from the row's place. */
+function parsePaste(text){
+  const lines = String(text || "").replace(/\r\n?/g, "\n").split("\n").filter(l => l.trim());
+  const cells = lines.map(l => l.split("\t").map(c => c.trim()));
+  if (!cells.length) return [];
+  const map = {}; cells[0].forEach((c, i) => { const k = canonHeader(c); if (k && !(k in map)) map[k] = i; });
+  let body = cells, col;
+  if ("Q1" in map && "A1" in map){ body = cells.slice(1); col = k => (k in map) ? map[k] : -1; }
+  else {
+    const w = Math.max(...cells.map(c => c.length)), off = w >= 3 && w % 2 === 1 ? 1 : 0;
+    col = k => { if (k === "ENT") return off ? 0 : -1; const m = k.match(/^([QA])(\d+)$/); return m ? off + (+m[2] - 1) * 2 + (m[1] === "A" ? 1 : 0) : -1; };
+  }
+  const get = (arr, k) => { const i = col(k); return i >= 0 ? (arr[i] || "") : ""; };
+  const rows = [];
+  for (const arr of body){
+    const pairs = []; for (let i = 1; i <= 10; i++){ const q = get(arr, "Q" + i), a = get(arr, "A" + i); if (q && a) pairs.push({ q, a }); }
+    if (!get(arr, "Q1") || !get(arr, "A1")) continue;
+    const row = { ID: String(rows.length + 1).padStart(4, "0"), pairs, ENT: get(arr, "ENT") || pairs[0].a };
+    const L = parseL(get(arr, "L")); if (L) row.L = L.text;
+    for (const k of ["CAT", "SUB", "TAG", "SRC"]){ const v = get(arr, k); if (v) row[k] = v; }
+    rows.push(row);
+  }
+  return rows;
+}
+function showMake(){ $("mkName").value = ""; $("mkSrc").value = ""; $("mkRows").value = ""; makeInfo(); $("makeBack").hidden = false; $("mkName").focus(); }
+function hideMake(){ $("makeBack").hidden = true; }
+let _mkTimer = null;
+function makeInfo(){
+  const k = keyFrom($("mkName").value), nh = $("mkNameHint");
+  nh.textContent = T.nameHint(k, k.length); nh.classList.toggle("warn", k.length > 12);
+  clearTimeout(_mkTimer);
+  _mkTimer = setTimeout(async () => {
+    const info = $("mkInfo"), rows = parsePaste($("mkRows").value);
+    if (!rows.length || !canLink()){ info.textContent = ""; info.classList.remove("warn"); return; }
+    const src = $("mkSrc").value.trim(); if (src) rows.forEach(r => { if (!r.SRC) r.SRC = src; });
+    const n = (await linkFor(k || "LIST", rows)).length;
+    info.textContent = T.mkInfo(rows.length, n) + (n > 4000 ? T.mkLong : ""); info.classList.toggle("warn", n > 4000);
+  }, 200);
+}
+async function makeFromPaste(){
+  const info = $("mkInfo"), rows = parsePaste($("mkRows").value), src = $("mkSrc").value.trim();
+  let key = keyFrom($("mkName").value);
+  if (!key){ info.textContent = T.makeNoName; info.classList.add("warn"); $("mkName").focus(); return; }
+  if (!rows.length){ info.textContent = T.makeNone; info.classList.add("warn"); $("mkRows").focus(); return; }
+  if (src) rows.forEach(r => { if (!r.SRC) r.SRC = src; });
+  while (isPublished(key)){
+    const v = await promptDlg(T.isWd(key), T.nameYours(key + "-01"), key + "-01");
+    if (v === null) return; key = keyFrom(v); if (!key) return;
+  }
+  const ex = LISTS[key] && LISTS[key].own && LISTS[key].rows ? LISTS[key] : null;
+  let keepPool = false;
+  if (ex && JSON.stringify(packRows(ex.rows)) !== rowsSig(rows)){
+    keepPool = sameOrder(ex.rows, normalizeRows(rows));
+    if (!(await confirmDlg(T.linkReplaceQ(key), keepPool ? T.progressStays : T.progressFresh, T.replace, T.keep))) return;
+  } else if (ex) keepPool = true;
+  if (!putOwn(key, rows, keepPool)){ await confirmDlg(T.cantKeep, T.noRoom, T.ok, null); return; }
+  if (activeKey === key) initDeck(LISTS[key].rows);
+  hideMake(); render();
+  await shareLink(key);
+}
+/* v0.36: once per device, after the first done deck of a real list, when nothing keeps a copy. */
+const SAFE_KEY = "wd_safe_asked";
+function maybeAskSafe(){
+  if (!SYNC_API || getSyncKey() || activeKey === FIRST_OPEN) return;
+  try { if (localStorage.getItem(SAFE_KEY)) return; localStorage.setItem(SAFE_KEY, "1"); } catch { return; }
+  setTimeout(async () => {
+    if (await confirmDlg(T.safeTitle, T.safeBody, T.safeMake, T.safeLater)){ showSyncPanel(); await doCreateKey(); }
+  }, 700);
+}
+
 const SYNC_KEY_STORE = "wd_sync_key";
 const KEY_ALPHABET   = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const SYNC_KEY_LEN = 8;           // XXXX-XXXX
@@ -1802,10 +2024,23 @@ function confirmDlg(title, body, okLabel, cancelLabel){
   return new Promise(res => {
     const back = $("dlgBack"), ok = $("dlgOk"), cancel = $("dlgCancel");
     $("dlgInput").hidden = true;
-    $("dlgTitle").textContent = title; $("dlgBody").textContent = body; ok.textContent = okLabel; cancel.textContent = cancelLabel; back.hidden = false;
-    const done = v => { back.hidden = true; ok.onclick = cancel.onclick = back.onclick = null; document.removeEventListener("keydown", onKey, true); res(v); };
+    $("dlgTitle").textContent = title; $("dlgBody").textContent = body; ok.textContent = okLabel; cancel.textContent = cancelLabel || ""; cancel.hidden = cancelLabel == null; back.hidden = false;
+    const done = v => { back.hidden = true; cancel.hidden = false; ok.onclick = cancel.onclick = back.onclick = null; document.removeEventListener("keydown", onKey, true); res(v); };
     const onKey = e => { if (e.key === "Escape"){ e.stopPropagation(); done(false); } if (e.key === "Enter"){ e.stopPropagation(); e.preventDefault(); done(true); } };
     ok.onclick = () => done(true); cancel.onclick = () => done(false); back.onclick = e => { if (e.target === back) done(false); };
+    document.addEventListener("keydown", onKey, true); ok.focus();
+  });
+}
+/* v0.36: three answers: 0 = the green one, 1 = the middle one, 2 = cancel (also Esc, a click outside). */
+function choiceDlg(title, body, labels){
+  return new Promise(res => {
+    const back = $("dlgBack"), ok = $("dlgOk"), alt = $("dlgAlt"), cancel = $("dlgCancel");
+    $("dlgInput").hidden = true;
+    $("dlgTitle").textContent = title; $("dlgBody").textContent = body;
+    ok.textContent = labels[0]; alt.textContent = labels[1]; cancel.textContent = labels[2]; alt.hidden = false; back.hidden = false;
+    const done = v => { back.hidden = true; alt.hidden = true; ok.onclick = alt.onclick = cancel.onclick = back.onclick = null; document.removeEventListener("keydown", onKey, true); res(v); };
+    const onKey = e => { if (e.key === "Escape"){ e.stopPropagation(); done(2); } };
+    ok.onclick = () => done(0); alt.onclick = () => done(1); cancel.onclick = () => done(2); back.onclick = e => { if (e.target === back) done(2); };
     document.addEventListener("keydown", onKey, true); ok.focus();
   });
 }
@@ -1834,6 +2069,12 @@ $("addRow").addEventListener("click", e => { if (!e.target.closest("#btnAdd")) $
 $("helpX").addEventListener("click", hideHelp); $("helpClose").addEventListener("click", hideHelp);
 $("helpBack").addEventListener("click", e => { if (e.target === $("helpBack")) hideHelp(); });
 $("helpTpl").addEventListener("click", downloadTemplate);
+$("pasteRow").addEventListener("click", showMake);
+$("makeX").addEventListener("click", hideMake); $("mkCancel").addEventListener("click", hideMake);
+$("makeBack").addEventListener("click", e => { if (e.target === $("makeBack")) hideMake(); });
+$("mkGo").addEventListener("click", makeFromPaste);
+for (const id of ["mkName", "mkSrc", "mkRows"]) $(id).addEventListener("input", makeInfo);
+window.addEventListener("hashchange", async () => { const k = await takeLink(); if (k) goList(k); });
 $("syncX").addEventListener("click", hideSyncPanel);
 $("syncBack").addEventListener("click", e => { if (e.target === $("syncBack")) hideSyncPanel(); });
 $("fileIn").addEventListener("change", () => { const f = $("fileIn").files[0]; if (f) importSheet(f); });
@@ -1862,6 +2103,7 @@ document.addEventListener("keydown", e => {
   if (!$("dlgBack").hidden) return;
   if (!$("syncBack").hidden){ if (e.key === "Escape") hideSyncPanel(); return; }
   if (!$("helpBack").hidden){ if (e.key === "Escape") hideHelp(); return; }
+  if (!$("makeBack").hidden){ if (e.key === "Escape") hideMake(); return; }
   if (level === "about"){ if (e.key === "Escape"){ e.preventDefault(); closeAbout(); } return; }
   if (level !== "study"){
     if (document.activeElement && ["INPUT","SELECT"].includes(document.activeElement.tagName)) return;
@@ -1892,13 +2134,14 @@ setTimeout(bootDone, 5000);                      // a safety net: never stay hid
   try {
     const p = new URLSearchParams(location.search), raw = p.get("list");
     if (raw !== null){
-      const k = canonKey(raw); if (WD_KEYS.includes(k)) linked = k;
+      const k = canonKey(raw); if (WD_KEYS.includes(k)) linked = k;   // (a #l= link, below, may still take its place)
       p.delete("list"); const qs = p.toString();
       history.replaceState(history.state, "", location.pathname + (qs ? "?" + qs : "") + location.hash);
     }
   } catch {}
   applyT();
   loadOwn();
+  { const k = await takeLink(); if (k) linked = k; }   // v0.36: a list in the link (#l=...) lands on this device and opens
   let wanted = null; try { wanted = localStorage.getItem(LIST_KEY); } catch {}
   wanted = canonKey(linked || wanted || (WD_KEYS.includes(FIRST_OPEN) ? FIRST_OPEN : WD_KEYS[0]));
   activeKey = wanted;
