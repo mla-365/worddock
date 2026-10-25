@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.37.1 ─────────────────────────────────────────
+/* ── WordDock — v0.37.2 ─────────────────────────────────────────
+   v0.37.2 (25 Oct): a tap on Good before the reveal reveals; the next tap grades. The same two-step as Enter and space,
+   so a thumb can stay on one spot (M). Again stays inert before the reveal.
    v0.37.1 (25 Oct): the tab names where you are: "LA-NL-L · WordDock", "All lists · WordDock", "About · WordDock"; the
    page's own title (search engines, link previews) stays "WordDock · Learn".
    v0.37 (25 Oct): on a PC the door moves to the top-left of every page (M: on a PC we are wired to look for navigation at
@@ -2040,7 +2042,7 @@ $("card").addEventListener("click", () => {
   if (showingA){ peeking = !peeking; renderCard(); return; }
   reveal();
 });
-$("btnGood").addEventListener("click", e => { gradeGood(); e.currentTarget.blur(); });
+$("btnGood").addEventListener("click", e => { if (!showingA && !deckDone) reveal(); else gradeGood(); e.currentTarget.blur(); });   // v0.37.2: like Enter: reveal first, then Good
 $("btnAgain").addEventListener("click", e => { gradeAgain(); e.currentTarget.blur(); });
 document.addEventListener("keydown", e => {
   if (!$("dlgBack").hidden) return;
