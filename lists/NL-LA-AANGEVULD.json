@@ -9,7 +9,7 @@
 {"ID":"0008","L":"A1.1","ENT":"schola","CAT":"zelfstandig naamwoord","SUB":"vrouwelijk","TAG":"uitspraak","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"school","a":"schola"},{"q":"schola: uitspraak?","a":"sko-la"}]},
 {"ID":"0009","L":"A1.1","ENT":"poena","CAT":"zelfstandig naamwoord","SUB":"vrouwelijk","TAG":"uitspraak","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"straf","a":"poena"},{"q":"poena: uitspraak?","a":"poi-na"}]},
 {"ID":"0010","L":"A1.1","ENT":"gaudium","CAT":"zelfstandig naamwoord","SUB":"onzijdig","TAG":"uitspraak","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"vreugde","a":"gaudium"},{"q":"gaudium: uitspraak?","a":"gau-di-um"}]},
-{"ID":"0011","L":"A1.2","ENT":"non","CAT":"bijwoord","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"niet","a":"non"},{"q":"non amo","a":"niet (ik bemin niet)"}]},
+{"ID":"0011","L":"A1.2","ENT":"non","CAT":"bijwoord","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"niet","a":"non"},{"q":"ik bemin niet","a":"non amo"}]},
 {"ID":"0012","L":"A1.2","ENT":"et","CAT":"voegwoord","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"en","a":"et"},{"q":"Caesar en Cicero","a":"Caesar et Cicero"}]},
 {"ID":"0013","L":"A1.2","ENT":"quoque","CAT":"bijwoord","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"ook","a":"quoque"},{"q":"ik ook","a":"ego quoque"}]},
 {"ID":"0014","L":"A1.2","ENT":"domi","CAT":"bijwoord","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"thuis","a":"domi"},{"q":"ik ben thuis","a":"domi sum"}]},
