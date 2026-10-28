@@ -62,7 +62,7 @@
 {"ID":"0061","ENT":"verus","CAT":"bijvoeglijk naamwoord","pairs":[{"q":"echt, waar","a":"verus"}]},
 {"ID":"0062","ENT":"multi","CAT":"bijvoeglijk naamwoord","pairs":[{"q":"veel","a":"multi"}]},
 {"ID":"0063","ENT":"pars","CAT":"zelfstandig naamwoord","SUB":"vrouwelijk","pairs":[{"q":"deel","a":"pars"}]},
-{"ID":"0064","ENT":"magnus","CAT":"bijvoeglijk naamwoord","pairs":[{"q":"grootvader","a":"magnus"}]},
+{"ID":"0064","ENT":"magnus","CAT":"bijvoeglijk naamwoord","pairs":[{"q":"groot","a":"magnus"}]},
 {"ID":"0065","ENT":"familia","CAT":"zelfstandig naamwoord","SUB":"vrouwelijk","pairs":[{"q":"familie","a":"familia"}]},
 {"ID":"0066","ENT":"murus","CAT":"zelfstandig naamwoord","SUB":"mannelijk","pairs":[{"q":"muur","a":"murus"}]},
 {"ID":"0067","ENT":"pater","CAT":"zelfstandig naamwoord","SUB":"mannelijk","pairs":[{"q":"vader","a":"pater"}]},
