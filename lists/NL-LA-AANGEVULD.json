@@ -16,7 +16,7 @@
 {"ID":"0015","L":"A1.2","ENT":"in+ablatief","CAT":"voorzetsel","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"in","a":"in"},{"q":"in de school","a":"in schola"}]},
 {"ID":"0016","L":"A1.2","ENT":"semper","CAT":"bijwoord","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"altijd","a":"semper"},{"q":"altijd thuis","a":"semper domi"}]},
 {"ID":"0017","L":"A1.2","ENT":"hic","CAT":"bijwoord","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"hier","a":"hic"},{"q":"hier thuis","a":"hic domi"}]},
-{"ID":"0018","L":"A1.2","ENT":"ubi?","CAT":"bijwoord","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"waar?","a":"ubi"},{"q":"Waar is Caesar?","a":"Ubi est Caesar?"}]},
+{"ID":"0018","L":"A1.2","ENT":"ubi?","CAT":"bijwoord","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"waar?","a":"ubi?"},{"q":"Waar is Caesar?","a":"Ubi est Caesar?"}]},
 {"ID":"0019","L":"A1.2","ENT":"ita","CAT":"bijwoord","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"ja","a":"ita"},{"q":"ja, thuis","a":"ita, domi"}]},
 {"ID":"0020","L":"A1.3","ENT":"amare","CAT":"werkwoord","SUB":"eerste vervoeging","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"beminnen, houden van","a":"amare"},{"q":"ik bemin","a":"amo"}]},
 {"ID":"0021","L":"A1.3","ENT":"laudare","CAT":"werkwoord","SUB":"eerste vervoeging","SRC":"M, concept 17 okt, v1b","pairs":[{"q":"prijzen","a":"laudare"},{"q":"ik prijs","a":"laudo"}]},
