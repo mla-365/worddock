@@ -35,7 +35,8 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.37.11 ─────────────────────────────────────────
+/* ── WordDock — v0.37.12 ─────────────────────────────────────────
+   v0.37.12 (29 Oct): the card's pill without bold and a little wider, so "NAME · 10/10 ✓" fits (M).
    v0.37.11 (29 Oct): on a PC the card's door reads "name · counter" as a solid green pill (no hover change) and the bottom
    counter is gone: one colour on a bare page (M). Phones unchanged.
    v0.37.10 (29 Oct): the bottom pill at the top door's size (13 px) and 10 px higher (M).
@@ -167,7 +168,7 @@ body.booting .pills{visibility:hidden}
 .corner{background:none;border:none;padding:4px 10px;min-width:140px;border-radius:999px;color:var(--green);font-size:13px;cursor:pointer;white-space:nowrap;text-align:center}   /* v0.37.5: one width for the four doors (M) */
 .corner::after{content:attr(data-t)}
 .corner:hover{background:var(--green);color:#fff}
-.corner.solid,.corner.solid:hover{background:var(--green);color:#fff;font-weight:600;font-variant-numeric:tabular-nums}   /* v0.37.11: the card's door, always filled */
+.corner.solid,.corner.solid:hover{background:var(--green);color:#fff;font-variant-numeric:tabular-nums;padding-left:16px;padding-right:16px}   /* v0.37.12: no bold, room for the ✓ of a done deck */   /* v0.37.11: the card's door, always filled */
 .corner[hidden]{display:none}
 /* All lists only: the sync line bottom left, About WordDock bottom right, both on the column's edges,
    a little above the bottom of the screen. */
