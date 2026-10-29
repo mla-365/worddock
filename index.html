@@ -35,7 +35,8 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.37.9 ─────────────────────────────────────────
+/* ── WordDock — v0.37.10 ─────────────────────────────────────────
+   v0.37.10 (29 Oct): the bottom pill at the top door's size (13 px) and 10 px higher (M).
    v0.37.9 (29 Oct): the PC Excel door pinned in a 52 px band at the foot of the window (the mirror of the top line), the pill
    at the true centre, the ? to its right (M).
    v0.37.8 (29 Oct): on a PC the Excel door is a centred pill at the foot of All lists, the twin of the top door; phones unchanged (M).
@@ -299,13 +300,13 @@ td.act{text-align:right;white-space:nowrap}
    the ? sits beside it. Phones keep the dashed box (their bottom bar holds the doors). */
 @media (min-width:641px){
   /* v0.37.9: pinned in a 52 px band at the foot of the window, like the top line; the pill is the true centre, the ? hangs to its right */
-  .add-row{position:fixed;left:0;right:0;bottom:0;height:52px;margin:0;padding:0 0 3px;border:none;background:var(--bg);cursor:default;
+  .add-row{position:fixed;left:0;right:0;bottom:0;height:62px;margin:0;padding:0 0 13px;border:none;background:var(--bg);cursor:default;
     display:flex;align-items:center;justify-content:center;gap:0;z-index:30}
   .add-row:hover{background:var(--bg);border-color:transparent}
-  .add{font-size:15px;font-weight:400;color:var(--green);padding:5px 14px;min-width:140px;border-radius:999px;text-align:center}
+  .add{font-size:13px;font-weight:400;color:var(--green);padding:4px 10px;min-width:140px;border-radius:999px;text-align:center}   /* the top door's size */
   .add:hover{text-decoration:none;background:var(--green);color:#fff}
   .add-row .help{position:absolute;left:calc(50% + var(--addw, 140px) / 2 + 12px)}
-  .cat{padding-bottom:72px}   /* room above the band */
+  .cat{padding-bottom:82px}   /* room above the band */
 }
 .dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px}
 .dlg input:focus{outline:none;border-color:var(--accent)}
