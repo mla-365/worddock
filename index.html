@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.37.8 ─────────────────────────────────────────
+/* ── WordDock — v0.37.9 ─────────────────────────────────────────
+   v0.37.9 (29 Oct): the PC Excel door pinned in a 52 px band at the foot of the window (the mirror of the top line), the pill
+   at the true centre, the ? to its right (M).
    v0.37.8 (29 Oct): on a PC the Excel door is a centred pill at the foot of All lists, the twin of the top door; phones unchanged (M).
    v0.37.7 (29 Oct): the class line at 30 px (M).
    v0.37.6 (29 Oct): the class line on the card sits 10 px lower (26 px from the top instead of 16), part of the card rather
@@ -296,10 +298,14 @@ td.act{text-align:right;white-space:nowrap}
 /* v0.37.8 (M): on a PC the Excel door mirrors the top door: a centred pill, green text, a green pill with white text on hover;
    the ? sits beside it. Phones keep the dashed box (their bottom bar holds the doors). */
 @media (min-width:641px){
-  .add-row{justify-content:center;gap:12px;margin:2.2rem 0 0;padding:0;border:none;background:none;cursor:default}
-  .add-row:hover{background:none;border-color:transparent}
+  /* v0.37.9: pinned in a 52 px band at the foot of the window, like the top line; the pill is the true centre, the ? hangs to its right */
+  .add-row{position:fixed;left:0;right:0;bottom:0;height:52px;margin:0;padding:0 0 3px;border:none;background:var(--bg);cursor:default;
+    display:flex;align-items:center;justify-content:center;gap:0;z-index:30}
+  .add-row:hover{background:var(--bg);border-color:transparent}
   .add{font-size:15px;font-weight:400;color:var(--green);padding:5px 14px;min-width:140px;border-radius:999px;text-align:center}
   .add:hover{text-decoration:none;background:var(--green);color:#fff}
+  .add-row .help{position:absolute;left:calc(50% + var(--addw, 140px) / 2 + 12px)}
+  .cat{padding-bottom:72px}   /* room above the band */
 }
 .dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px}
 .dlg input:focus{outline:none;border-color:var(--accent)}
@@ -1265,6 +1271,7 @@ function renderSection(id, lists, unit){
     tr.addEventListener("click", () => goList(l.key)); body.appendChild(tr);
   }
   $(id + "Empty").hidden = !(lists.length && !rows.length);
+  if (id === "my" && !isSmall()){ const w = $("btnAdd").getBoundingClientRect().width; if (w) $("addRow").style.setProperty("--addw", w + "px"); }   // v0.37.9
   const first = rows.length ? S.page * CAT_PAGE + 1 : 0, last = Math.min(rows.length, (S.page + 1) * CAT_PAGE);
   $(id + "Count").textContent = pages > 1 ? first + "–" + last + " / " + rows.length : "";
   $(id + "Prev").hidden = $(id + "Next").hidden = pages <= 1;
