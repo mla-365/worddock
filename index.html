@@ -35,7 +35,8 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.37.6 ─────────────────────────────────────────
+/* ── WordDock — v0.37.7 ─────────────────────────────────────────
+   v0.37.7 (29 Oct): the class line at 30 px (M).
    v0.37.6 (29 Oct): the class line on the card sits 10 px lower (26 px from the top instead of 16), part of the card rather
    than stuck to its edge (M). Low phone screens keep their own rule.
    v0.37.5 (29 Oct): the PC door has one minimum width (140 px) on all four pages, so the pill keeps one shape (M).
@@ -336,7 +337,7 @@ body.studying .top{position:relative;z-index:30}
 .card.s1::before,.card.s2::after{opacity:1}
 /* While the page starts, the list surfaces stay hidden: no flash of the list before the card. */
 body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
-.card-tag{position:absolute;top:26px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.card-tag{position:absolute;top:30px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
 .card-text{font-size:28px;text-align:center;white-space:pre-line;word-break:break-word;max-height:100%;overflow-y:auto}
 .card-text.q{color:var(--q)}.card-text.a{color:var(--fg)}
 .card.done{background:#f1f8f1;border-color:#b9dcbc}
