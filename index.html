@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.37.10 ─────────────────────────────────────────
+/* ── WordDock — v0.37.11 ─────────────────────────────────────────
+   v0.37.11 (29 Oct): on a PC the card's door reads "name · counter" as a solid green pill (no hover change) and the bottom
+   counter is gone: one colour on a bare page (M). Phones unchanged.
    v0.37.10 (29 Oct): the bottom pill at the top door's size (13 px) and 10 px higher (M).
    v0.37.9 (29 Oct): the PC Excel door pinned in a 52 px band at the foot of the window (the mirror of the top line), the pill
    at the true centre, the ? to its right (M).
@@ -165,6 +167,7 @@ body.booting .pills{visibility:hidden}
 .corner{background:none;border:none;padding:4px 10px;min-width:140px;border-radius:999px;color:var(--green);font-size:13px;cursor:pointer;white-space:nowrap;text-align:center}   /* v0.37.5: one width for the four doors (M) */
 .corner::after{content:attr(data-t)}
 .corner:hover{background:var(--green);color:#fff}
+.corner.solid,.corner.solid:hover{background:var(--green);color:#fff;font-weight:600;font-variant-numeric:tabular-nums}   /* v0.37.11: the card's door, always filled */
 .corner[hidden]{display:none}
 /* All lists only: the sync line bottom left, About WordDock bottom right, both on the column's edges,
    a little above the bottom of the screen. */
@@ -1023,14 +1026,15 @@ function renderBar(){
     c.hidden = true; k.classList.remove("count-only");
     $("bar").hidden = !(level === "list" || level === "catalog" || deckDoor);
   } else {                                                   // v0.37 PC: the door top-left; on the card only the counter stays at the bottom
+    // v0.37.11 (M): on the card the door is "name · counter" as a solid green pill, the one colour on the page; no bottom counter
+    const onCard = level === "study" && !!activeKey;
     const label = level === "list" ? T.dashboard : level === "catalog" ? T.aboutLink
-      : level === "study" && activeKey ? activeKey : level === "about" && deckDoor ? k.textContent : "";
+      : onCard ? (deckDoor ? k.textContent : activeKey) : level === "about" && deckDoor ? k.textContent : "";
     c.setAttribute("data-t", label); c.setAttribute("aria-label", label); c.hidden = !label;
+    c.classList.toggle("solid", onCard);
     $("listsLink").hidden = $("aboutLink").hidden = true;
-    const onCard = level === "study" && deckDoor;
-    k.hidden = !onCard; k.classList.toggle("count-only", onCard);
-    if (onCard) k.textContent = T.pillCount(deckScore, pipe.length, deckDone);
-    $("bar").hidden = !onCard;
+    k.hidden = true; k.classList.remove("count-only");
+    $("bar").hidden = true;
   }
   renderPills();
 }
