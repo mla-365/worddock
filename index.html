@@ -35,7 +35,8 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.37.4 ─────────────────────────────────────────
+/* ── WordDock — v0.37.5 ─────────────────────────────────────────
+   v0.37.5 (29 Oct): the PC door has one minimum width (140 px) on all four pages, so the pill keeps one shape (M).
    v0.37.4 (29 Oct): the PC door's hover is a green pill with white text, no bold (M).
    v0.37.3 (29 Oct): the PC door centred on the top line, green at rest, black and bold on hover, width held (M).
    v0.37.2 (25 Oct): a tap on Good before the reveal reveals; the next tap grades. The same two-step as Enter and space,
@@ -154,7 +155,7 @@ body.booting .pills{visibility:hidden}
 /* v0.31.1: the table's way out, "All lists", in the top left corner of the column. */
 .top-in{max-width:920px;margin:0 auto;padding:0 1.25rem;height:52px;display:flex;align-items:center;justify-content:center}   /* v0.37.3: the PC door centred */
 /* v0.37.4 (M): the PC door centred, green at rest; on hover a green pill with white text, like About's chosen topic; nothing shifts */
-.corner{background:none;border:none;padding:4px 10px;border-radius:999px;color:var(--green);font-size:13px;cursor:pointer;white-space:nowrap}
+.corner{background:none;border:none;padding:4px 10px;min-width:140px;border-radius:999px;color:var(--green);font-size:13px;cursor:pointer;white-space:nowrap;text-align:center}   /* v0.37.5: one width for the four doors (M) */
 .corner::after{content:attr(data-t)}
 .corner:hover{background:var(--green);color:#fff}
 .corner[hidden]{display:none}
