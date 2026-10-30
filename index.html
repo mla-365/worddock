@@ -35,7 +35,12 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.37.13 ─────────────────────────────────────────
+/* ── WordDock — v0.38 ─────────────────────────────────────────
+   v0.38 (30 Oct): a block at position n. A link may carry only new rows plus p, the row position of its first row. 🔗 on a My
+   list that was shared before asks: only the rows since the last share (wd_shared remembers the count per list) or the whole
+   list. Opening a block: no such list or a published name → refuse; the list ends at n-1 → append, progress untouched; the
+   list ends at n or later → the rows overwrite those positions, a row whose entry changed starts its score fresh, "Rows n–m
+   updated."; the list ends before n-1 → refuse, nothing changes. No merging by content, no holes (brief of 30 Oct).
    v0.37.13 (29 Oct): the dashed Excel box is back on a PC, in the flow under My lists, with more room above it (M).
    v0.37.12 (29 Oct): the card's pill without bold and a little wider, so "NAME · 10/10 ✓" fits (M).
    v0.37.11 (29 Oct): on a PC the card's door reads "name · counter" as a solid green pill (no hover change) and the bottom
@@ -521,6 +526,11 @@ const T = {
   linkBroken: "This link can't be read", linkBrokenBody: "It may have been cut off when it was shared. Ask for the link again.",
   noLinks: "This browser can't make or open WordDock links. Try a recent Chrome, Edge, Safari or Firefox.",
   srcLabel: "Source: ",
+  shareWhichQ: k => "Share " + k + ": which rows?", shareWhichBody: (a, b) => "You shared the first " + a + " rows before; " + b + " came after.",
+  shareNew: n => "Only the " + n + " new rows", shareAll: n => "The whole list (" + n + ")",
+  blockNoList: (k, n) => "This link starts at row " + n + ". You don't have " + k + " yet.", blockNoListBody: "Ask for the first rows first.",
+  blockGap: (k, have, n) => k + " on this device has " + have + " rows; this link starts at row " + n + ".", blockGapBody: "Ask for the missing rows first. Nothing was changed.",
+  blockUpdated: (n, m) => "Rows " + n + (m > n ? "–" + m : "") + " updated.", blockReset: r => " " + r + (r === 1 ? " row has a new word and starts fresh." : " rows have a new word and start fresh."),
   safeTitle: "Keep your progress safe?",
   safeBody: "Your scores live only in this browser and can be lost. A sync key keeps a copy, and brings them back on any device. You can also do this later: About WordDock › Devices and sync.",
   safeMake: "Make a key", safeLater: "Not now",
@@ -1553,13 +1563,13 @@ function packRows(rows){
     return arr;
   });
 }
-function unpackRows(arrs){
-  const rows = [];
+function unpackRows(arrs, start){
+  const rows = [], base = (start || 1) - 1;
   for (const a of arrs || []){
     if (!Array.isArray(a)) continue;
     const pairs = []; for (let i = 6; i + 1 < a.length; i += 2){ const q = cellText(a[i]), an = cellText(a[i + 1]); if (q && an) pairs.push({ q, a: an }); }
     if (!pairs.length) continue;
-    const row = { ID: String(rows.length + 1).padStart(4, "0"), pairs, ENT: cellText(a[0]) || pairs[0].a };
+    const row = { ID: String(base + rows.length + 1).padStart(4, "0"), pairs, ENT: cellText(a[0]) || pairs[0].a };
     const L = parseL(a[4]); if (L) row.L = L.text;
     [["CAT", 1], ["SUB", 2], ["TAG", 3], ["SRC", 5]].forEach(([k, i]) => { const v = cellText(a[i]); if (v) row[k] = v; });
     rows.push(row);
@@ -1569,13 +1579,15 @@ function unpackRows(arrs){
 const rowsSig = rows => JSON.stringify(packRows(normalizeRows(rows)));
 /* Four hex characters from the content: the same rows give the same four, whoever made them. */
 function fingerprint(str){ let h = 0x811c9dc5; for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).toUpperCase().padStart(8, "0").slice(0, 4); }
-async function linkFor(name, rows){
-  const json = JSON.stringify({ v: 1, n: name, r: packRows(rows) });
+async function linkFor(name, rows, p){   // v0.38: p = the row position of the link's first row (1-based); absent or 1 = the whole list
+  const o = { v: 1, n: name, r: packRows(rows) }; if (p > 1) o.p = p;
+  const json = JSON.stringify(o);
   return location.origin + location.pathname + "#" + LINK_TAG + b62Enc(await deflate(new TextEncoder().encode(json)));
 }
 async function readLink(data){
   const o = JSON.parse(new TextDecoder().decode(await deflate(b62Dec(data), true)));
-  return { name: keyFrom(o && o.n), rows: unpackRows(o && o.r) };
+  const p = o && Number.isInteger(o.p) && o.p > 1 ? o.p : 1;
+  return { name: keyFrom(o && o.n), rows: unpackRows(o && o.r, p), p };
 }
 /* Opening a link: the list lands on this device. Returns its name, or null. */
 async function takeLink(){
@@ -1585,6 +1597,7 @@ async function takeLink(){
   if (!canLink()){ await confirmDlg(T.linkBroken, T.noLinks, T.ok, null); return null; }
   let got = null; try { got = await readLink(data); } catch {}
   if (!got || !got.rows.length){ await confirmDlg(T.linkBroken, T.linkBrokenBody, T.ok, null); return null; }
+  if (got.p > 1) return await takeBlock(got);         // v0.38: a block at position n
   const sig = rowsSig(got.rows), base = got.name || "LIST", alt = base + "-" + fingerprint(sig);
   const sameAs = k => { const l = LISTS[k]; return !!(l && l.own && l.rows && JSON.stringify(packRows(l.rows)) === sig); };
   let key = isPublished(base) ? alt : base;
@@ -1601,12 +1614,43 @@ async function takeLink(){
   if (!putOwn(key, got.rows, keepPool)){ await confirmDlg(T.cantKeep, T.noRoom, T.ok, null); return null; }
   return key;
 }
-/* Sharing a My list: the phone's share sheet, else the clipboard, else the link to copy by hand. */
+/* v0.38: a block at position n, for the list of that name on this device (brief of 30 Oct, strict on gaps).
+   Appends when the list ends at n-1; overwrites positions n.. when it is longer (a row whose entry changed starts its
+   score fresh); refuses when the list is missing, published, or shorter than n-1. */
+async function takeBlock(got){
+  const key = got.name || "LIST", n = got.p, m = n + got.rows.length - 1;
+  const l = LISTS[key];
+  if (!l || !l.own || !l.rows || isPublished(key)){ await confirmDlg(T.blockNoList(key, n), T.blockNoListBody, T.ok, null); return null; }
+  const have = l.rows.length;
+  if (have < n - 1){ await confirmDlg(T.blockGap(key, have, n), T.blockGapBody, T.ok, null); return null; }
+  const o = readOwn(), rec = o[key]; if (!rec || !Array.isArray(rec.rows)) return null;
+  const raw = rec.rows.slice(0, n - 1).concat(got.rows);       // rows before n stay; n.. come from the link; anything after m goes
+  if (rec.rows.length > m) raw.push(...rec.rows.slice(m));     // rows beyond the block stay as they were
+  const fresh = normalizeRows(got.rows);
+  const pool = readPool(key); let reset = 0;
+  fresh.forEach((r, i) => { const old = l.rows[n - 1 + i]; if (old && strip(old.ENT) !== strip(r.ENT) && pool[r.ID] !== undefined){ delete pool[r.ID]; reset++; } });
+  if (!putOwn(key, raw, true)){ await confirmDlg(T.cantKeep, T.noRoom, T.ok, null); return null; }
+  try { localStorage.setItem(poolKey(key), JSON.stringify(pool)); } catch {}
+  if (activeKey === key) initDeck(LISTS[key].rows);
+  if (have >= n) await confirmDlg(T.blockUpdated(n, m) + (reset ? T.blockReset(reset) : ""), "", T.ok, null);
+  return key;
+}
+const SHARED_KEY = "wd_shared";   // v0.38: per list, how many rows were in the last link made from it (device only)
+function readShared(){ try { return JSON.parse(localStorage.getItem(SHARED_KEY)) || {}; } catch { return {}; } }
+function noteShared(key, n){ try { const m = readShared(); m[key] = n; localStorage.setItem(SHARED_KEY, JSON.stringify(m)); } catch {} }
+/* Sharing a My list: the phone's share sheet, else the clipboard, else the link to copy by hand.
+   v0.38: after a first share, 🔗 asks: the whole list, or only the rows since the last share (a block at position n). */
 async function shareLink(key){
   const l = LISTS[key]; if (!l || !l.rows) return;
   if (!canLink()){ await confirmDlg(T.shareLink, T.noLinks, T.ok, null); return; }
-  const url = await linkFor(key, l.rows), long = url.length > 4000;   // WhatsApp passes about 4,000 characters on a tap (M's test, 25 Oct)
-  const pairs = l.rows.reduce((n, r) => n + r.pairs.length, 0);
+  const since = readShared()[key] || 0; let rows = l.rows, p = 1;
+  if (since > 0 && since < l.rows.length){
+    const c = await choiceDlg(T.shareWhichQ(key), T.shareWhichBody(since, l.rows.length - since), [T.shareNew(l.rows.length - since), T.shareAll(l.rows.length), T.cancel]);
+    if (c === 2) return; if (c === 0){ rows = l.rows.slice(since); p = since + 1; }
+  }
+  const url = await linkFor(key, rows, p), long = url.length > 4000;   // WhatsApp passes about 4,000 characters on a tap (M's test, 25 Oct)
+  const pairs = rows.reduce((n, r) => n + r.pairs.length, 0);
+  noteShared(key, l.rows.length);
   if (navigator.share && window.matchMedia("(pointer:coarse)").matches){
     try { await navigator.share({ title: T.shareTitle(key), url }); return; } catch (e){ if (e && e.name === "AbortError") return; }
   }
