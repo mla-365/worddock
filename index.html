@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.38.1 ─────────────────────────────────────────
+/* ── WordDock — v0.38.2 ─────────────────────────────────────────
+   v0.38.2 (30 Oct): "✎ Make a list" (the sign tells the two doors apart, both green); the PC doors 160 px wide, so all four
+   labels fit in one width and nothing shifts (M).
    v0.38.1 (30 Oct): Make a list / Add rows, a form on the phone (brief of 30 Oct): "+ Make a list" beside the Excel door, ✎ on a
    My list; name (new) or the list's name (adding); Q and A, Q2 and A2 optional, a fold with CAT, SUB, TAG (kept for the next
    row; the list's own values as suggestions); the rows so far, newest last, a pencil for the text, × for rows not yet shared;
@@ -176,7 +178,7 @@ body.booting .pills{visibility:hidden}
 /* v0.31.1: the table's way out, "All lists", in the top left corner of the column. */
 .top-in{max-width:920px;margin:0 auto;padding:0 1.25rem;height:52px;display:flex;align-items:center;justify-content:center}   /* v0.37.3: the PC door centred */
 /* v0.37.4 (M): the PC door centred, green at rest; on hover a green pill with white text, like About's chosen topic; nothing shifts */
-.corner{background:none;border:none;padding:4px 10px;min-width:140px;border-radius:999px;color:var(--green);font-size:13px;cursor:pointer;white-space:nowrap;text-align:center}   /* v0.37.5: one width for the four doors (M) */
+.corner{background:none;border:none;padding:4px 10px;min-width:160px;border-radius:999px;color:var(--green);font-size:13px;cursor:pointer;white-space:nowrap;text-align:center}   /* v0.37.5: one width for the four doors (M) */
 .corner::after{content:attr(data-t)}
 .corner:hover{background:var(--green);color:#fff}
 .corner.solid,.corner.solid:hover{background:var(--green);color:#fff;font-variant-numeric:tabular-nums;padding-left:16px;padding-right:16px}   /* v0.37.12: no bold, room for the ✓ of a done deck */   /* v0.37.11: the card's door, always filled */
@@ -576,7 +578,7 @@ const T = {
   linkBroken: "This link can't be read", linkBrokenBody: "It may have been cut off when it was shared. Ask for the link again.",
   noLinks: "This browser can't make or open WordDock links. Try a recent Chrome, Edge, Safari or Firefox.",
   srcLabel: "Source: ",
-  make: "+ Make a list", makeName: "Name", fmTitleNew: "Make a list", fmTitleAdd: k => "Add rows to " + k,
+  make: "✎ Make a list", makeName: "Name", fmTitleNew: "Make a list", fmTitleAdd: k => "Add rows to " + k,
   fmQ: "Question", fmA: "Answer", fmQ2: "Question 2 (optional)", fmA2: "Answer 2 (optional)", fmMore: "more: CAT, SUB, TAG",
   fmNext: "Next row", fmDone: "Done", fmNeedQA: "A row needs a question and an answer.", fmNeedName: "Give the list a name.",
   fmNameHint: (k, n) => (k ? k + " · " : "") + n + " / 12" + (n > 12 ? " · long for a phone: as short as possible" : " · as short as possible"),
