@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.38.2 ─────────────────────────────────────────
+/* ── WordDock — v0.38.3 ─────────────────────────────────────────
+   v0.38.3 (30 Oct): the two doors under My lists slimmer (18 px text, less padding), no underline on hover (the box lightens);
+   All lists fits a laptop window again without a scrollbar (M).
    v0.38.2 (30 Oct): "✎ Make a list" (the sign tells the two doors apart, both green); the PC doors 160 px wide, so all four
    labels fit in one width and nothing shifts (M).
    v0.38.1 (30 Oct): Make a list / Add rows, a form on the phone (brief of 30 Oct): "+ Make a list" beside the Excel door, ✎ on a
@@ -155,6 +157,7 @@ button,select,input{font-family:inherit}
 
 /* ── the top line: empty, except on the card, where the counter sits in its middle. One height on
    every page, so the headings of the table and of All lists sit at the same y. ── */
+@media (min-width:641px){ html{scrollbar-gutter:stable} }   /* v0.38.3: the centre is the same whether a page scrolls or not */
 .top{position:relative;height:52px}
 /* ── the pills: one layer over every page, the column's width, its right end at the controls row.
    --pill-top is the y of that row on the table and on All lists (52 top + heading + sub line + the
@@ -269,18 +272,18 @@ tr.detail td{white-space:normal;padding:2px 10px 14px;border-bottom:.5px solid v
 .dg-n{font-family:var(--mono);font-size:12px}
 
 /* ── LISTS: three zones — WD lists on top, My lists in the middle, the door in at the bottom ── */
-.cat{display:none;max-width:920px;margin:0 auto;padding:.25rem 1.25rem 4rem;grid-template-rows:auto 1fr}   /* the same top as the table */
+.cat{display:none;max-width:920px;margin:0 auto;padding:.25rem 1.25rem 1.5rem;grid-template-rows:auto 1fr}   /* v0.38.3: no bottom bar on a PC any more */   /* the same top as the table */
 body.cataloging .cat{display:grid}
 body.cataloging .wrap{display:none}
-.zone-mid{align-self:start;padding:2.75rem 0 1.25rem}   /* a fixed step under the WD lists, not centred in what is left */
+.zone-mid{align-self:start;padding:1.75rem 0 .5rem}   /* v0.38.3: a shorter step */   /* a fixed step under the WD lists, not centred in what is left */
 /* The Excel door: a dashed box with a faint green tint at the end of the My lists it feeds;
    the whole box opens the file picker, the ? at its right opens the help. */
-.add-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:.9rem 0 0;padding:13px 16px;cursor:pointer;
+.add-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:.9rem 0 0;padding:9px 16px;cursor:pointer;   /* v0.38.3: slimmer, two doors fit without a scrollbar */
   border:1px dashed var(--line2);border-radius:12px;background:color-mix(in srgb,var(--green) 4%,transparent)}
 .add-row:hover{background:color-mix(in srgb,var(--green) 7%,transparent);border-color:var(--green2)}
 /* The ? beside the Excel line: a small round grey button, quiet until hovered. */
 /* v0.38.1: the form "Make a list" / "Add rows" */
-.add-row + .add-row{margin-top:.6rem}
+.add-row + .add-row{margin-top:.5rem}
 .form-dlg{max-width:560px;max-height:calc(100dvh - 48px);overflow:auto}
 .dlg .mk-l{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
 .dlg .mk-l[hidden]{display:none}
@@ -328,8 +331,7 @@ td.act{text-align:right;white-space:nowrap}
 /* v0.36.4: the source, on a PC only, at the end of the line under the heading */
 #dlgBack{z-index:70}   /* above the form */
 .sub .src a{color:inherit}
-.add{background:none;border:none;padding:0;color:var(--green2);font-weight:600;font-size:22px;line-height:1.3;cursor:pointer;text-align:left}   /* a heading, like the two above it */
-.add:hover{text-decoration:underline;text-underline-offset:3px}
+.add{background:none;border:none;padding:0;color:var(--green2);font-weight:600;font-size:18px;line-height:1.3;cursor:pointer;text-align:left}   /* v0.38.3: a step under the headings */
 /* v0.37.13 (M): the dashed Excel box is back on a PC, as it was, with more room above it; the pill version (v0.37.8 to v0.37.10) is gone */
 @media (min-width:641px){ .add-row{margin-top:2.2rem} }
 .dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px}
@@ -414,7 +416,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 }
 @media (max-width:640px){
   .wrap,.cat{padding-left:12px;padding-right:12px}
-  .h,.sec-h,.add{font-size:20px}
+  .h,.sec-h{font-size:20px}.add{font-size:17px}
   /* phone: the pills on a full line of their own under the heading; the controls row moves down under them */
   :root{--pill-top:126px}
   .pills-in{padding:0 12px;align-items:stretch}
