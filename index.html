@@ -35,7 +35,12 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.38 ─────────────────────────────────────────
+/* ── WordDock — v0.38.1 ─────────────────────────────────────────
+   v0.38.1 (30 Oct): Make a list / Add rows, a form on the phone (brief of 30 Oct): "+ Make a list" beside the Excel door, ✎ on a
+   My list; name (new) or the list's name (adding); Q and A, Q2 and A2 optional, a fold with CAT, SUB, TAG (kept for the next
+   row; the list's own values as suggestions); the rows so far, newest last, a pencil for the text, × for rows not yet shared;
+   shared rows keep their place (no delete, no move). No ENT, L, SRC: the place is the ID. Corrections travel by resharing
+   the whole list, not as blocks (M).
    v0.38 (30 Oct): a block at position n. A link may carry only new rows plus p, the row position of its first row. 🔗 on a My
    list that was shared before asks: only the rows since the last share (wd_shared remembers the count per list) or the whole
    list. Opening a block: no such list or a published name → refuse; the list ends at n-1 → append, progress untouched; the
@@ -272,6 +277,23 @@ body.cataloging .wrap{display:none}
   border:1px dashed var(--line2);border-radius:12px;background:color-mix(in srgb,var(--green) 4%,transparent)}
 .add-row:hover{background:color-mix(in srgb,var(--green) 7%,transparent);border-color:var(--green2)}
 /* The ? beside the Excel line: a small round grey button, quiet until hovered. */
+/* v0.38.1: the form "Make a list" / "Add rows" */
+.add-row + .add-row{margin-top:.6rem}
+.form-dlg{max-width:560px;max-height:calc(100dvh - 48px);overflow:auto}
+.dlg .mk-l{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
+.dlg .mk-l[hidden]{display:none}
+.dlg .mk-l input{display:block;width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:15px;margin:3px 0 0}
+.dlg .mk-l input:focus{outline:none;border-color:var(--accent)}
+.dlg .mk-hint{font-size:12.5px;color:var(--muted);margin:2px 0 10px;min-height:1.2em}
+.dlg .mk-hint.warn{color:#b45309}
+.fm-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+.fm-more{margin:4px 0 8px}.fm-more summary{font-size:13px;color:var(--sec);cursor:pointer;padding:4px 0}
+.fm-rows{margin:14px 0 0;border-top:.5px solid var(--line);max-height:220px;overflow:auto}
+.fm-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid var(--line);font-size:14px}
+.fm-row .n{font-family:var(--mono);font-size:12px;color:var(--muted);width:2.2em;flex:none}
+.fm-row .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--sec)}
+.fm-row .t b{color:var(--fg);font-weight:500}
+.fm-row .lock{font-size:11px;color:var(--muted)}
 .help{width:22px;height:22px;border-radius:50%;border:.5px solid var(--line2);background:none;color:var(--muted);font-size:13px;line-height:1;padding:0;cursor:pointer}
 .help:hover{color:var(--fg);border-color:var(--sec)}
 
@@ -302,7 +324,7 @@ td.act{text-align:right;white-space:nowrap}
 .ib.ln{font-size:13px;filter:grayscale(1);opacity:.75}   /* v0.36: share a My list as a link */
 .ib.ln:hover{opacity:1}
 /* v0.36.4: the source, on a PC only, at the end of the line under the heading */
-#dlgBack{z-index:70}   /* above the make dialog */
+#dlgBack{z-index:70}   /* above the form */
 .sub .src a{color:inherit}
 .add{background:none;border:none;padding:0;color:var(--green2);font-weight:600;font-size:22px;line-height:1.3;cursor:pointer;text-align:left}   /* a heading, like the two above it */
 .add:hover{text-decoration:underline;text-underline-offset:3px}
@@ -401,7 +423,8 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .top-in,.bar-in{padding:0 12px}
   .hide-s{display:none}
   input[type=search]{min-width:0;flex:1 1 150px}
-  .cat col.c-n{width:44px}.cat col.c-r{width:0}.cat col.c-s{width:78px}.cat col.c-a{width:108px}   /* room for "studying now", the date, and ↓ × */
+  .cat col.c-n{width:36px}.cat col.c-r{width:0}.cat col.c-s{width:56px}.cat col.c-a{width:140px}   /* v0.38.1: room for ↓ ✎ 🔗 × */
+  td.act{padding-left:0;padding-right:4px} td.act .ib{padding:3px 4px;font-size:15px}
   .cat td.rs{font-size:0;padding:0}   /* on a phone the RS sum sits under the word count; a hidden cell would shift the fixed columns */
   .cat td.id .rs-m{display:block}
   .card{height:200px;padding:24px 22px}
@@ -459,6 +482,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
     <table><colgroup><col><col class="c-n"><col class="c-r"><col class="c-s"><col class="c-a"></colgroup><tbody id="myBody"></tbody></table>
     <div class="empty" id="myEmpty" hidden data-t="noMatches"></div>
     <div class="add-row" id="addRow"><button class="add" id="btnAdd" data-t="add"></button><button class="help" id="btnHelp" data-t-aria="excelHelpAria">?</button></div>
+    <div class="add-row" id="makeRow"><button class="add" id="btnMake" data-t="make"></button></div>
   </section>
 </main>
 
@@ -487,6 +511,32 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   <div class="dlg" role="dialog" aria-modal="true">
     <h3 id="dlgTitle"></h3><p id="dlgBody"></p><input id="dlgInput" hidden autocomplete="off" spellcheck="false">
     <div class="dlg-actions"><button class="dlg-cancel" id="dlgCancel" data-t="cancel"></button><button class="dlg-cancel" id="dlgAlt" hidden></button><button class="dlg-ok" id="dlgOk" data-t="ok"></button></div>
+  </div>
+</div>
+
+<div class="dlg-back" id="formBack" hidden>
+  <div class="dlg sync-dlg form-dlg" role="dialog" aria-modal="true">
+    <button class="sync-x" id="formX" data-t-aria="close">&times;</button>
+    <h3 id="formTitle"></h3>
+    <label class="mk-l" id="fmNameL"><span data-t="makeName"></span><input id="fmName" autocomplete="off" spellcheck="false" autocapitalize="characters"></label>
+    <p class="mk-hint" id="fmNameHint"></p>
+    <div class="fm-grid">
+      <label class="mk-l"><span data-t="fmQ"></span><input id="fmQ1" autocomplete="off" spellcheck="false" enterkeyhint="next"></label>
+      <label class="mk-l"><span data-t="fmA"></span><input id="fmA1" autocomplete="off" spellcheck="false" enterkeyhint="next"></label>
+      <label class="mk-l"><span data-t="fmQ2"></span><input id="fmQ2" autocomplete="off" spellcheck="false" enterkeyhint="next"></label>
+      <label class="mk-l"><span data-t="fmA2"></span><input id="fmA2" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
+    </div>
+    <details class="fm-more" id="fmMore"><summary data-t="fmMore"></summary>
+      <div class="fm-grid">
+        <label class="mk-l"><span>CAT</span><input id="fmCat" list="fmCatList" autocomplete="off" spellcheck="false"></label>
+        <label class="mk-l"><span>SUB</span><input id="fmSub" list="fmSubList" autocomplete="off" spellcheck="false"></label>
+        <label class="mk-l"><span>TAG</span><input id="fmTag" autocomplete="off" spellcheck="false"></label>
+      </div>
+      <datalist id="fmCatList"></datalist><datalist id="fmSubList"></datalist>
+    </details>
+    <p class="mk-hint" id="fmInfo"></p>
+    <div class="dlg-actions sync-actions"><button class="dlg-cancel" id="fmNext" data-t="fmNext"></button><button class="dlg-ok" id="fmDone" data-t="fmDone"></button></div>
+    <div class="fm-rows" id="fmRows"></div>
   </div>
 </div>
 
@@ -526,6 +576,14 @@ const T = {
   linkBroken: "This link can't be read", linkBrokenBody: "It may have been cut off when it was shared. Ask for the link again.",
   noLinks: "This browser can't make or open WordDock links. Try a recent Chrome, Edge, Safari or Firefox.",
   srcLabel: "Source: ",
+  make: "+ Make a list", makeName: "Name", fmTitleNew: "Make a list", fmTitleAdd: k => "Add rows to " + k,
+  fmQ: "Question", fmA: "Answer", fmQ2: "Question 2 (optional)", fmA2: "Answer 2 (optional)", fmMore: "more: CAT, SUB, TAG",
+  fmNext: "Next row", fmDone: "Done", fmNeedQA: "A row needs a question and an answer.", fmNeedName: "Give the list a name.",
+  fmNameHint: (k, n) => (k ? k + " · " : "") + n + " / 12" + (n > 12 ? " · long for a phone: as short as possible" : " · as short as possible"),
+  fmRows: n => n + (n === 1 ? " row" : " rows"), fmShared: "shared",
+  fmEdit: "Change the text", fmDel: "Remove this row", fmLocked: "Shared rows keep their place, so pupils' progress stays.",
+  fmEditQ: (n) => "Row " + n + ": question", fmEditA: (n) => "Row " + n + ": answer",
+  addRows: "Add rows",
   shareWhichQ: k => "Share " + k + ": which rows?", shareWhichBody: (a, b) => "You shared the first " + a + " rows before; " + b + " came after.",
   shareNew: n => "Only the " + n + " new rows", shareAll: n => "The whole list (" + n + ")",
   blockNoList: (k, n) => "This link starts at row " + n + ". You don't have " + k + " yet.", blockNoListBody: "Ask for the first rows first.",
@@ -1270,6 +1328,8 @@ function renderSection(id, lists, unit){
     const tdA = document.createElement("td"); tdA.className = "act";
     if (l.rows || isPublished(l.key)){ const b = document.createElement("button"); b.className = "ib"; b.textContent = "↓"; b.title = T.excelOut(l.key);   // v0.32.3: drawn at once, the rows load on tap
       b.addEventListener("click", e => { e.stopPropagation(); exportList(l.key); }); tdA.appendChild(b); }
+    if (l.own){ const e = document.createElement("button"); e.className = "ib ln"; e.textContent = "✎"; e.title = T.addRows;   // v0.38.1: add rows on the phone
+      e.addEventListener("click", ev => { ev.stopPropagation(); openForm(l.key); }); tdA.appendChild(e); }
     if (l.own){ const k = document.createElement("button"); k.className = "ib ln"; k.textContent = "🔗"; k.title = T.shareLink;   // v0.36
       k.addEventListener("click", e => { e.stopPropagation(); shareLink(l.key); }); tdA.appendChild(k); }
     if (l.own){ const x = document.createElement("button"); x.className = "ib x"; x.textContent = "×"; x.title = T.removeHere;
@@ -1634,6 +1694,78 @@ async function takeBlock(got){
   if (activeKey === key) initDeck(LISTS[key].rows);
   if (have >= n) await confirmDlg(T.blockUpdated(n, m) + (reset ? T.blockReset(reset) : ""), "", T.ok, null);
   return key;
+}
+/* ── v0.38.1: Make a list / Add rows, a form on the phone (brief of 30 Oct). Rows go at the end, always; a row that was
+   shared (its place is within wd_shared) keeps its place: its text may change, it is never removed or moved. Rows not yet
+   shared may be removed. No ENT (A1), no L, no SRC: the row's place is its ID. ── */
+let fm = null;   // { key, isNew, rows: [raw rows], shared: n }
+function fmRaw(q, a, q2, a2, cat, sub, tag){
+  const r = { pairs: [{ q, a }] }; if (q2 && a2) r.pairs.push({ q: q2, a: a2 });
+  if (cat) r.CAT = cat; if (sub) r.SUB = sub; if (tag) r.TAG = tag; return r;
+}
+function openForm(key){
+  const isNew = !key;
+  fm = { key: key || "", isNew, rows: [], shared: 0 };
+  if (!isNew){ const rec = readOwn()[key]; if (!rec || !Array.isArray(rec.rows)) return; fm.rows = rec.rows.map(r => ({ ...r })); fm.shared = readShared()[key] || 0; }
+  $("formTitle").textContent = isNew ? T.fmTitleNew : T.fmTitleAdd(key);
+  $("fmNameL").hidden = !isNew; $("fmNameHint").hidden = !isNew; $("fmName").value = "";
+  for (const id of ["fmQ1", "fmA1", "fmQ2", "fmA2", "fmCat", "fmSub", "fmTag"]) $(id).value = "";
+  $("fmMore").open = false; $("fmInfo").textContent = ""; $("fmInfo").classList.remove("warn");
+  fmFillLists(); fmNameHint(); fmRenderRows();
+  $("formBack").hidden = false; (isNew ? $("fmName") : $("fmQ1")).focus();
+}
+function closeForm(){ $("formBack").hidden = true; fm = null; }
+function fmFillLists(){
+  const cats = new Set(), subs = new Set();
+  (fm.rows || []).forEach(r => { if (r.CAT) cats.add(r.CAT); toks(r.SUB).forEach(v => subs.add(v)); });
+  $("fmCatList").innerHTML = [...cats].map(v => "<option value=\"" + v.replace(/"/g, "&quot;") + "\">").join("");
+  $("fmSubList").innerHTML = [...subs].map(v => "<option value=\"" + v.replace(/"/g, "&quot;") + "\">").join("");
+}
+function fmNameHint(){ if (!fm || !fm.isNew) return; const k = keyFrom($("fmName").value), h = $("fmNameHint"); h.textContent = T.fmNameHint(k, k.length); h.classList.toggle("warn", k.length > 12); }
+function fmTakeRow(){
+  const q = $("fmQ1").value.trim(), a = $("fmA1").value.trim();
+  if (!q || !a){ $("fmInfo").textContent = T.fmNeedQA; $("fmInfo").classList.add("warn"); (!q ? $("fmQ1") : $("fmA1")).focus(); return false; }
+  fm.rows.push(fmRaw(q, a, $("fmQ2").value.trim(), $("fmA2").value.trim(), $("fmCat").value.trim(), $("fmSub").value.trim(), $("fmTag").value.trim()));
+  for (const id of ["fmQ1", "fmA1", "fmQ2", "fmA2"]) $(id).value = "";   // CAT, SUB, TAG stay for the next row
+  $("fmInfo").textContent = ""; $("fmInfo").classList.remove("warn"); fmFillLists(); fmRenderRows(); $("fmQ1").focus(); return true;
+}
+function fmRenderRows(){
+  const box = $("fmRows"); box.innerHTML = "";
+  fm.rows.forEach((r, i) => {
+    const d = document.createElement("div"); d.className = "fm-row";
+    const n = document.createElement("span"); n.className = "n"; n.textContent = i + 1;
+    const t = document.createElement("span"); t.className = "t"; const b = document.createElement("b"); b.textContent = r.pairs[0].q; t.append(b, " · " + r.pairs[0].a);
+    d.append(n, t);
+    const e = document.createElement("button"); e.className = "ib"; e.textContent = "✎"; e.title = T.fmEdit; e.addEventListener("click", () => fmEditRow(i)); d.appendChild(e);
+    if (i < fm.shared){ const l = document.createElement("span"); l.className = "lock"; l.textContent = T.fmShared; l.title = T.fmLocked; d.appendChild(l); }
+    else { const x = document.createElement("button"); x.className = "ib x"; x.textContent = "×"; x.title = T.fmDel; x.addEventListener("click", () => { fm.rows.splice(i, 1); fmRenderRows(); }); d.appendChild(x); }
+    box.appendChild(d);
+  });
+  $("fmInfo").textContent = fm.rows.length ? T.fmRows(fm.rows.length) : "";
+}
+async function fmEditRow(i){
+  const r = fm.rows[i]; if (!r) return;
+  const q = await promptDlg(T.fmEditQ(i + 1), "", r.pairs[0].q); if (q === null) return;
+  const a = await promptDlg(T.fmEditA(i + 1), "", r.pairs[0].a); if (a === null) return;
+  if (q.trim() && a.trim()){ r.pairs[0].q = q.trim(); r.pairs[0].a = a.trim(); if (r.ENT) delete r.ENT; }
+  fmRenderRows();
+}
+async function fmDone(){
+  if (!fm) return;
+  if ($("fmQ1").value.trim() || $("fmA1").value.trim()){ if (!fmTakeRow()) return; }   // a half-typed row goes in or stops Done
+  if (!fm.rows.length){ $("fmInfo").textContent = T.fmNeedQA; $("fmInfo").classList.add("warn"); return; }
+  let key = fm.key;
+  if (fm.isNew){
+    key = keyFrom($("fmName").value);
+    if (!key){ $("fmInfo").textContent = T.fmNeedName; $("fmInfo").classList.add("warn"); $("fmName").focus(); return; }
+    while (isPublished(key)){ const v = await promptDlg(T.isWd(key), T.nameYours(key + "-01"), key + "-01"); if (v === null) return; key = keyFrom(v); if (!key) return; }
+    const ex = LISTS[key] && LISTS[key].own && LISTS[key].rows ? LISTS[key] : null;
+    if (ex && !(await confirmDlg(T.linkReplaceQ(key), T.progressFresh, T.replace, T.keep))) return;
+  }
+  const rows = fm.rows.map((r, i) => ({ ...r, ID: String(i + 1).padStart(4, "0") }));
+  if (!putOwn(key, rows, !fm.isNew)){ await confirmDlg(T.cantKeep, T.noRoom, T.ok, null); return; }
+  if (activeKey === key) initDeck(LISTS[key].rows);
+  closeForm(); goList(key);
 }
 const SHARED_KEY = "wd_shared";   // v0.38: per list, how many rows were in the last link made from it (device only)
 function readShared(){ try { return JSON.parse(localStorage.getItem(SHARED_KEY)) || {}; } catch { return {}; } }
@@ -2083,6 +2215,13 @@ $("addRow").addEventListener("click", e => { if (!e.target.closest("#btnAdd")) $
 $("helpX").addEventListener("click", hideHelp); $("helpClose").addEventListener("click", hideHelp);
 $("helpBack").addEventListener("click", e => { if (e.target === $("helpBack")) hideHelp(); });
 $("helpTpl").addEventListener("click", downloadTemplate);
+$("makeRow").addEventListener("click", () => openForm(""));
+$("formX").addEventListener("click", closeForm);
+$("formBack").addEventListener("click", e => { if (e.target === $("formBack")) closeForm(); });
+$("fmNext").addEventListener("click", fmTakeRow); $("fmDone").addEventListener("click", fmDone);
+$("fmName").addEventListener("input", fmNameHint);
+for (const id of ["fmQ1", "fmA1", "fmQ2"]) $(id).addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $(id === "fmQ1" ? "fmA1" : id === "fmA1" ? "fmQ2" : "fmA2").focus(); } });
+$("fmA2").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); fmTakeRow(); } });
 window.addEventListener("hashchange", async () => { const k = await takeLink(); if (k) goList(k); });
 $("syncX").addEventListener("click", hideSyncPanel);
 $("syncBack").addEventListener("click", e => { if (e.target === $("syncBack")) hideSyncPanel(); });
@@ -2112,6 +2251,7 @@ document.addEventListener("keydown", e => {
   if (!$("dlgBack").hidden) return;
   if (!$("syncBack").hidden){ if (e.key === "Escape") hideSyncPanel(); return; }
   if (!$("helpBack").hidden){ if (e.key === "Escape") hideHelp(); return; }
+  if (!$("formBack").hidden){ if (e.key === "Escape" && $("dlgBack").hidden) closeForm(); return; }
   if (level === "about"){ if (e.key === "Escape"){ e.preventDefault(); closeAbout(); } return; }
   if (level !== "study"){
     if (document.activeElement && ["INPUT","SELECT"].includes(document.activeElement.tagName)) return;
