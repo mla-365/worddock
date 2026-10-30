@@ -35,7 +35,8 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.38.4 ─────────────────────────────────────────
+/* ── WordDock — v0.38.5 ─────────────────────────────────────────
+   v0.38.5 (30 Oct): "Send by email" withdrawn (a mailto: fails with Gmail in a tab); the phone share keeps title and text.
    v0.38.4 (30 Oct): a shared link carries a subject ("WordDock list: NAME") and a body (the tagline, "Open the list:", the
    link): in the phone's share sheet as title and text; on a PC the copied-link dialog gains "Send by email" (a mailto:).
    v0.38.3 (30 Oct): the two doors under My lists slimmer (18 px text, less padding), no underline on hover (the box lightens);
@@ -574,7 +575,7 @@ const T = {
   prevPage: "Previous page", nextPage: "Next page", study: "Study",
   again: "Again", good: "Good", ok: "OK", cancel: "Cancel", close: "Close", keep: "Keep",
   shareLink: "Share as a link", shareTitle: k => "WordDock list: " + k,
-  shareBody: url => "Your words. Your lists. One link.\n\nOpen the list:\n" + url, sendMail: "Send by email",
+  shareBody: url => "Your words. Your lists. One link.\n\nOpen the list:\n" + url,
   linkCopied: k => "The link to " + k + " is copied",
   linkCopiedBody: "Paste it in a mail, a chat or a video description. Whoever opens it gets this list on their device, with their own progress.",
   linkLong: n => "This link is long: " + n + " pairs. Mail usually works; WhatsApp cuts links above about 160 pairs, so send the Excel file (↓) there instead, or split the list.",
@@ -1790,18 +1791,14 @@ async function shareLink(key){
   const url = await linkFor(key, rows, p), long = url.length > 4000;   // WhatsApp passes about 4,000 characters on a tap (M's test, 25 Oct)
   const pairs = rows.reduce((n, r) => n + r.pairs.length, 0);
   noteShared(key, l.rows.length);
-  // v0.38.4: the share carries a subject and a body, so Mail from the share sheet (phone) or "Send by email" (PC) lands
-  // with a subject, the tagline and the link; mail clients build no link card of their own.
-  const subject = T.shareTitle(key), body = T.shareBody(url);
+  // v0.38.4: the phone's share sheet gets a title and a text (the tagline and the link), so Mail picked there lands with them.
+  // v0.38.5: the PC's "Send by email" (a mailto:) is withdrawn: it needs a mail program wired to the browser, and Gmail in a tab is none (M).
   if (navigator.share && window.matchMedia("(pointer:coarse)").matches){
-    try { await navigator.share({ title: subject, text: body, url }); return; } catch (e){ if (e && e.name === "AbortError") return; }
+    try { await navigator.share({ title: T.shareTitle(key), text: T.shareBody(url), url }); return; } catch (e){ if (e && e.name === "AbortError") return; }
   }
-  const mailto = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
   let copied = false; try { await navigator.clipboard.writeText(url); copied = true; } catch {}
-  if (copied){
-    const c = await choiceDlg(T.linkCopied(key), T.linkCopiedBody + (long ? " " + T.linkLong(pairs) : ""), [T.ok, T.sendMail, T.cancel]);
-    if (c === 1) location.href = mailto;
-  } else await promptDlg(T.copyThis, long ? T.linkLong(pairs) : "", url);
+  if (copied) await confirmDlg(T.linkCopied(key), T.linkCopiedBody + (long ? " " + T.linkLong(pairs) : ""), T.ok, null);
+  else await promptDlg(T.copyThis, long ? T.linkLong(pairs) : "", url);
 }
 /* v0.36: once per device, after the first done deck of a real list, when nothing keeps a copy. */
 const SAFE_KEY = "wd_safe_asked";
