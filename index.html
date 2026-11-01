@@ -29,13 +29,17 @@
 }
 </script>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#FAF0E6">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.38.5 ─────────────────────────────────────────
+/* ── WordDock — v0.39 ─────────────────────────────────────────
+   v0.39 (2 Nov): linen. The page colour is linen (#FAF0E6) on every view; cards, buttons and dialogs stay white, surfaces on the
+   strip. On the Study view a blind-embossed wordmark "WordDock" stands at the left edge, centred, bottom to top: white letters
+   raised by shadow alone, inert, under everything. The Bayeux image: a fixed linen strip, lists embroidered on it (handoff of 2 Nov).
+   No dark mode exists yet; the handoff's dark values (#1B1916, sunk letters) wait for one.
    v0.38.5 (30 Oct): "Send by email" withdrawn (a mailto: fails with Gmail in a tab); the phone share keeps title and text.
    v0.38.4 (30 Oct): a shared link carries a subject ("WordDock list: NAME") and a body (the tagline, "Open the list:", the
    link): in the phone's share sheet as title and text; on a PC the copied-link dialog gains "Send by email" (a mailto:).
@@ -148,7 +152,8 @@
    there the bottom door is the way out, and the counter lives in it.
    Engine from v26.98 except the finish line. Writes RS only at deck completion. */
 :root{
-  --bg:#fff;--fg:#1a1a18;--muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
+  --bg:#FAF0E6;--fg:#1a1a18;   /* v0.39: linen, the strip the lists are embroidered on (the Bayeux image); cards and dialogs stay white */
+  --muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
   --card:#f6f5ef;--accent:#185fa5;--green:#006600;--green2:#0a7a0a;--q:#6b6a64;
   --again:#b44a4a;--again-ink:#6e1010;--good:#006600;--good-ink:#006600;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
@@ -362,6 +367,13 @@ body.abouting .wrap,body.abouting .cat{display:none}
 .about-content a{color:var(--accent);text-underline-offset:2px}
 
 /* ── study: the list is gone; card + Again / Good ── */
+/* v0.39: the wordmark, blind-embossed on the linen, Study view only. White letters raised by shadow alone, no ink, no outline;
+   reads bottom to top at the left edge, centred; inert (no pointer, no selection, under everything). Tune the two shadows by eye. */
+.mark{display:none;position:fixed;left:calc(6px + env(safe-area-inset-left,0px));top:50%;transform:translateY(-50%) rotate(180deg);
+  writing-mode:vertical-rl;font-size:16px;letter-spacing:.08em;font-weight:600;color:#fff;
+  text-shadow:0 1px 1px rgba(60,45,30,.18),0 2px 3px rgba(60,45,30,.08);
+  pointer-events:none;user-select:none;-webkit-user-select:none;z-index:21;line-height:1}
+body.studying .mark{display:block}
 .study{position:fixed;inset:0;z-index:20;background:var(--bg);display:none;flex-direction:column;
   align-items:center;padding:0 16px}
 .study-block{position:absolute;left:16px;right:16px;top:max(42%, calc(var(--pill-top) + 56px + 138px));transform:translateY(-50%);   /* the card stays clear of the pills */
@@ -501,6 +513,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   </div>
 </main>
 
+<div class="mark" aria-hidden="true">WordDock</div>
 <section class="study" id="study" aria-hidden="true">
   <div class="study-block">
     <div class="card" id="card"><div class="card-tag" id="cardTag"></div><div class="card-text q" id="cardText">…</div></div>
