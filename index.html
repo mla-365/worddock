@@ -35,7 +35,10 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.40.1 ─────────────────────────────────────────
+/* ── WordDock — v0.41 ─────────────────────────────────────────
+   v0.41 (2 Nov, M): a bottom line on the card, TAG · L · ID, the mirror of CAT · SUB, same weight, always shown (for the
+   crafting months; to retire or subdue later) · a text card: a side over 80 characters or with a line break reads at 18 px,
+   left aligned, the card grows to two thirds of the screen before it scrolls; no column, decided from the content.
    v0.40.1 (2 Nov, M): on a PC the two doors under My lists are pinned at the bottom, the lowest where the card's counter
    pill sits; lists per section follow the screen height (fitCat, 5 to 20), as the list table does.
    v0.40 (2 Nov, M): the wordmark removed · the card centred on a PC · on the PC card the top door is the name alone and the
@@ -399,6 +402,11 @@ body.studying .top{position:relative;z-index:30}
 /* While the page starts, the list surfaces stay hidden: no flash of the list before the card. */
 body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 .card-tag{position:absolute;top:30px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.card-foot{position:absolute;bottom:30px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}   /* v0.41: TAG · L · ID, mirrored under the text (M, for crafting) */
+/* v0.41: a text card. A long answer (or question), or one with a line break, reads as text: smaller, left aligned,
+   the card grows to two thirds of the screen before it scrolls. Decided from the content, no column. */
+.card.text{height:auto;min-height:220px;max-height:66dvh;align-items:flex-start;padding-top:56px;padding-bottom:56px}
+.card.text .card-text{font-size:18px;line-height:1.5;text-align:left;max-height:calc(66dvh - 112px)}
 .card-text{font-size:28px;text-align:center;white-space:pre-line;word-break:break-word;max-height:100%;overflow-y:auto}
 .card-text.q{color:var(--q)}.card-text.a{color:var(--fg)}
 .card.done{background:#f1f8f1;border-color:#b9dcbc}
@@ -429,6 +437,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .study-block{top:calc(var(--pill-top) + 56px + (100dvh - var(--pill-top) - 56px) / 2)}
   .card{height:clamp(56px, calc(100dvh - var(--pill-top) - 56px - 70px), 150px);padding:10px 24px}
   .card-tag{top:6px;font-size:10px}
+  .card-foot{bottom:6px;font-size:10px}
   .card-text{font-size:22px}
   .actions{margin-top:8px}
   .btn{height:38px}
@@ -452,6 +461,8 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .cat td.id .rs-m{display:block}
   .card{height:200px;padding:24px 22px}
   .card-text{font-size:24px}
+  .card.text{height:auto;min-height:200px;max-height:calc(100dvh - 250px);padding-top:54px;padding-bottom:54px}   /* v0.41: the buttons and the bar stay on screen */
+  .card.text .card-text{font-size:17px;max-height:calc(100dvh - 358px)}
   .about{padding-left:12px;padding-right:12px}
   .about-h{font-size:20px}
   .about-panes{grid-template-columns:1fr;margin-top:calc(var(--pill-top) - 44px)}
@@ -519,7 +530,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 
 <section class="study" id="study" aria-hidden="true">
   <div class="study-block">
-    <div class="card" id="card"><div class="card-tag" id="cardTag"></div><div class="card-text q" id="cardText">…</div></div>
+    <div class="card" id="card"><div class="card-tag" id="cardTag"></div><div class="card-text q" id="cardText">…</div><div class="card-foot" id="cardFoot"></div></div>
     <div class="actions">
       <button class="btn btn-again" id="btnAgain" data-t="again"></button>
       <button class="btn btn-good" id="btnGood" data-t="good"></button>
@@ -1610,17 +1621,19 @@ function restoreDeck(rows){
 }
 function renderCard(){
   paintCounter();
-  const card = $("card"), text = $("cardText"), tag = $("cardTag");
-  card.classList.remove("s1", "s2");
-  if (deckDone){ card.classList.add("done"); tag.textContent = ""; text.textContent = T.deckDone; text.className = "card-text a"; return; }
+  const card = $("card"), text = $("cardText"), tag = $("cardTag"), foot = $("cardFoot");
+  card.classList.remove("s1", "s2", "text");
+  if (deckDone){ card.classList.add("done"); tag.textContent = foot.textContent = ""; text.textContent = T.deckDone; text.className = "card-text a"; return; }
   card.classList.remove("done");
-  if (!pipe.length){ tag.textContent = ""; text.textContent = "…"; return; }
+  if (!pipe.length){ tag.textContent = foot.textContent = ""; text.textContent = "…"; return; }
   const s = cur(), f = s.row.pairs[s.fi], c = (s.row.CAT || "").toUpperCase(), sub = (s.row.SUB || "").trim().toUpperCase();
   // An elaboration pair: the lemma's card(s) peek out above this one.
   card.classList.toggle("s1", s.fi >= 1); card.classList.toggle("s2", s.fi >= 2);
   tag.textContent = sub ? c + " · " + sub : c;
-  const showQ = !showingA || peeking;
-  text.textContent = showQ ? f.q : f.a; text.className = "card-text " + (showQ ? "q" : "a");
+  foot.textContent = [(s.row.TAG || "").trim(), (s.row.LVL || "").trim(), s.row.ID].filter(Boolean).join(" · ");   // v0.41: TAG · L · ID (a made list numbers its rows)
+  const showQ = !showingA || peeking, shown = showQ ? f.q : f.a;
+  card.classList.toggle("text", shown.length > 80 || shown.includes("\n"));   // v0.41: a text card
+  text.textContent = shown; text.className = "card-text " + (showQ ? "q" : "a");
 }
 
 /* ── Sync: ported from index.html v26.98 (the client only; the Worker is untouched).
