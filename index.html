@@ -35,7 +35,10 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.39 ─────────────────────────────────────────
+/* ── WordDock — v0.40 ─────────────────────────────────────────
+   v0.40 (2 Nov, M): the wordmark removed · the card centred on a PC · on the PC card the top door is the name alone and the
+   counter stands alone at the bottom, a pill that is no door · every PC door a green pill with white text, a shade lighter on hover (the two
+   doors under My lists too) · the ring unchanged (C: one door per page; two taps to All lists, one back).
    v0.39 (2 Nov): linen. The page colour is linen (#FAF0E6) on every view; cards, buttons and dialogs stay white, surfaces on the
    strip. On the Study view a blind-embossed wordmark "WordDock" stands at the left edge, centred, bottom to top: white letters
    raised by shadow alone, inert, under everything. The Bayeux image: a fixed linen strip, lists embroidered on it (handoff of 2 Nov).
@@ -154,7 +157,7 @@
 :root{
   --bg:#FAF0E6;--fg:#1a1a18;   /* v0.39: linen, the strip the lists are embroidered on (the Bayeux image); cards and dialogs stay white */
   --muted:#8a8980;--sec:#56554f;--line:#e7e6df;--line2:#cfcdc4;
-  --card:#f6f5ef;--accent:#185fa5;--green:#006600;--green2:#0a7a0a;--q:#6b6a64;
+  --card:#f6f5ef;--accent:#185fa5;--green:#006600;--green2:#0a7a0a;--pill:#0a7a0a;--pill2:#1a8a1a;--q:#6b6a64;
   --again:#b44a4a;--again-ink:#6e1010;--good:#006600;--good-ink:#006600;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 *{box-sizing:border-box}
@@ -189,10 +192,9 @@ body.booting .pills{visibility:hidden}
 /* v0.31.1: the table's way out, "All lists", in the top left corner of the column. */
 .top-in{max-width:920px;margin:0 auto;padding:0 1.25rem;height:52px;display:flex;align-items:center;justify-content:center}   /* v0.37.3: the PC door centred */
 /* v0.37.4 (M): the PC door centred, green at rest; on hover a green pill with white text, like About's chosen topic; nothing shifts */
-.corner{background:none;border:none;padding:4px 10px;min-width:160px;border-radius:999px;color:var(--green);font-size:13px;cursor:pointer;white-space:nowrap;text-align:center}   /* v0.37.5: one width for the four doors (M) */
+.corner{background:var(--pill);border:none;padding:4px 16px;min-width:160px;border-radius:999px;color:#fff;font-size:13px;cursor:pointer;white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums}   /* v0.40: every PC door a green pill, white text (M) */
 .corner::after{content:attr(data-t)}
-.corner:hover{background:var(--green);color:#fff}
-.corner.solid,.corner.solid:hover{background:var(--green);color:#fff;font-variant-numeric:tabular-nums;padding-left:16px;padding-right:16px}   /* v0.37.12: no bold, room for the ✓ of a done deck */   /* v0.37.11: the card's door, always filled */
+.corner:hover{background:var(--pill2)}   /* v0.40: a shade lighter on hover, nothing else moves */
 .corner[hidden]{display:none}
 /* All lists only: the sync line bottom left, About WordDock bottom right, both on the column's edges,
    a little above the bottom of the screen. */
@@ -206,7 +208,7 @@ body.booting .pills{visibility:hidden}
 .sync-note{font-size:13px;color:var(--muted);margin:.2rem 0 1rem;cursor:pointer}
 .sync-note:hover{color:var(--green)}
 .bar .door-b[hidden]{display:none}
-.bar .door-b.count-only{cursor:default}.bar .door-b.count-only:hover{color:var(--muted)}   /* v0.37 PC card: the counter, not a door */
+.bar .door-b.count-only{cursor:default;background:var(--pill);color:#fff;padding:4px 16px;min-width:160px;border-radius:999px;text-align:center;font-variant-numeric:tabular-nums}.bar .door-b.count-only:hover{color:#fff}   /* v0.40 PC card: the counter, a green pill, not a door */
 
 /* ── list surface ── */
 .wrap{max-width:920px;margin:0 auto;padding:.25rem 1.25rem 4rem}
@@ -339,9 +341,15 @@ td.act{text-align:right;white-space:nowrap}
 /* v0.36.4: the source, on a PC only, at the end of the line under the heading */
 #dlgBack{z-index:70}   /* above the form */
 .sub .src a{color:inherit}
-.add{background:none;border:none;padding:0;color:var(--green2);font-weight:600;font-size:18px;line-height:1.3;cursor:pointer;text-align:left}   /* v0.38.3: a step under the headings */
+.add{background:none;border:none;padding:0;color:var(--green2);font-weight:600;font-size:18px;line-height:1.3;cursor:pointer;text-align:left}
 /* v0.37.13 (M): the dashed Excel box is back on a PC, as it was, with more room above it; the pill version (v0.37.8 to v0.37.10) is gone */
-@media (min-width:641px){ .add-row{margin-top:2.2rem} }
+@media (min-width:641px){   /* v0.40: on a PC the two doors under My lists are green pills like the top door */
+  .add-row{margin-top:1.4rem;padding:0;border:none;background:none;justify-content:center;gap:12px;cursor:default}
+  .add-row:hover{background:none;border-color:transparent}
+  .add{background:var(--pill);color:#fff;font-weight:400;font-size:13px;padding:4px 16px;min-width:160px;border-radius:999px;text-align:center}
+  .add:hover{background:var(--pill2)}
+  .add-row + .add-row{margin-top:.6rem}
+}
 .dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px}
 .dlg input:focus{outline:none;border-color:var(--accent)}
 
@@ -367,16 +375,9 @@ body.abouting .wrap,body.abouting .cat{display:none}
 .about-content a{color:var(--accent);text-underline-offset:2px}
 
 /* ── study: the list is gone; card + Again / Good ── */
-/* v0.39: the wordmark, blind-embossed on the linen, Study view only. White letters raised by shadow alone, no ink, no outline;
-   reads bottom to top at the left edge, centred; inert (no pointer, no selection, under everything). Tune the two shadows by eye. */
-.mark{display:none;position:fixed;left:calc(6px + env(safe-area-inset-left,0px));top:50%;transform:translateY(-50%) rotate(180deg);
-  writing-mode:vertical-rl;font-size:16px;letter-spacing:.08em;font-weight:600;color:#fff;
-  text-shadow:0 1px 1px rgba(60,45,30,.18),0 2px 3px rgba(60,45,30,.08);
-  pointer-events:none;user-select:none;-webkit-user-select:none;z-index:21;line-height:1}
-body.studying .mark{display:block}
 .study{position:fixed;inset:0;z-index:20;background:var(--bg);display:none;flex-direction:column;
   align-items:center;padding:0 16px}
-.study-block{position:absolute;left:16px;right:16px;top:max(42%, calc(var(--pill-top) + 56px + 138px));transform:translateY(-50%);   /* the card stays clear of the pills */
+.study-block{position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);   /* v0.40: centred (M); the phone keeps its own rule below */
   display:flex;flex-direction:column;align-items:center}
 body.studying .study{display:flex}
 body.studying .wrap{display:none}
@@ -513,7 +514,6 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   </div>
 </main>
 
-<div class="mark" aria-hidden="true">WordDock</div>
 <section class="study" id="study" aria-hidden="true">
   <div class="study-block">
     <div class="card" id="card"><div class="card-tag" id="cardTag"></div><div class="card-text q" id="cardText">…</div></div>
@@ -1110,12 +1110,13 @@ function renderBar(){
     // v0.37.11 (M): on the card the door is "name · counter" as a solid green pill, the one colour on the page; no bottom counter
     const onCard = level === "study" && !!activeKey;
     const label = level === "list" ? T.dashboard : level === "catalog" ? T.aboutLink
-      : onCard ? (deckDoor ? k.textContent : activeKey) : level === "about" && deckDoor ? k.textContent : "";
+      : onCard ? activeKey : level === "about" && deckDoor ? k.textContent : "";   // v0.40: the card's top door is the name alone
     c.setAttribute("data-t", label); c.setAttribute("aria-label", label); c.hidden = !label;
-    c.classList.toggle("solid", onCard);
     $("listsLink").hidden = $("aboutLink").hidden = true;
-    k.hidden = true; k.classList.remove("count-only");
-    $("bar").hidden = true;
+    const counter = onCard && deckDoor;                                             // v0.40: the counter alone at the bottom, a pill, no door
+    k.hidden = !counter; k.classList.toggle("count-only", counter);
+    if (counter) k.textContent = T.pillCount(deckScore, pipe.length, deckDone);
+    $("bar").hidden = !counter;
   }
   renderPills();
 }
