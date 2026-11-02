@@ -35,7 +35,9 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.40 ─────────────────────────────────────────
+/* ── WordDock — v0.40.1 ─────────────────────────────────────────
+   v0.40.1 (2 Nov, M): on a PC the two doors under My lists are pinned at the bottom, the lowest where the card's counter
+   pill sits; lists per section follow the screen height (fitCat, 5 to 20), as the list table does.
    v0.40 (2 Nov, M): the wordmark removed · the card centred on a PC · on the PC card the top door is the name alone and the
    counter stands alone at the bottom, a pill that is no door · every PC door a green pill with white text, a shade lighter on hover (the two
    doors under My lists too) · the ring unchanged (C: one door per page; two taps to All lists, one back).
@@ -344,11 +346,12 @@ td.act{text-align:right;white-space:nowrap}
 .add{background:none;border:none;padding:0;color:var(--green2);font-weight:600;font-size:18px;line-height:1.3;cursor:pointer;text-align:left}
 /* v0.37.13 (M): the dashed Excel box is back on a PC, as it was, with more room above it; the pill version (v0.37.8 to v0.37.10) is gone */
 @media (min-width:641px){   /* v0.40: on a PC the two doors under My lists are green pills like the top door */
-  .add-row{margin-top:1.4rem;padding:0;border:none;background:none;justify-content:center;gap:12px;cursor:default}
+  .cat{padding-bottom:88px}   /* v0.40.1: room for the two doors pinned at the bottom */
+  .add-row{position:fixed;left:0;right:0;bottom:65px;margin:0;padding:0;border:none;background:none;justify-content:center;gap:12px;cursor:default;z-index:40}
+  #makeRow{bottom:29px}   /* v0.40.1: the lowest door sits where the card's counter pill sits (M) */
   .add-row:hover{background:none;border-color:transparent}
   .add{background:var(--pill);color:#fff;font-weight:400;font-size:13px;padding:4px 16px;min-width:160px;border-radius:999px;text-align:center}
   .add:hover{background:var(--pill2)}
-  .add-row + .add-row{margin-top:.6rem}
 }
 .dlg input{width:100%;height:36px;padding:0 10px;border:.5px solid var(--line2);border-radius:8px;font-size:14px;margin:-8px 0 16px}
 .dlg input:focus{outline:none;border-color:var(--accent)}
@@ -743,7 +746,8 @@ function labelsOf(key){
   const m = String(key).match(/^([A-Za-z]{2})-([A-Za-z]{2})(?:-(.+))?$/);
   return m ? { q: m[1].toUpperCase(), a: m[2].toUpperCase() } : { q: T.colQ, a: T.colA };
 }
-const LISTS_DIR = "lists/", ROW_H = 38, DECK_SIZE = 10, CAT_PAGE = 5;
+const LISTS_DIR = "lists/", ROW_H = 38, DECK_SIZE = 10;
+let CAT_PAGE = 5;   // v0.40.1: lists per section follow the screen height on a PC (fitCat), 5 on a phone
 const DECK_KEY = "wd_deck", LIST_KEY = "wd_list", OWN_KEY = "wd_mylists", VIEW_KEY = k => "wd_view_" + k;   /* the app's own keys (v0.34: renamed; the earlier keys are removed at boot, nothing is copied: M, 24 Oct) */
 try { for (const k of Object.keys(localStorage)) if (k.startsWith("wd_lens_")) localStorage.removeItem(k); } catch {}
 const OWN_SUFFIX = "-OWN";
@@ -1323,6 +1327,20 @@ function renderCatalog(){
   renderSection("my", all.filter(l => l.own), T.onThisDevice);
   renderSyncLine();
   renderPos();
+  if (fitCat()) renderCatalog();
+}
+/* v0.40.1: as many lists per section as fit above the two pinned doors, never a scrollbar; 5 on a phone. */
+function fitCat(){
+  const next = (() => {
+    if (isSmall()) return 5;
+    const tb = $("myBody"), tr = tb.querySelector("tr");
+    const rowH = tr ? tr.getBoundingClientRect().height : ROW_H;
+    const shown = $("wdBody").querySelectorAll("tr").length + tb.querySelectorAll("tr").length;   // a short section leaves room that is not spare
+    const free = window.innerHeight - 116 - (tb.closest("table").getBoundingClientRect().bottom + window.scrollY) - (2 * CAT_PAGE - shown) * rowH;
+    return Math.max(5, Math.min(20, CAT_PAGE + Math.floor(free / rowH / 2)));
+  })();
+  if (next === CAT_PAGE) return false;
+  CAT_PAGE = next; return true;
 }
 function renderSection(id, lists, unit){
   const S = CAT[id], qq = strip(S.q), body = $(id + "Body");
