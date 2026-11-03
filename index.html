@@ -35,7 +35,11 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.41 ─────────────────────────────────────────
+/* ── WordDock — v0.41.1 ─────────────────────────────────────────
+   v0.41.1 (3 Nov, M): SRC moves to the last column of the sheet (template, export, Read me, help): a crafter's field, after
+   the pairs, where comment columns may follow. Read by name, so older sheets work. SRC is a short key (caesar-bg), not a
+   citation: it travels with the row through the bazaar, where footnote numbers would collide. The link order is unchanged
+   (positional, SRC at 5; older links must open).
    v0.41 (2 Nov, M): a bottom line on the card, TAG · L · ID, the mirror of CAT · SUB, same weight, always shown (for the
    crafting months; to retire or subdue later) · a text card: a side over 80 characters or with a line break reads at 18 px,
    left aligned, the card grows to two thirds of the screen before it scrolls; no column, decided from the content.
@@ -670,8 +674,8 @@ const T = {
   excelHelp2: "Try it first as it is: it becomes a small list you can study, and remove again with ×.",
   // the template: a note on each header cell, and the same lines on a second sheet "Read me"
   tplNotes: { ENT: "the word itself (empty: A1 is taken)", CAT: "word class", SUB: "what the word is: m, f, irregular …", TAG: "where it belongs: a theme, a text …",
-    L: "level: A1 … C2, or A1.3 for a unit", SRC: "where the row comes from (a book, a site); empty = your own", Q1: "the question", A1: "the answer", Q2: "the same word, deeper: a prompt (gen., mv. …)", A2: "… and its answer, up to Q10 · A10" },
-  tplReadme: ["WordDock: a list from an Excel sheet", "", "Name the columns in the first row: ENT · CAT · SUB · TAG · L · SRC · Q1 · A1 … Q10 · A10.",
+    L: "level: A1 … C2, or A1.3 for a unit", Q1: "the question", A1: "the answer", Q2: "the same word, deeper: a prompt (gen., mv. …)", A2: "… and its answer, up to Q10 · A10", SRC: "where a row comes from, as a short key (caesar-bg, wolters-3); empty = your own" },
+  tplReadme: ["WordDock: a list from an Excel sheet", "", "Name the columns in the first row: ENT · CAT · SUB · TAG · L · Q1 · A1 … Q10 · A10 · SRC.",
     "Only Q1 and A1 are required in a row; the rest may stay empty.", "", "@notes", "",
     "The file name becomes the list name, in capitals: NL-LA-Test.xlsx → NL-LA-TEST.",
     "Three example rows: the shortest possible (water · aqua), a full one (amare, with a source in SRC), and a re-entry row (amare again at A2.1, with its persons).",
@@ -730,7 +734,7 @@ const T = {
     { id: "wdlists", title: "Published lists", paras: [
       "Lists made and tested by users, then published on WordDock, so every user can study them at once." ] },
     { id: "mylists", title: "My lists", paras: [
-      "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>ENT · CAT · SUB · TAG · L · SRC · Q1 · A1 … Q10 · A10</code>. Only Q1 and A1 are required in each row." ] },
+      "Add a list from an Excel sheet (<code>.xlsx</code>). The file name becomes the list name. The columns are read by their names, in any order: <code>ENT · CAT · SUB · TAG · L · Q1 · A1 … Q10 · A10 · SRC</code>. Only Q1 and A1 are required in each row." ] },
     { id: "contact", title: "Contact", paras: [
       "Working together through exchange is one of the main purposes of WordDock. If you'd like to take part, write to info@worddock.app." ] },
     { id: "more", title: "More", paras: [
@@ -932,11 +936,12 @@ function readSheet(buf){
 }
 /* The sheet out: the curator's layout, every cell as Text, so it comes back in unchanged. File name = the key. */
 function sheetOut(l){
-  const H = ["ENT", "CAT", "SUB", "TAG", "L", "SRC"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
+  const H = ["ENT", "CAT", "SUB", "TAG", "L"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i); H.push("SRC");   // v0.41.1: SRC last (M, 3 Nov)
   const aoa = [H];
   for (const r of l.rows){
-    const arr = [r.ENT || null, r.CAT || null, r.SUB || null, r.TAG || null, r.LVL ?? null, r.SRC || null];
+    const arr = [r.ENT || null, r.CAT || null, r.SUB || null, r.TAG || null, r.LVL ?? null];
     for (let i = 0; i < 10; i++){ const p = r.pairs[i]; arr.push(p ? p.q : null, p ? p.a : null); }
+    arr.push(r.SRC || null);
     aoa.push(arr);
   }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -947,10 +952,11 @@ function sheetOut(l){
 }
 /* The template: the header row, the shortest legitimate row (Q1 + A1 only), and a full one. */
 function templateOut(){
-  const H = ["ENT", "CAT", "SUB", "TAG", "L", "SRC"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i);
-  const r1 = [null, null, null, null, null, null, "water", "aqua"];   // v0.35.1: the smallest valid row, a full row, a re-entry row
-  const r2 = ["amare", "werkwoord", "eerste vervoeging", "basis", "A1.3", "a textbook, lesson 3", "beminnen", "amare", "amare: vervoeging?", "eerste", "ik bemin", "amo"];
-  const r3 = ["amare", "werkwoord", "eerste vervoeging", "basis", "A2.1", null, "jij bemint", "amas", "hij bemint", "amat", "wij beminnen", "amamus"];
+  const H = ["ENT", "CAT", "SUB", "TAG", "L"]; for (let i = 1; i <= 10; i++) H.push("Q" + i, "A" + i); H.push("SRC");   // v0.41.1: SRC last, a short key
+  const r1 = [null, null, null, null, null, "water", "aqua"];   // v0.35.1: the smallest valid row, a full row, a re-entry row
+  const r2 = ["amare", "werkwoord", "eerste vervoeging", "basis", "A1.3", "beminnen", "amare", "amare: vervoeging?", "eerste", "ik bemin", "amo"];
+  r2[25] = "textbook-3";
+  const r3 = ["amare", "werkwoord", "eerste vervoeging", "basis", "A2.1", "jij bemint", "amas", "hij bemint", "amat", "wij beminnen", "amamus"];
   const ws = XLSX.utils.aoa_to_sheet([H, r1, r2, r3]);
   for (const addr of Object.keys(ws)) if (addr[0] !== "!"){ ws[addr].t = "s"; ws[addr].v = String(ws[addr].v); ws[addr].z = "@"; }
   ws["!cols"] = H.map((h, i) => ({ wch: i < 6 ? 12 : 14 }));
