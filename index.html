@@ -35,7 +35,11 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.42 ─────────────────────────────────────────
+/* ── WordDock — v0.42.1 ─────────────────────────────────────────
+   v0.42.1 (4 Nov, M and L): the card's height no longer changes between Q and A (it flickered on verb paradigms).
+   The word card is three lines of entry text high (236 px PC, 216 px phone), content centred; the text card has one
+   fixed height, top aligned, scrolling inside; the mode is decided per list: a list with any text pair shows every
+   card at the text height, so nothing moves within a deck (M: general stability). .tall is gone.
    v0.42 (4 Nov, M): the shelf comes from a catalog: lists/index.json (published) and lists/devel.json (the second
    stage, worddock.app/devel, the device remembers the shelf, amber pills, "In the making"); one line per list (n, w,
    src, since), so the shelf costs one fetch and a list is published by adding its JSON and one line. WD_LISTS goes.
@@ -400,7 +404,7 @@ body.abouting .wrap,body.abouting .cat{display:none}
 body.studying .study{display:flex}
 body.studying .wrap{display:none}
 body.studying .top{position:relative;z-index:30}
-.card{width:100%;max-width:680px;height:220px;background:#fff;border:1px solid var(--line);border-radius:18px;
+.card{width:100%;max-width:680px;height:236px;background:#fff;border:1px solid var(--line);border-radius:18px;
   box-shadow:0 10px 36px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:center;
   padding:28px 40px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;
   transition:background-color .2s,border-color .2s;user-select:none}
@@ -419,10 +423,12 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
    the card grows to two thirds of the screen before it scrolls. Decided from the content, no column.
    v0.41.3: a side of two or three short lines stays a word card that grows (.tall); a column of short lines (.col,
    a conjugation) is a block centred in the card with its lines left aligned, so the stems line up (M). */
-.card.text{height:auto;min-height:220px;max-height:66dvh;align-items:flex-start;padding-top:56px;padding-bottom:56px}
-.card.text .card-text{font-size:18px;line-height:1.5;text-align:left;max-height:calc(66dvh - 112px)}
-.card.tall{height:auto;min-height:220px;padding-top:56px;padding-bottom:56px}
+.card.text{height:min(66dvh, 400px);padding-top:56px;padding-bottom:56px}   /* v0.42.1: the text height, one per list */
+.card.prose{align-items:flex-start}                                             /* the side shown is text: smaller, top, left */
+.card.prose .card-text{font-size:18px;line-height:1.5;text-align:left;max-height:100%}
 .card.col .card-text{text-align:left}
+/* v0.42.1 (M, L): the card's height never changes between Q and A. The word card is three lines of entry text
+   high (236 px on a PC), whatever the side shows; the mode (word or text) is decided from both sides of the pair. */
 /* v0.42: the devel shelf (worddock.app/devel) is the same app on a second catalog; its pills are amber so a curator sees where she is. */
 body.devel{--pill:#b7791f;--pill2:#c98a2b}
 body.devel .pill{background:var(--pill);border-color:var(--pill)}   /* the shelf's deck button too, so a phone shows it */
@@ -480,11 +486,10 @@ body.devel .bar .door-b.count-only{background:var(--pill)}
   td.act{padding-left:0;padding-right:4px} td.act .ib{padding:3px 4px;font-size:15px}
   .cat td.rs{font-size:0;padding:0}   /* on a phone the RS sum sits under the word count; a hidden cell would shift the fixed columns */
   .cat td.id .rs-m{display:block}
-  .card{height:200px;padding:24px 22px}
+  .card{height:216px;padding:24px 22px}   /* v0.42.1: three lines of 24 px */
   .card-text{font-size:24px}
-  .card.text{height:auto;min-height:200px;max-height:calc(100dvh - 250px);padding-top:54px;padding-bottom:54px}
-  .card.tall{height:auto;min-height:200px;padding-top:54px;padding-bottom:54px}   /* v0.41: the buttons and the bar stay on screen */
-  .card.text .card-text{font-size:17px;max-height:calc(100dvh - 358px)}
+  .card.text{height:min(calc(100dvh - 250px), 380px);padding-top:54px;padding-bottom:54px}   /* v0.41: the buttons and the bar stay on screen */
+  .card.prose .card-text{font-size:17px;max-height:100%}
   .about{padding-left:12px;padding-right:12px}
   .about-h{font-size:20px}
   .about-panes{grid-template-columns:1fr;margin-top:calc(var(--pill-top) - 44px)}
@@ -1663,10 +1668,18 @@ function restoreDeck(rows){
   deckScore = countClean();
   return true;
 }
+/* v0.42.1: is a side text (over 80 characters, or more than three lines)? One answer per list, cached on the rows. */
+const sideIsText = t => t.length > 80 || t.split("\n").length > 3;
+function listHasText(rows){
+  if (!rows) return false;
+  if (rows._hasText === undefined) rows._hasText = rows.some(r => r.pairs.some(p => sideIsText(p.q) || sideIsText(p.a)));
+  return rows._hasText;
+}
 function renderCard(){
   paintCounter();
   const card = $("card"), text = $("cardText"), tag = $("cardTag"), foot = $("cardFoot");
-  card.classList.remove("s1", "s2", "text", "tall", "col");
+  card.classList.remove("s1", "s2", "col", "prose");
+  card.classList.toggle("text", listHasText(deckRows));   // v0.42.1: one height per list, the done card included
   if (deckDone){ card.classList.add("done"); tag.textContent = foot.textContent = ""; text.textContent = T.deckDone; text.className = "card-text a"; return; }
   card.classList.remove("done");
   if (!pipe.length){ tag.textContent = foot.textContent = ""; text.textContent = "…"; return; }
@@ -1676,9 +1689,8 @@ function renderCard(){
   tag.textContent = sub ? c + " · " + sub : c;
   foot.textContent = [(s.row.TAG || "").trim(), (s.row.LVL || "").trim(), s.row.ID].filter(Boolean).join(" · ");   // v0.41: TAG · L · ID (a made list numbers its rows)
   const showQ = !showingA || peeking, shown = showQ ? f.q : f.a;
-  const lines = shown.split("\n"), isText = shown.length > 80 || lines.length > 3;   // v0.41.3: amount decides, not shape
-  card.classList.toggle("text", isText);                                              // v0.41: a text card
-  card.classList.toggle("tall", !isText && lines.length > 1);                         // two or three lines: a word card that grows
+  const lines = shown.split("\n");
+  card.classList.toggle("prose", sideIsText(shown));                                  // the side shown reads as text; a short side stays a word
   card.classList.toggle("col", lines.length > 1 && lines.every(x => x.length <= 24)); // a column: lines left aligned in a centred block
   text.textContent = shown; text.className = "card-text " + (showQ ? "q" : "a");
 }
