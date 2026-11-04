@@ -35,8 +35,10 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.41.2 ─────────────────────────────────────────
-   v0.41.2 (4 Nov, M): a text card whose lines are all short (24 characters or fewer, a conjugation) stands centred.
+/* ── WordDock — v0.41.3 ─────────────────────────────────────────
+   v0.41.3 (4 Nov, M): amount decides the card, not shape: over 80 characters or more than three lines = the text card
+   (18 px); two or three short lines = a word card at 28 px that grows. A column of short lines is a block centred in
+   the card with its lines left aligned, so the stems line up and the endings stand out (replaces v0.41.2's centring).
    v0.41.1 (3 Nov, M): SRC moves to the last column of the sheet (template, export, Read me, help): a crafter's field, after
    the pairs, where comment columns may follow. Read by name, so older sheets work. SRC is a short key (caesar-bg), not a
    citation: it travels with the row through the bazaar, where footnote numbers would collide. The link order is unchanged
@@ -408,11 +410,14 @@ body.studying .top{position:relative;z-index:30}
 body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 .card-tag{position:absolute;top:30px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
 .card-foot{position:absolute;bottom:30px;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}   /* v0.41: TAG · L · ID, mirrored under the text (M, for crafting) */
-/* v0.41: a text card. A long answer (or question), or one with a line break, reads as text: smaller, left aligned,
-   the card grows to two thirds of the screen before it scrolls. Decided from the content, no column. */
+/* v0.41: a text card. A long side (over 80 characters, or more than three lines) reads as text: smaller, left aligned,
+   the card grows to two thirds of the screen before it scrolls. Decided from the content, no column.
+   v0.41.3: a side of two or three short lines stays a word card that grows (.tall); a column of short lines (.col,
+   a conjugation) is a block centred in the card with its lines left aligned, so the stems line up (M). */
 .card.text{height:auto;min-height:220px;max-height:66dvh;align-items:flex-start;padding-top:56px;padding-bottom:56px}
 .card.text .card-text{font-size:18px;line-height:1.5;text-align:left;max-height:calc(66dvh - 112px)}
-.card.text.col .card-text{text-align:center}   /* v0.41.2: a column of short lines (a conjugation) stands centred (M) */
+.card.tall{height:auto;min-height:220px;padding-top:56px;padding-bottom:56px}
+.card.col .card-text{text-align:left}
 .card-text{font-size:28px;text-align:center;white-space:pre-line;word-break:break-word;max-height:100%;overflow-y:auto}
 .card-text.q{color:var(--q)}.card-text.a{color:var(--fg)}
 .card.done{background:#f1f8f1;border-color:#b9dcbc}
@@ -467,7 +472,8 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
   .cat td.id .rs-m{display:block}
   .card{height:200px;padding:24px 22px}
   .card-text{font-size:24px}
-  .card.text{height:auto;min-height:200px;max-height:calc(100dvh - 250px);padding-top:54px;padding-bottom:54px}   /* v0.41: the buttons and the bar stay on screen */
+  .card.text{height:auto;min-height:200px;max-height:calc(100dvh - 250px);padding-top:54px;padding-bottom:54px}
+  .card.tall{height:auto;min-height:200px;padding-top:54px;padding-bottom:54px}   /* v0.41: the buttons and the bar stay on screen */
   .card.text .card-text{font-size:17px;max-height:calc(100dvh - 358px)}
   .about{padding-left:12px;padding-right:12px}
   .about-h{font-size:20px}
@@ -1630,7 +1636,7 @@ function restoreDeck(rows){
 function renderCard(){
   paintCounter();
   const card = $("card"), text = $("cardText"), tag = $("cardTag"), foot = $("cardFoot");
-  card.classList.remove("s1", "s2", "text", "col");
+  card.classList.remove("s1", "s2", "text", "tall", "col");
   if (deckDone){ card.classList.add("done"); tag.textContent = foot.textContent = ""; text.textContent = T.deckDone; text.className = "card-text a"; return; }
   card.classList.remove("done");
   if (!pipe.length){ tag.textContent = foot.textContent = ""; text.textContent = "…"; return; }
@@ -1640,8 +1646,10 @@ function renderCard(){
   tag.textContent = sub ? c + " · " + sub : c;
   foot.textContent = [(s.row.TAG || "").trim(), (s.row.LVL || "").trim(), s.row.ID].filter(Boolean).join(" · ");   // v0.41: TAG · L · ID (a made list numbers its rows)
   const showQ = !showingA || peeking, shown = showQ ? f.q : f.a;
-  card.classList.toggle("text", shown.length > 80 || shown.includes("\n"));   // v0.41: a text card
-  card.classList.toggle("col", shown.includes("\n") && shown.split("\n").every(x => x.length <= 24));   // v0.41.2: every line short: centred
+  const lines = shown.split("\n"), isText = shown.length > 80 || lines.length > 3;   // v0.41.3: amount decides, not shape
+  card.classList.toggle("text", isText);                                              // v0.41: a text card
+  card.classList.toggle("tall", !isText && lines.length > 1);                         // two or three lines: a word card that grows
+  card.classList.toggle("col", lines.length > 1 && lines.every(x => x.length <= 24)); // a column: lines left aligned in a centred block
   text.textContent = shown; text.className = "card-text " + (showQ ? "q" : "a");
 }
 
