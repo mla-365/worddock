@@ -35,7 +35,12 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.41.3 ─────────────────────────────────────────
+/* ── WordDock — v0.42 ─────────────────────────────────────────
+   v0.42 (4 Nov, M): the shelf comes from a catalog: lists/index.json (published) and lists/devel.json (the second
+   stage, worddock.app/devel, the device remembers the shelf, amber pills, "In the making"); one line per list (n, w,
+   src, since), so the shelf costs one fetch and a list is published by adding its JSON and one line. WD_LISTS goes.
+   The name's language codes label nothing any more: the columns read Q | A on every list (M: an answer is an answer
+   because it follows a question; the language is immaterial).
    v0.41.3 (4 Nov, M): amount decides the card, not shape: over 80 characters or more than three lines = the text card
    (18 px); two or three short lines = a word card at 28 px that grows. A column of short lines is a block centred in
    the card with its lines left aligned, so the stems line up and the endings stand out (replaces v0.41.2's centring).
@@ -418,6 +423,11 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 .card.text .card-text{font-size:18px;line-height:1.5;text-align:left;max-height:calc(66dvh - 112px)}
 .card.tall{height:auto;min-height:220px;padding-top:56px;padding-bottom:56px}
 .card.col .card-text{text-align:left}
+/* v0.42: the devel shelf (worddock.app/devel) is the same app on a second catalog; its pills are amber so a curator sees where she is. */
+body.devel{--pill:#b7791f;--pill2:#c98a2b}
+body.devel .pill{background:var(--pill);border-color:var(--pill)}   /* the shelf's deck button too, so a phone shows it */
+#wdSub a{color:var(--green);text-decoration:none}#wdSub a:hover{text-decoration:underline}
+body.devel .bar .door-b.count-only{background:var(--pill)}
 .card-text{font-size:28px;text-align:center;white-space:pre-line;word-break:break-word;max-height:100%;overflow-y:auto}
 .card-text.q{color:var(--q)}.card-text.a{color:var(--fg)}
 .card.done{background:#f1f8f1;border-color:#b9dcbc}
@@ -509,7 +519,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
 
 <main class="cat" id="catalog">
   <section class="zone-top" id="secWd">
-    <h2 class="sec-h" data-t="wdHeading"></h2>
+    <h2 class="sec-h" id="wdHeading" data-t="wdHeading"></h2>
     <p class="sub" id="wdSub"></p>
     <div class="controls" id="wdCtl">
       <input type="search" id="wdQ" data-t-ph="search" data-t-aria="searchWdAria" autocomplete="off" spellcheck="false">
@@ -639,7 +649,7 @@ const T = {
   safeTitle: "Keep your progress safe?",
   safeBody: "Your scores live only in this browser and can be lost. A sync key keeps a copy, and brings them back on any device. You can also do this later: About WordDock › Devices and sync.",
   safeMake: "Make a key", safeLater: "Not now",
-  wdHeading: "Published lists", myHeading: "My lists on this device", syncNoteAria: "Sync settings", add: "+ Add a list from an Excel sheet",
+  wdHeading: "Published lists", develHeading: "In the making", develSub: "devel", toPublished: "the published shelf", toDevel: "the devel shelf", myHeading: "My lists on this device", syncNoteAria: "Sync settings", add: "+ Add a list from an Excel sheet",
   // the list surface
   words: n => n + (n === 1 ? " word" : " words"),
   lists: n => n + (n === 1 ? " list" : " lists"),
@@ -752,7 +762,27 @@ const T = {
 };
 /* ── WD lists, published on this site: one line. A new WD list = one JSON file (lists/<NAME>.json)
    + its name here. ── */
-const WD_LISTS = ["LA-NL-L","NL-LA-V2","WORDDOCK", "LA-NL-V1-AANGEVULD", "NL-LA-AANGEVULD"];
+/* v0.42: the shelf comes from a catalog, lists/index.json (published) or lists/devel.json (the second stage,
+   worddock.app/devel); one line per list: n, w (words), src, since. WD_LISTS is filled at boot by loadCatalog. */
+let WD_LISTS = [], CATALOG = {};
+const SHELF_KEY = "wd_shelf";
+let shelf = "";   // "" = published, "devel" = the second stage
+async function loadCatalog(){
+  try { const p = new URLSearchParams(location.search), v = p.get("shelf");
+    if (v !== null){ shelf = v === "devel" ? "devel" : ""; try { localStorage.setItem(SHELF_KEY, shelf); } catch {}
+      p.delete("shelf"); const qs = p.toString(); history.replaceState(history.state, "", location.pathname + (qs ? "?" + qs : "") + location.hash); }
+    else shelf = localStorage.getItem(SHELF_KEY) === "devel" ? "devel" : "";
+  } catch {}
+  const file = LISTS_DIR + (shelf === "devel" ? "devel.json" : "index.json"), store = "wd_catalog_" + (shelf || "published");
+  let cat = null;
+  try { const r = await fetch(file, { cache: "no-cache" }); if (r.ok) cat = await r.json(); } catch {}
+  if (cat && Array.isArray(cat.lists)){ try { localStorage.setItem(store, JSON.stringify(cat)); } catch {} }
+  else { try { cat = JSON.parse(localStorage.getItem(store)); } catch {} }   // offline: the catalog seen last time
+  CATALOG = {}; WD_LISTS = [];
+  for (const e of (cat && cat.lists) || []){ const k = canonKey(e.n); if (!k || WD_LISTS.includes(k)) continue; WD_LISTS.push(k); CATALOG[k] = e; }
+  WD_KEYS = WD_LISTS.map(canonKey);
+  document.body.classList.toggle("devel", shelf === "devel");
+}
 /* A first visit (no list stored on this device) lands in the list that explains WordDock. */
 const FIRST_OPEN = "WORDDOCK";
 /* A list has one name, shown everywhere as it is: letters, digits and hyphens, in capitals
@@ -764,11 +794,8 @@ const validKey = n => /^[A-Z0-9][A-Z0-9-]*$/.test(n);
 /* A file name becomes a name: capitals, every run of characters other than letters, digits and
    hyphens one hyphen. "les 3 (kopie)" → LES-3-KOPIE. */
 const keyFrom = t => String(t || "").toUpperCase().replace(/[^A-Z0-9-]+/g, "-").replace(/-{2,}/g, "-").replace(/^-+|-+$/g, "");
-const WD_KEYS = WD_LISTS.map(canonKey);
-function labelsOf(key){
-  const m = String(key).match(/^([A-Za-z]{2})-([A-Za-z]{2})(?:-(.+))?$/);
-  return m ? { q: m[1].toUpperCase(), a: m[2].toUpperCase() } : { q: T.colQ, a: T.colA };
-}
+let WD_KEYS = [];
+function labelsOf(key){ return { q: T.colQ, a: T.colA }; }   // v0.42: Q and A, no sides; the name's codes label nothing (M, 4 Nov)
 const LISTS_DIR = "lists/", ROW_H = 38, DECK_SIZE = 10;
 let CAT_PAGE = 5;   // v0.40.1: lists per section follow the screen height on a PC (fitCat), 5 on a phone
 const DECK_KEY = "wd_deck", LIST_KEY = "wd_list", OWN_KEY = "wd_mylists", VIEW_KEY = k => "wd_view_" + k;   /* the app's own keys (v0.34: renamed; the earlier keys are removed at boot, nothing is copied: M, 24 Oct) */
@@ -895,7 +922,8 @@ function ownSince(key){
 }
 function knownCount(key){
   const l = LISTS[key]; if (l && l.rows) return l.rows.length;
-  try { const n = parseInt(localStorage.getItem("wd_rowcount_" + key), 10); return n > 0 ? n : null; } catch { return null; }
+  try { const n = parseInt(localStorage.getItem("wd_rowcount_" + key), 10); if (n > 0) return n; } catch {}
+  return CATALOG[key] && CATALOG[key].w > 0 ? CATALOG[key].w : null;   // v0.42: the catalog's count, no fetch
 }
 const readPool = k => { try { return JSON.parse(localStorage.getItem("wd_rs_" + k)) || {}; } catch { return {}; } };
 
@@ -1028,7 +1056,7 @@ async function removeList(key){
 
 /* ── State ── */
 let level = "list";                              // catalog (LISTS) | list | study | about
-let viewKey = WD_KEYS[0], activeKey = null;
+let viewKey = null, activeKey = null;   // v0.42: viewKey is set at boot, after the catalog
 let qText = "", query = "", lvlText = "", page = 0, sortKey = null, sortDir = 1, openId = null;
 const CAT = { wd: { q: "", page: 0 }, my: { q: "", page: 0 } };   // LISTS: search and page per section
 const viewRows = () => { const l = LISTS[viewKey]; return l && l.rows ? l.rows : null; };
@@ -1342,13 +1370,15 @@ function renderCatalog(){
   const all = listKeys().map(k => getList(k));
   // WD lists not seen yet: fetch them, so the Words column fills in. v0.32.2: one redraw when all have
   // landed, not one per list (that was the flicker M saw), and only if a count was still unknown.
-  const pending = all.filter(l => (!l.loaded || (isPublished(l.key) && !l.checked)) && !l.fetching);
+  const pending = all.filter(l => (!l.loaded || (isPublished(l.key) && !l.checked)) && !l.fetching && !(isPublished(l.key) && CATALOG[l.key] && CATALOG[l.key].w > 0));   // v0.42: a list with a count in the catalog waits until opened
   if (pending.length){
     const missing = pending.some(l => knownCount(l.key) === null);
     pending.forEach(l => { l.fetching = true; });
     Promise.all(pending.map(l => ensureList(l.key))).then(() => { if (level === "catalog" && missing) renderCatalog(); });   // a redraw only when a count was still missing (the very first visit)
   }
-  renderSection("wd", all.filter(l => !l.own), T.published);
+  renderSection("wd", all.filter(l => !l.own), shelf === "devel" ? T.develSub : T.published);
+  $("wdHeading").textContent = shelf === "devel" ? T.develHeading : T.wdHeading;   // v0.42: the devel shelf says so
+  { const sub = $("wdSub"); if (shelf === "devel"){ sub.appendChild(document.createTextNode(" · ")); const a = document.createElement("a"); a.href = "?shelf=published"; a.textContent = T.toPublished; sub.appendChild(a); } }
   renderSection("my", all.filter(l => l.own), T.onThisDevice);
   renderSyncLine();
   renderPos();
@@ -2344,6 +2374,8 @@ document.addEventListener("keydown", e => {
 const bootDone = () => document.body.classList.remove("booting");
 setTimeout(bootDone, 5000);                      // a safety net: never stay hidden
 (async () => {
+  await loadCatalog();   // v0.42: the shelf first; everything below reads WD_KEYS
+  viewKey = WD_KEYS[0] || null;
   // A reload keeps the screen the user was on (the browser keeps history.state across a
   // reload); a fresh open (new tab, the app icon) has no state and lands on the card.
   const back = history.state && history.state.wd && history.state.level !== "study" ? history.state : null;
