@@ -35,7 +35,8 @@
 <link rel="apple-touch-icon" href="icon-192-green.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23006600'/%3E%3Ctext x='16' y='25' font-family='Georgia,serif' font-weight='700' font-size='26' fill='%23ffffff' text-anchor='middle'%3EW%3C/text%3E%3C/svg%3E">
 <style>
-/* ── WordDock — v0.41.1 ─────────────────────────────────────────
+/* ── WordDock — v0.41.2 ─────────────────────────────────────────
+   v0.41.2 (4 Nov, M): a text card whose lines are all short (24 characters or fewer, a conjugation) stands centred.
    v0.41.1 (3 Nov, M): SRC moves to the last column of the sheet (template, export, Read me, help): a crafter's field, after
    the pairs, where comment columns may follow. Read by name, so older sheets work. SRC is a short key (caesar-bg), not a
    citation: it travels with the row through the bazaar, where footnote numbers would collide. The link order is unchanged
@@ -411,6 +412,7 @@ body.booting .wrap,body.booting .cat,body.booting .about{visibility:hidden}
    the card grows to two thirds of the screen before it scrolls. Decided from the content, no column. */
 .card.text{height:auto;min-height:220px;max-height:66dvh;align-items:flex-start;padding-top:56px;padding-bottom:56px}
 .card.text .card-text{font-size:18px;line-height:1.5;text-align:left;max-height:calc(66dvh - 112px)}
+.card.text.col .card-text{text-align:center}   /* v0.41.2: a column of short lines (a conjugation) stands centred (M) */
 .card-text{font-size:28px;text-align:center;white-space:pre-line;word-break:break-word;max-height:100%;overflow-y:auto}
 .card-text.q{color:var(--q)}.card-text.a{color:var(--fg)}
 .card.done{background:#f1f8f1;border-color:#b9dcbc}
@@ -1628,7 +1630,7 @@ function restoreDeck(rows){
 function renderCard(){
   paintCounter();
   const card = $("card"), text = $("cardText"), tag = $("cardTag"), foot = $("cardFoot");
-  card.classList.remove("s1", "s2", "text");
+  card.classList.remove("s1", "s2", "text", "col");
   if (deckDone){ card.classList.add("done"); tag.textContent = foot.textContent = ""; text.textContent = T.deckDone; text.className = "card-text a"; return; }
   card.classList.remove("done");
   if (!pipe.length){ tag.textContent = foot.textContent = ""; text.textContent = "…"; return; }
@@ -1639,6 +1641,7 @@ function renderCard(){
   foot.textContent = [(s.row.TAG || "").trim(), (s.row.LVL || "").trim(), s.row.ID].filter(Boolean).join(" · ");   // v0.41: TAG · L · ID (a made list numbers its rows)
   const showQ = !showingA || peeking, shown = showQ ? f.q : f.a;
   card.classList.toggle("text", shown.length > 80 || shown.includes("\n"));   // v0.41: a text card
+  card.classList.toggle("col", shown.includes("\n") && shown.split("\n").every(x => x.length <= 24));   // v0.41.2: every line short: centred
   text.textContent = shown; text.className = "card-text " + (showQ ? "q" : "a");
 }
 
